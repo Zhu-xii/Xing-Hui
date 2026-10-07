@@ -1,0 +1,230 @@
+.favorites-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+.favorites-header {
+  padding: 4px 2px 0;
+}
+
+.favorites-eyebrow {
+  color: var(--color-primary-soft);
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.favorites-title {
+  margin-top: 2px;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.favorites-intro {
+  margin-top: 5px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.favorites-grid {
+  display: grid;
+  gap: 13px;
+}
+
+.favorites-panel {
+  padding: 14px;
+  border: 1px solid rgba(30, 58, 95, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 22px rgba(41, 67, 94, 0.045);
+}
+
+.favorites-panel--star {
+  background:
+    linear-gradient(145deg, rgba(234, 245, 253, 0.82), rgba(255, 255, 255, 0.8)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.favorites-panel__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(30, 58, 95, 0.07);
+}
+
+.favorites-panel__heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.favorites-panel__mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 10px;
+  background: #e6f2fb;
+  color: var(--color-primary);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.favorites-panel__heading h3 {
+  font-size: 0.9rem;
+}
+
+.favorites-panel__heading > span {
+  color: var(--color-text-faint);
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.favorites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.favorite-card {
+  padding: 10px 11px;
+  border: 1px solid #e2edf5;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.favorite-card--star {
+  border-color: #d4e6f4;
+  background: rgba(247, 252, 255, 0.92);
+}
+
+.favorite-card--system {
+  background: rgba(244, 248, 251, 0.92);
+}
+
+.favorite-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.favorite-card__header strong {
+  color: var(--color-primary-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.favorite-card__header time {
+  color: var(--color-text-faint);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.favorite-card__content {
+  color: var(--color-text);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.favorite-card__content.is-withdrawn {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+
+.favorite-card__content.is-sticker {
+  color: var(--color-text-muted);
+}
+
+.favorite-card__content img {
+  width: min(100%, 150px);
+  max-height: 150px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.favorites-empty {
+  padding: 14px 4px 8px;
+  color: var(--color-text-muted);
+}
+
+.favorites-empty > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #7da8cc;
+  font-size: 1.1rem;
+}
+
+.favorites-empty strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.76rem;
+}
+
+.favorites-empty p {
+  margin-top: 3px;
+  color: var(--color-text-faint);
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.favorites-panel--questionnaire {
+  background:
+    linear-gradient(145deg, rgba(237, 246, 252, 0.82), rgba(255, 255, 255, 0.8)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.favorite-card__questionnaire strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.favorite-card__questionnaire ul {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.favorite-card__questionnaire li {
+  padding: 5px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.favorite-card__questionnaire li.is-selected {
+  border-color: #7FAFCB;
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.favorite-card__answer {
+  margin-top: 8px;
+  padding: 7px 8px;
+  border-left: 3px solid #7FAFCB;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

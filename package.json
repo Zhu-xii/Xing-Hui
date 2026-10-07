@@ -1,0 +1,17 @@
+{
+  "name": "xing-hui-note",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && node scripts/sync-assets.mjs && wrangler deploy",
+    "standalone": "npm run build && node scripts/build-standalone.mjs"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0",
+    "wrangler": "^4.136.3"
+  }
+}

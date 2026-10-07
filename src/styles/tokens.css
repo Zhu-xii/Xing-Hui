@@ -1,0 +1,32 @@
+:root {
+  /* 单一浅色方案：偏白淡蓝 */
+  --color-primary: #2B5F8F;
+  --color-primary-deep: #214B73;
+  --color-primary-soft: #5D86AD;
+  --color-white: #FFFFFF;
+  --color-silver: #C9D9E6;
+  --color-silver-soft: #EDF5FA;
+
+  /* 间距基准 8px */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-block-sm: 24px;
+  --space-block-md: 32px;
+  --space-block-lg: 48px;
+
+  /* 圆角 */
+  --radius-bubble: 18px;
+  --radius-button: 12px;
+  --radius-card: 22px;
+  --radius-pill: 999px;
+
+  /* 字体：全部使用本机系统字体，离线不发起字体请求 */
+  --font-title: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-round: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --content-max: 720px;
+}

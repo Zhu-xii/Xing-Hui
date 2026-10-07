@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="deepBlue">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#EAF4FC" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E3A5F'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23FFFFFF'/%3E%3C/svg%3E" />
+    <title>星回 · Xing Hui-note</title>
+
+    <script type="module">
+(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),t.credentials=e.crossOrigin===`use-credentials`?`include`:e.crossOrigin===`anonymous`?`omit`:`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e=Object.freeze({settings:`xinghui_settings`,cards:`xinghui_cards`,groups:`xinghui_groups`,stickers:`xinghui_stickers`,patCards:`xinghui_pat_cards`,chatMessages:`xinghui_chat_messages`,character:`xinghui_character`,firstLaunchAt:`xinghui_first_launch_at`,lastBackupAt:`xinghui_last_backup_at`}),t=e.settings,n=e.cards,r=e.groups;e.stickers;var i=e.patCards,a=e.chatMessages;e.character;var o=`group_default`,s=`group_greeting`,c=`xinghui:settings-changed`,l=`xinghui:character-changed`,ee=`xinghui:data-restored`,te=`xinghui:backup-status-changed`,ne=`xinghui:chat-changed`,u=Object.freeze({replyDelayMin:1,replyDelayMax:3,typingIndicator:!0,readNoReplyEnabled:!0,readNoReply:15,stickerReply:10,starFavorite:5,patReply:70,theme:`deepBlue`,showTimestamp:!0,fontSize:`medium`,darkMode:`system`,currentGroupId:o}),d=Object.freeze({name:`星回`,avatar:``}),re=new Set([`deepBlue`,`silver`,`lightBlue`]),ie=new Set([`small`,`medium`,`large`]),ae=new Set([`light`,`dark`,`system`]),oe=864e5;function se(){return typeof window<`u`&&window.localStorage?window.localStorage:typeof globalThis<`u`&&globalThis.localStorage?globalThis.localStorage:null}function f(e,t){if(e===``||e==null)return t;let n=Number(e);return Number.isFinite(n)?n:t}function ce(e,t,n){return Math.min(n,Math.max(t,e))}function le(e){return`${e}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}function ue(e,t=null){let n=se();if(!n)return t;try{let r=n.getItem(e);return r===null?t:r}catch{return t}}function de(e,t){let n=se();if(!n)return!1;try{return n.setItem(e,t),!0}catch{return!1}}function fe(e){let t=se();if(!t)return!1;try{return t.removeItem(e),!0}catch{return!1}}function p(e,t=null){let n=ue(e,null);if(n===null)return t;try{return JSON.parse(n)}catch{return t}}function m(e,t){try{return de(e,JSON.stringify(t))}catch{return!1}}function pe(e){let t=p(e,[]);return Array.isArray(t)?t:[]}function me(e,t,n=0){return typeof e==`boolean`?e?t:0:ce(f(e,t),n,100)}function h(e={}){let t=e&&typeof e==`object`&&!Array.isArray(e)?e:{},n=ce(f(t.replyDelayMin,u.replyDelayMin),0,600),r=ce(f(t.replyDelayMax,u.replyDelayMax),0,600);return{replyDelayMin:Math.min(n,r),replyDelayMax:Math.max(n,r),typingIndicator:t.typingIndicator!==!1,readNoReplyEnabled:t.readNoReplyEnabled!==!1,readNoReply:me(t.readNoReply,u.readNoReply,1),stickerReply:me(t.stickerReply,u.stickerReply,1),starFavorite:me(t.starFavorite,u.starFavorite,0),patReply:me(t.patReply,u.patReply,1),theme:re.has(t.theme)?t.theme:u.theme,showTimestamp:t.showTimestamp!==!1,fontSize:ie.has(t.fontSize)?t.fontSize:u.fontSize,darkMode:ae.has(t.darkMode)?t.darkMode:u.darkMode,currentGroupId:String(t.currentGroupId||``).trim()||`group_default`}}function g(){return h(p(e.settings,{}))}function he(t){let n=h(t),r=m(e.settings,n);return r&&typeof window<`u`&&window.dispatchEvent(new CustomEvent(c,{detail:n})),r?n:null}function _(e={}){let t=g(),n=e&&typeof e==`object`&&!Array.isArray(e)?e:{};return he({...t,...n})}function ge(e={}){let t=e&&typeof e==`object`&&!Array.isArray(e)?e:{},n=typeof t.avatar==`string`&&/^data:image\/[a-z0-9.+-]+;base64,/i.test(t.avatar)?t.avatar:``;return{name:String(t.name||d.name).trim()||d.name,avatar:n}}function v(){return ge(p(e.character,d))}function _e(t){let n=ge(t),r=m(e.character,n);return r&&typeof window<`u`&&window.dispatchEvent(new CustomEvent(l,{detail:n})),r?n:null}function ve(e){if(!e||typeof e!=`object`||Array.isArray(e))return null;let t=String(e.id||``).trim(),n=String(e.name||``).trim();return!t||!n?null:{id:t,name:n}}function ye(e){if(!e||typeof e!=`object`||Array.isArray(e))return null;let t=typeof e.content==`string`?e.content:``;return{id:String(e.id||le(`card`)),groupId:String(e.groupId||`group_default`).trim()||`group_default`,content:t,disabled:!!e.disabled}}function be(e){if(!e||typeof e!=`object`||Array.isArray(e))return null;let t=String(e.image||e.content||e.src||``).trim();return t?{id:String(e.id||le(`sticker`)),image:t,enabled:e.enabled!==!1}:null}function xe(e){if(!e||typeof e!=`object`||Array.isArray(e))return null;let t=typeof e.content==`string`?e.content:``;return t?{id:String(e.id||le(`pat`)),content:t}:null}function Se(e){if(Number.isFinite(Number(e))&&Number(e)>0)return Number(e);let t=Date.parse(e);return Number.isNaN(t)?Date.now():t}function y(e){if(!e||typeof e!=`object`||Array.isArray(e))return null;let t=e.role===`star`?`star`:e.role===`system`?`system`:`user`,n=e.type===`sticker`?`sticker`:e.type===`pat`?`pat`:`text`;return{id:String(e.id||le(`msg`)),role:t,type:n,content:typeof e.content==`string`?e.content:``,timestamp:Se(e.timestamp),read:!!e.read,favorited:!!e.favorited,starFavorited:!!e.starFavorited,withdrawn:!!e.withdrawn}}function b(e,t){return pe(e).map(t).filter(Boolean)}function Ce(){return b(e.cards,ye)}function we(){return b(e.groups,ve)}function Te(){return b(e.stickers,be)}function Ee(){return b(e.patCards,xe)}function De(){return b(e.chatMessages,y)}function Oe(t){let n=Array.isArray(t)?t.map(ye).filter(Boolean):[];return m(e.cards,n)?n:null}function ke(t){let n=Array.isArray(t)?t.map(ve).filter(Boolean):[];return m(e.groups,n)?n:null}function Ae(t){let n=Array.isArray(t)?t.map(be).filter(Boolean):[];return m(e.stickers,n)?n:null}function je(t){let n=Array.isArray(t)?t.map(xe).filter(Boolean):[];return m(e.patCards,n)?n:null}function Me(t){let n=Array.isArray(t)?t.map(y).filter(Boolean):[],r=m(e.chatMessages,n);return r&&typeof window<`u`&&window.dispatchEvent(new CustomEvent(ne,{detail:{messages:n}})),r?n:null}function Ne(e,t){let n=f(e,NaN);if(Number.isFinite(n)&&n>0)return n;let r=Date.parse(e);return Number.isNaN(r)?t:r}function Pe(t=Date.now()){let n=Ne(ue(e.firstLaunchAt,null),0);if(n>0)return n;let r=Ne(t,Date.now());return de(e.firstLaunchAt,String(r)),r}function Fe(){return Ne(ue(e.lastBackupAt,null),0)}function Ie(t=Date.now()){let n=Ne(t,Date.now()),r=de(e.lastBackupAt,String(n));return r&&typeof window<`u`&&window.dispatchEvent(new CustomEvent(te,{detail:{lastBackupAt:n}})),r}function Le(e=Date.now()){let t=Pe(e),n=Fe(),r=n||t,i=Math.max(0,e-r),a=Math.floor(i/oe);return{isDue:i>7*oe,elapsedDays:a,firstLaunchAt:t,lastBackupAt:n,baselineAt:r}}function Re(){let t=se();return t?(t.getItem(e.settings)===null&&m(e.settings,u),t.getItem(e.character)===null&&m(e.character,d),Pe(),{settings:g(),character:v()}):{settings:{...u},character:{...d}}}function ze(){let e=De(),t=e.filter(e=>e.favorited).map(e=>({...e})),n=e.filter(e=>e.starFavorited).map(e=>({...e}));return{cards:Ce(),stickers:Te(),chatMessages:e,favorites:{mine:t,star:n},settings:g(),groups:we(),patCards:Ee(),character:v()}}function Be(e=new Date().toISOString()){return{app:`星回`,version:1,exportedAt:e,...ze()}}function Ve(e,t,n){return Object.prototype.hasOwnProperty.call(e,t)?e[t]:n}function He(e){let t=e;if(typeof e==`string`)try{t=JSON.parse(e)}catch{throw Error(`文件不是有效的 JSON。`)}if(!t||typeof t!=`object`||Array.isArray(t))throw Error(`备份内容格式不正确。`);let n=t.data&&typeof t.data==`object`&&!Array.isArray(t.data)?t.data:t,r=n.favorites&&typeof n.favorites==`object`&&!Array.isArray(n.favorites)?n.favorites:{};if(![`cards`,`stickers`,`chatMessages`,`favorites`,`settings`,`groups`,`patCards`,`character`].some(e=>Object.prototype.hasOwnProperty.call(n,e)))throw Error(`没有找到可导入的星回数据。`);return{version:Math.max(1,f(t.version,1)),exportedAt:String(t.exportedAt||``),cards:Array.isArray(n.cards)?n.cards.map(ye).filter(Boolean):[],stickers:Array.isArray(n.stickers)?n.stickers.map(be).filter(Boolean):[],chatMessages:Array.isArray(n.chatMessages)?n.chatMessages.map(y).filter(Boolean):[],favorites:{mine:Array.isArray(Ve(r,`mine`,[]))?r.mine.map(y).filter(Boolean):[],star:Array.isArray(Ve(r,`star`,[]))?r.star.map(y).filter(Boolean):[]},settings:n.settings&&typeof n.settings==`object`&&!Array.isArray(n.settings)?h(n.settings):null,groups:Array.isArray(n.groups)?n.groups.map(ve).filter(Boolean):[],patCards:Array.isArray(n.patCards)?n.patCards.map(xe).filter(Boolean):[],character:n.character&&typeof n.character==`object`&&!Array.isArray(n.character)?ge(n.character):null}}var Ue=`xinghui:message-action`,We=`xinghui:trigger-star-reply`,Ge=`xinghui:chat-placeholder`,x=null,S=null,C=null,Ke=0,qe=!1,Je=null;function Ye(){return`msg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}function Xe(e){let t=new Date(e);return Number.isNaN(t.getTime())?`--:--`:`${String(t.getHours()).padStart(2,`0`)}:${String(t.getMinutes()).padStart(2,`0`)}`}function Ze(e){if(!e)return!1;let t=Qe(),n=!1;return t.forEach(t=>{t.id!==e||t.read||(t.read=!0,n=!0)}),!n||w(t)}function Qe(){return De()}function w(e){return!!Me(e)}function $e(e){let{avatar:t}=v();if(e.replaceChildren(),t){let n=document.createElement(`img`);n.src=t,n.alt=``,e.append(n);return}e.textContent=`星`}function et(){S?.profileAvatar&&$e(S.profileAvatar)}function tt(e){let t=document.createElement(`span`);return t.className=`chat-message__avatar chat-message__avatar--${e}`,t.setAttribute(`aria-hidden`,`true`),e===`star`?$e(t):t.textContent=`我`,t}function nt(e){let t=document.createElement(`div`);if(t.className=`bubble message-bubble bubble--${e.role}`,e.withdrawn)return t.classList.add(`message-bubble--withdrawn`),t.textContent=`你撤回了一条消息`,t;if(e.type===`sticker`){if(t.classList.add(`message-bubble--sticker`),/^data:image\//i.test(e.content)){let n=document.createElement(`img`);n.className=`message-sticker__image`,n.src=e.content,n.alt=`表情包`,t.append(n)}else{let e=document.createElement(`span`);e.className=`message-sticker__icon`,e.textContent=`☺`;let n=document.createElement(`span`);n.className=`message-sticker__label`,n.textContent=`表情包占位`;let r=document.createElement(`small`);r.textContent=`STICKER`,t.append(e,n,r)}}else t.textContent=e.content||` `;return t}function rt(e){let t=e.role===`system`,n=document.createElement(`article`);n.className=`chat-message chat-message--${e.role}${e.withdrawn?` is-withdrawn`:``}`,n.dataset.messageId=e.id,n.tabIndex=t?-1:0,n.setAttribute(`role`,t?`status`:`button`),n.setAttribute(`aria-expanded`,`false`),n.setAttribute(`aria-label`,t?e.content||`拍一拍消息`:`${e.role===`user`?`我`:`星回`}的消息，点击查看操作`);let r=document.createElement(`div`);r.className=`chat-message__actions`,r.setAttribute(`aria-label`,`消息操作`),(e.withdrawn?[[`delete`,`删除`]]:[[`delete`,`删除`],[`withdraw`,`撤回`],[`favorite`,e.favorited?`已收藏`:`收藏`]]).forEach(([t,n])=>{let i=document.createElement(`button`);i.type=`button`,i.className=`chat-message__action`,i.dataset.messageAction=t,i.textContent=n,t===`withdraw`&&e.role!==`user`&&(i.disabled=!0,i.title=`星回的消息不可撤回`,i.setAttribute(`aria-disabled`,`true`)),t===`favorite`&&e.favorited&&(i.disabled=!0,i.title=`这条消息已经收藏`,i.setAttribute(`aria-disabled`,`true`)),r.append(i)});let i=document.createElement(`div`);i.className=`chat-message__content`,i.append(nt(e));let a=document.createElement(`div`);a.className=`chat-message__meta`;let{showTimestamp:o}=g();if(o){let t=document.createElement(`time`);t.dateTime=new Date(e.timestamp).toISOString(),t.textContent=Xe(e.timestamp),t.dataset.messageTime=``,a.append(t)}if(e.role===`user`&&!e.withdrawn){let e=document.createElement(`span`);e.className=`chat-message__read`,e.textContent=`已读`,a.append(e)}return a.childElementCount>0&&i.append(a),t?n.append(i):n.append(r,tt(e.role),i),n}function it(){let e=document.createElement(`div`);e.className=`chat-empty`;let t=document.createElement(`span`);t.className=`chat-empty__icon`,t.textContent=`✦`;let n=document.createElement(`p`);n.textContent=`还没有消息`;let r=document.createElement(`small`);return r.textContent=`从一句“你好”开始吧`,e.append(t,n,r),e}function at({behavior:e=`auto`}={}){let t=S?.messageList;t&&window.requestAnimationFrame(()=>{if(e===`smooth`){t.scrollTo({top:t.scrollHeight,behavior:e});return}t.scrollTop=t.scrollHeight})}function T(){Je!==null&&window.cancelAnimationFrame(Je),Je=window.requestAnimationFrame(()=>{Je=null;let e=window.visualViewport,t=e?Math.max(0,Math.round(window.innerHeight-e.height-e.offsetTop)):0;document.documentElement.style.setProperty(`--keyboard-inset`,`${t}px`),(t>0||document.activeElement===S?.input)&&at()})}function ot(){[0,120,320].forEach(e=>{window.setTimeout(()=>at(),e)})}function st(e){let t=S?.messageList;t&&(C=C===e?null:e,t.querySelectorAll(`.chat-message`).forEach(e=>{let t=e.dataset.messageId===C;e.classList.toggle(`is-actions-open`,t),e.setAttribute(`aria-expanded`,String(t))}))}function ct(){C&&(C=null,S?.messageList.querySelectorAll(`.chat-message.is-actions-open`).forEach(e=>{e.classList.remove(`is-actions-open`),e.setAttribute(`aria-expanded`,`false`)}))}function lt(e){let t=S?.messageList;t&&(t.querySelector(`.chat-empty`)?.remove(),t.append(rt(e)))}function ut(){return Qe()}function dt(e,{persist:t=!0,scroll:n=!0}={}){let r=y(e);if(!r)return null;let i=Qe();return i.push(r),t&&!w(i)?null:(lt(r),n&&at({behavior:`smooth`}),r)}function ft(e){if(Ke=Math.max(0,Ke+(e?1:-1)),!S?.status)return;let t=Ke>0;S.status.textContent=t?`对方正在输入…`:`离线`,S.status.classList.toggle(`is-typing`,t)}function E(){let e=S?.messageList;if(!e)return;let t=Qe();if(e.replaceChildren(),C=null,!t.length){e.append(it());return}t.forEach(t=>e.append(rt(t))),at()}function pt(e,t,n){window.dispatchEvent(new CustomEvent(Ue,{detail:{action:e,message:t,changed:n,phase:`complete`}}))}function mt(e,t){let n=typeof t==`string`?t:t?.id;if(!n)return!1;let r=Qe(),i=r.findIndex(e=>e.id===n);if(i===-1)return!1;let a=r[i];return e===`delete`?(r.splice(i,1),w(r)?(E(),!0):!1):e===`withdraw`?a.role!==`user`||a.withdrawn||(a.withdrawn=!0,!w(r))?!1:(E(),!0):e===`favorite`?a.favorited?!0:(a.favorited=!0,w(r)?(E(),!0):!1):!1}function ht(e){let t=e.target.closest(`[data-message-action]`),n=e.target.closest(`[data-message-id]`);if(n&&!n.classList.contains(`chat-message--system`)){if(t){if(e.preventDefault(),e.stopPropagation(),t.disabled)return;let r=ut().find(e=>e.id===n.dataset.messageId);if(r){let e=mt(t.dataset.messageAction,r);pt(t.dataset.messageAction,r,e)}ct();return}st(n.dataset.messageId)}}function gt(e){if(e.key!==`Enter`&&e.key!==` `||e.target.closest(`[data-message-action]`))return;let t=e.target.closest(`[data-message-id]`);t&&(e.preventDefault(),st(t.dataset.messageId))}function _t(e){e.preventDefault();let t=S?.input;if(!t)return;let n=t.value.trim();if(!n){t.focus();return}let r=dt({id:Ye(),role:`user`,type:`text`,content:n,timestamp:Date.now(),read:!1,favorited:!1,starFavorited:!1},{persist:!0,scroll:!0});r&&(t.value=``,t.focus({preventScroll:!0}),ot(),window.dispatchEvent(new CustomEvent(We,{detail:{message:r,storageKey:a}})))}function vt(){S&&!qe&&(S.form.addEventListener(`submit`,_t),S.messageList.addEventListener(`click`,ht),S.messageList.addEventListener(`keydown`,gt),S.input.addEventListener(`focus`,()=>{T(),ot()}),S.input.addEventListener(`blur`,()=>{window.setTimeout(T,80)}),window.addEventListener(c,()=>E()),window.addEventListener(l,()=>{et(),E()}),S.form.querySelectorAll(`[data-chat-placeholder]`).forEach(e=>{e.addEventListener(`click`,()=>{window.dispatchEvent(new CustomEvent(Ge,{detail:{action:e.dataset.chatPlaceholder}}))})}),document.addEventListener(`click`,e=>{(!x?.contains(e.target)||!e.target.closest(`.chat-message`))&&ct()}),document.addEventListener(`keydown`,e=>{e.key===`Escape`&&ct()}),window.visualViewport?.addEventListener(`resize`,T,{passive:!0}),window.visualViewport?.addEventListener(`scroll`,T,{passive:!0}),window.addEventListener(`orientationchange`,ot,{passive:!0}),qe=!0)}function yt(e=document.getElementById(`view-chat`)){return e?(x=e,x.innerHTML=`
+    <div class="chat-panel">
+      <header class="chat-profile" aria-labelledby="chatTitle">
+        <span class="chat-profile__avatar" data-pat-avatar role="button" tabindex="0" aria-label="星回头像，长按拍一拍">星</span>
+        <span class="chat-profile__copy">
+          <span class="chat-profile__title">
+            <strong id="chatTitle">星回</strong>
+            <span class="chat-profile__status" id="chatStatus">离线</span>
+          </span>
+          <small>字卡传讯 · 本地对话</small>
+        </span>
+      </header>
+
+      <div
+        class="chat-message-list"
+        id="chatMessageList"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-label="与星回的聊天记录"
+      ></div>
+    </div>
+
+    <form class="chat-composer" id="chatComposer">
+      <button class="chat-composer__tool" type="button" data-chat-placeholder="avatar" aria-label="发送头像，功能占位" title="发送头像（占位）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="8.5" r="3.2"></circle>
+          <path d="M5.8 19c.7-3.2 2.9-5 6.2-5s5.5 1.8 6.2 5"></path>
+        </svg>
+      </button>
+      <button class="chat-composer__tool" type="button" data-chat-placeholder="sticker" aria-label="发送表情包，功能占位" title="发送表情包（占位）">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="4" width="16" height="16" rx="4"></rect>
+          <path d="M9 10h.01M15 10h.01M8.8 14.2c1.7 1.7 4.7 1.7 6.4 0"></path>
+        </svg>
+      </button>
+      <input
+        class="chat-composer__input"
+        id="chatInput"
+        name="message"
+        type="text"
+        autocomplete="off"
+        enterkeyhint="send"
+        inputmode="text"
+        aria-label="输入消息"
+        placeholder="写点什么…"
+      />
+      <button class="chat-composer__send" id="chatSend" type="submit">发送</button>
+    </form>
+  `,S={profileAvatar:x.querySelector(`.chat-profile__avatar`),form:x.querySelector(`#chatComposer`),input:x.querySelector(`#chatInput`),status:x.querySelector(`#chatStatus`),messageList:x.querySelector(`#chatMessageList`)},vt(),et(),E(),!0):!1}function bt(){ct(),et(),E(),T()}function xt(e,t=0){let n=Number(e);return Number.isFinite(n)?n:t}function St(e,t){let n=xt(e),r=xt(t,n),i=Math.min(n,r);return i+Math.random()*(Math.max(n,r)-i)}function D(e){let t=Math.min(100,Math.max(0,xt(e)));return t<=0?!1:t>=100||Math.random()*100<t}function Ct(e){return!Array.isArray(e)||e.length===0?null:e[Math.floor(Math.random()*e.length)]??null}Object.freeze({replyDelayMin:1,replyDelayMax:3,typingIndicator:!0,readNoReplyEnabled:!0,readNoReply:15,stickerReply:10,starFavorite:5,patReply:70});var wt=!1;function Tt(e=g()){let t=h(e);return Math.round(St(t.replyDelayMin,t.replyDelayMax)*1e3)}function Et(e,t=Ce()){let n=String(e||`group_default`).trim()||`group_default`;return(Array.isArray(t)?t:[]).filter(e=>e&&typeof e==`object`).filter(e=>!e.disabled).filter(e=>String(e.groupId||``)===n).map(e=>({...e,content:typeof e.content==`string`?e.content.trim():``})).filter(e=>e.content)}function Dt(e=Te()){return(Array.isArray(e)?e:[]).filter(e=>e&&typeof e==`object`&&e.enabled!==!1).map(e=>{let t=String(e.image||e.content||e.src||``).trim();return{...e,image:t}}).filter(e=>e.image)}function Ot({settings:e,cards:t,stickers:n}={}){let r=h(e||g());if(r.readNoReplyEnabled&&D(r.readNoReply))return null;let i=`text`,a=``,o=Dt(n===void 0?Te():n);if(o.length>0&&D(r.stickerReply)){let e=Ct(o);i=`sticker`,a=e.image}else a=Ct(Et(r.currentGroupId,t===void 0?Ce():t))?.content||`嗯嗯`;return{role:`star`,type:i,content:a,timestamp:Date.now(),read:!1,favorited:!1,starFavorited:D(r.starFavorite)}}async function kt(e,{settings:t=g(),wait:n=e=>new Promise(t=>window.setTimeout(t,e)),onTypingChange:r=ft,createPayload:i=Ot,addMessage:a=dt,markRead:o=Ze}={}){let s=h(t),c=Tt(s),l=!1;s.typingIndicator&&(r(!0),l=!0);try{await n(c),e?.id&&o(e.id);let t=i({settings:s});return t?a(t,{persist:!0,scroll:!0}):null}finally{l&&r(!1)}}function At(){return wt||typeof window>`u`?!1:(window.addEventListener(We,e=>{let t=e.detail?.message;t&&kt(t)}),wt=!0,!0)}var O=null,k=null,jt=!1;function Mt(e){let t=new Date(e);return Number.isNaN(t.getTime())?`--`:`${t.getMonth()+1}月${t.getDate()}日 ${String(t.getHours()).padStart(2,`0`)}:${String(t.getMinutes()).padStart(2,`0`)}`}function Nt(e){return e.role===`user`?`我`:e.role===`system`?`消息`:`星回`}function Pt(e){let t=document.createElement(`div`);if(t.className=`favorite-card__content`,e.withdrawn)return t.classList.add(`is-withdrawn`),t.textContent=`你撤回了一条消息`,t;if(e.type===`sticker`){if(t.classList.add(`is-sticker`),/^data:image\//i.test(e.content)){let n=document.createElement(`img`);n.src=e.content,n.alt=`收藏的表情包`,t.append(n)}else{let e=document.createElement(`span`);e.textContent=`☺ 表情包`,t.append(e)}return t}return t.textContent=e.content||`（空消息）`,t}function Ft(e){let t=document.createElement(`article`);t.className=`favorite-card favorite-card--${e.role}`;let n=document.createElement(`header`);n.className=`favorite-card__header`;let r=document.createElement(`strong`);r.textContent=Nt(e);let i=document.createElement(`time`);return i.dateTime=new Date(e.timestamp).toISOString(),i.textContent=Mt(e.timestamp),n.append(r,i),t.append(n,Pt(e)),t}function It(e,t,n,r){if(e){if(e.replaceChildren(),!t.length){let t=document.createElement(`div`);t.className=`favorites-empty`;let i=document.createElement(`span`);i.textContent=`☆`,i.setAttribute(`aria-hidden`,`true`);let a=document.createElement(`strong`);a.textContent=n;let o=document.createElement(`p`);o.textContent=r,t.append(i,a,o),e.append(t);return}t.forEach(t=>e.append(Ft(t)))}}function Lt(){if(!k)return;let e=De(),t=e.filter(e=>e.favorited).sort((e,t)=>t.timestamp-e.timestamp),n=e.filter(e=>e.starFavorited).sort((e,t)=>t.timestamp-e.timestamp);k.mineCount.textContent=`${t.length} 条`,k.starCount.textContent=`${n.length} 条`,It(k.mineList,t,`还没有收藏消息`,`在聊天气泡的操作栏中点击“收藏”，消息会出现在这里。`),It(k.starList,n,`星回还没有收藏消息`,`星回回复时会按设置概率标记梦角收藏。`)}function Rt(){jt||typeof window>`u`||(window.addEventListener(ne,Lt),window.addEventListener(ee,Lt),jt=!0)}function zt(e=document.getElementById(`view-favorites`)){return e?(O=e,O.innerHTML=`
+    <div class="favorites-page">
+      <header class="favorites-header">
+        <p class="favorites-eyebrow">SAVED MESSAGES</p>
+        <h2 class="favorites-title">收藏</h2>
+        <p class="favorites-intro">从聊天记录中整理我与星回想留住的片段。</p>
+      </header>
+
+      <div class="favorites-grid">
+        <section class="favorites-panel" aria-labelledby="favoritesMineTitle">
+          <div class="favorites-panel__heading">
+            <div>
+              <span class="favorites-panel__mark" aria-hidden="true">我</span>
+              <h3 id="favoritesMineTitle">我收藏的</h3>
+            </div>
+            <span id="favoritesMineCount">0 条</span>
+          </div>
+          <div class="favorites-list" id="favoritesMineList"></div>
+        </section>
+
+        <section class="favorites-panel favorites-panel--star" aria-labelledby="favoritesStarTitle">
+          <div class="favorites-panel__heading">
+            <div>
+              <span class="favorites-panel__mark" aria-hidden="true">星</span>
+              <h3 id="favoritesStarTitle">梦角收藏的</h3>
+            </div>
+            <span id="favoritesStarCount">0 条</span>
+          </div>
+          <div class="favorites-list" id="favoritesStarList"></div>
+        </section>
+      </div>
+    </div>
+  `,k={mineCount:O.querySelector(`#favoritesMineCount`),starCount:O.querySelector(`#favoritesStarCount`),mineList:O.querySelector(`#favoritesMineList`),starList:O.querySelector(`#favoritesStarList`)},Rt(),Lt(),!0):!1}function Bt(){Lt()}var Vt=`xinghui:pat-activity`,Ht=500,Ut=16,Wt=560,A=null,j=null,Gt=!1,M=null,Kt=!1;function qt(e){return new Promise(t=>window.setTimeout(t,e))}function Jt(e){return`${e}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}function Yt(e){if(!e)return;let{avatar:t}=v();if(e.replaceChildren(),t){let n=document.createElement(`img`);n.src=t,n.alt=``,e.append(n);return}let n=document.createElement(`span`);n.textContent=`星`,e.append(n)}function Xt(){Yt(j?.avatar)}function Zt(e){let t=document.createElement(`article`);if(t.className=`pat-activity pat-activity--${e.kind}`,e.kind===`pat`){let n=document.createElement(`p`);return n.textContent=e.message?.content||`你拍了拍星回`,t.append(n),t}let n=document.createElement(`span`);n.className=`pat-activity__avatar`,n.textContent=`星`,n.setAttribute(`aria-hidden`,`true`);let r=document.createElement(`p`);return r.textContent=e.message?.content||``,t.append(n,r),t}function Qt(e){j?.feed&&(j.feed.querySelector(`.pat-empty`)?.remove(),j.feed.append(Zt(e)),j.feed.scrollTo({top:j.feed.scrollHeight,behavior:`smooth`}))}function $t(e){window.dispatchEvent(new CustomEvent(Vt,{detail:e}))}function en(e,t,n=`pat`){if(!e?.isConnected||typeof document>`u`)return;let r=e.getBoundingClientRect(),i=document.createElement(`div`);i.className=`pat-floating pat-floating--${n}`,i.textContent=t,document.body.append(i);let a=i.offsetWidth/2,o=Math.min(window.innerWidth-a-12,Math.max(a+12,r.left+r.width/2));i.style.left=`${o}px`,i.style.top=`${Math.max(12,r.top-8)}px`,window.requestAnimationFrame(()=>i.classList.add(`is-visible`)),window.setTimeout(()=>{i.classList.remove(`is-visible`),window.setTimeout(()=>i.remove(),180)},1900)}async function tn(e){if(Kt||!e)return;Kt=!0;let t=g(),n=dt({id:Jt(`pat`),role:`system`,type:`pat`,content:`你拍了拍星回`,timestamp:Date.now(),read:!0,favorited:!1,starFavorited:!1,withdrawn:!1},{persist:!0,scroll:!0});if(!n){Kt=!1;return}let r={kind:`pat`,message:n};$t(r),Qt(r),A?.contains(e)||en(e,n.content,`pat`);try{if(!D(t.patReply))return;let n=Ee().map(e=>({...e,content:String(e.content||``).trim()})).filter(e=>e.content);if(!n.length)return;await qt(Wt);let r=Ct(n);if(!r)return;let i=dt({id:Jt(`msg`),role:`star`,type:`text`,content:r.content,timestamp:Date.now(),read:!1,favorited:!1,starFavorited:D(t.starFavorite),withdrawn:!1},{persist:!0,scroll:!0});if(!i)return;let a={kind:`reply`,message:i};$t(a),Qt(a),A?.contains(e)||en(e,i.content,`reply`)}finally{Kt=!1}}function N(){M&&=(window.clearTimeout(M.timer),M.target?.classList.remove(`is-pressing`),null)}function nn(e){e.classList.remove(`is-pressing`),e.classList.add(`is-patted`),window.setTimeout(()=>e.classList.remove(`is-patted`),320)}function rn(e){let t=e.target.closest?.(`[data-pat-avatar]`);t&&e.isPrimary!==!1&&(e.pointerType!==`mouse`||e.button===0)&&(t.matches(`:disabled`)||(N(),t.classList.add(`is-pressing`),M={pointerId:e.pointerId,target:t,pointerType:e.pointerType,startX:e.clientX,startY:e.clientY,timer:window.setTimeout(()=>{let e=M;M=null,e&&(nn(e.target),tn(e.target))},Ht)}))}function an(e){M&&e.pointerId===M.pointerId&&Math.hypot(e.clientX-M.startX,e.clientY-M.startY)>Ut&&N()}function on(e){M&&e.pointerId===M.pointerId&&N()}function sn(e){M&&e.pointerId===M.pointerId&&M.pointerType===`mouse`&&N()}function cn(e){if(e.key!==`Enter`&&e.key!==` `||e.repeat)return;let t=e.target.closest?.(`[data-pat-avatar]`);t&&(e.preventDefault(),nn(t),tn(t))}function ln(){Gt||typeof document>`u`||(document.addEventListener(`pointerdown`,rn),document.addEventListener(`pointermove`,an),document.addEventListener(`pointerup`,on),document.addEventListener(`pointercancel`,on),document.addEventListener(`pointerleave`,sn),document.addEventListener(`keydown`,cn),window.addEventListener(`scroll`,N,{passive:!0,capture:!0}),window.addEventListener(`blur`,N),document.addEventListener(`contextmenu`,e=>{e.target.closest?.(`[data-pat-avatar]`)&&e.preventDefault()}),window.addEventListener(l,Xt),Gt=!0)}function un(e=document.getElementById(`view-pat`)){return e?(A=e,A.innerHTML=`
+    <div class="pat-page">
+      <header class="pat-header">
+        <p class="pat-eyebrow">PAT &amp; POKE</p>
+        <h2 class="pat-title">拍一拍</h2>
+        <p class="pat-intro">长按星回头像，轻轻拍一拍。星回是否回应，由设置中的拍一拍回复概率决定。</p>
+      </header>
+
+      <section class="pat-stage" aria-label="拍一拍互动">
+        <div class="pat-avatar-orbit" aria-hidden="true"></div>
+        <button
+          class="pat-avatar"
+          id="patAvatar"
+          type="button"
+          data-pat-avatar
+          aria-label="长按或按回车拍一拍星回"
+        ></button>
+        <p class="pat-hint"><span aria-hidden="true">○</span> 长按头像触发</p>
+      </section>
+
+      <section class="pat-feed-panel" aria-labelledby="patFeedTitle">
+        <div class="pat-feed-heading">
+          <h3 id="patFeedTitle">本次互动</h3>
+          <span>拍一拍记录</span>
+        </div>
+        <div class="pat-feed" id="patFeed" role="log" aria-live="polite">
+          <div class="pat-empty">
+            <span aria-hidden="true">✦</span>
+            <p>还没拍过，长按上面的头像试试。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  `,j={avatar:A.querySelector(`#patAvatar`),feed:A.querySelector(`#patFeed`)},ln(),Xt(),!0):!1}var dn=r,fn=n,pn=t,mn=i,P=o,F=[{id:P,name:`默认分组`},{id:s,name:`问候语字卡`}],I=null,L=null,hn=!1,gn=null,_n=null,R={groups:[],cards:[],patCards:[],currentGroupId:P,selectedCardIds:new Set};function z(e){return`${e}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}function vn(e){let t=p(e,[]);return Array.isArray(t)?t:[]}function yn(e){if(!e||typeof e!=`object`)return null;let t=String(e.id||``).trim(),n=String(e.name||``).trim();return!t||!n?null:{id:t,name:n}}function bn(e,t){if(!e||typeof e!=`object`)return null;let n=typeof e.content==`string`?e.content:``,r=String(e.groupId||``).trim(),i=t.has(r)?r:P;return{id:String(e.id||z(`card`)),groupId:i,content:n,disabled:!!e.disabled}}function xn(e){if(!e||typeof e!=`object`)return null;let t=typeof e.content==`string`?e.content.trim():``;return t?{id:String(e.id||z(`pat`)),content:t}:null}function Sn(){let e=[],t=new Set;vn(dn).forEach(n=>{let r=yn(n);r&&!t.has(r.id)&&(t.add(r.id),e.push(r))}),F.forEach(n=>{t.has(n.id)||(t.add(n.id),e.push({...n}))}),e.sort((e,t)=>{let n=F.findIndex(t=>t.id===e.id),r=F.findIndex(e=>e.id===t.id);return n===-1&&r===-1?0:n===-1?1:r===-1?-1:n-r});let n=vn(fn).map(e=>bn(e,t)).filter(Boolean),r=vn(mn).map(xn).filter(Boolean),i=p(pn,{}),a=String((i&&typeof i==`object`&&!Array.isArray(i)?i:{}).currentGroupId||``).trim();return{groups:e,cards:n,patCards:r,currentGroupId:t.has(a)?a:P}}function B(e,t){return m(e,t)}function Cn(){let e=p(pn,{}),t=e&&typeof e==`object`&&!Array.isArray(e)?e:{};return t.currentGroupId=R.currentGroupId,m(pn,t)}function V(){B(dn,R.groups),B(fn,R.cards),B(mn,R.patCards),Cn(),window.dispatchEvent(new CustomEvent(`xinghui:manage-data-changed`,{detail:{groups:R.groups,cards:R.cards,patCards:R.patCards,currentGroupId:R.currentGroupId}}))}function wn(){let e=Sn();R.groups=e.groups,R.cards=e.cards,R.patCards=e.patCards,R.currentGroupId=e.currentGroupId;let t=new Set(R.cards.map(e=>e.id));R.selectedCardIds.forEach(e=>{t.has(e)||R.selectedCardIds.delete(e)}),B(dn,R.groups),B(fn,R.cards),B(mn,R.patCards),Cn()}function H(e){return String(e).replaceAll(`&`,`&amp;`).replaceAll(`<`,`&lt;`).replaceAll(`>`,`&gt;`).replaceAll(`"`,`&quot;`).replaceAll(`'`,`&#039;`)}function U(e){return R.groups.find(t=>t.id===e)||null}function Tn(e){return R.cards.filter(t=>t.groupId===e)}function En(e=R.currentGroupId){return R.groups.map(t=>`<option value="${H(t.id)}"${t.id===e?` selected`:``}>${H(t.name)}</option>`).join(``)}function W(e,t=`success`){L?.toast&&e&&(window.clearTimeout(gn),L.toast.textContent=e,L.toast.dataset.tone=t,L.toast.hidden=!1,gn=window.setTimeout(()=>{L?.toast&&(L.toast.hidden=!0)},2600))}function G(e){L?.modalError&&(L.modalError.textContent=e,L.modalError.hidden=!e)}function Dn(){L?.modal&&(L.modal.hidden=!0,L.modal.innerHTML=``,L.modalError=null,_n=null)}function K({title:e,description:t=``,body:n=``,confirmLabel:r=`确认`,cancelLabel:i=`取消`,danger:a=!1,onConfirm:o}){if(!L?.modal)return;L.modal.hidden=!1,L.modal.innerHTML=`
+    <div class="manage-modal__backdrop" data-manage-action="close-modal"></div>
+    <section class="manage-modal__panel" role="dialog" aria-modal="true" aria-labelledby="manageModalTitle">
+      <header class="manage-modal__header">
+        <div>
+          <h3 id="manageModalTitle">${H(e)}</h3>
+          ${t?`<p>${H(t)}</p>`:``}
+        </div>
+        <button class="manage-icon-button" type="button" data-manage-action="close-modal" aria-label="关闭">×</button>
+      </header>
+      <form class="manage-modal__form" id="manageModalForm">
+        <div class="manage-modal__body">${n}</div>
+        <p class="manage-modal__error" id="manageModalError" hidden></p>
+        <footer class="manage-modal__footer">
+          <button class="manage-button manage-button--ghost" type="button" data-manage-action="close-modal">${H(i)}</button>
+          <button class="manage-button ${a?`manage-button--danger`:`manage-button--primary`}" type="submit">${H(r)}</button>
+        </footer>
+      </form>
+    </section>
+  `,L.modalError=L.modal.querySelector(`#manageModalError`),_n=typeof o==`function`?o:null;let s=L.modal.querySelector(`input:not([type="hidden"]), textarea, select`);s&&window.setTimeout(()=>s.focus(),0)}function On(){L?.groupList&&(L.groupList.innerHTML=R.groups.map(e=>{let t=e.id===R.currentGroupId,n=F.some(t=>t.id===e.id);return`
+        <div class="manage-group${t?` is-active`:``}">
+          <button
+            class="manage-group__select"
+            type="button"
+            data-manage-action="select-group"
+            data-group-id="${H(e.id)}"
+            aria-pressed="${t}"
+          >
+            <span class="manage-group__name">${H(e.name)}</span>
+            <span class="manage-group__count">${Tn(e.id).length}</span>
+          </button>
+          ${n?`<span class="manage-group__builtin">内置</span>`:`
+                <button class="manage-group__action" type="button" data-manage-action="rename-group" data-group-id="${H(e.id)}" aria-label="重命名${H(e.name)}" title="重命名">改</button>
+                <button class="manage-group__action manage-group__action--danger" type="button" data-manage-action="delete-group" data-group-id="${H(e.id)}" aria-label="删除${H(e.name)}" title="删除">删</button>
+              `}
+        </div>
+      `}).join(``))}function kn(){if(!L?.cardList||!L?.summary)return;let e=Tn(R.currentGroupId),t=e.filter(e=>R.selectedCardIds.has(e.id)).length,n=U(R.currentGroupId),r=R.cards.filter(e=>e.disabled).length;L.summary.textContent=`${R.groups.length} 个分组 · ${R.cards.length} 张字卡 · ${R.patCards.length} 张拍一拍字卡 · ${r} 张已禁用`,L.currentGroupName.textContent=n?.name||`默认分组`,L.visibleCardCount.textContent=`${e.length} 张`,L.selectAll&&(L.selectAll.checked=e.length>0&&t===e.length,L.selectAll.indeterminate=t>0&&t<e.length,L.selectAll.disabled=e.length===0),L.selectionText&&(L.selectionText.textContent=`已选 ${R.selectedCardIds.size} 张`),L.batchBar&&(L.batchBar.hidden=R.selectedCardIds.size===0),L.cardList.innerHTML=e.length?e.map(e=>{let t=R.selectedCardIds.has(e.id);return`
+            <article class="manage-card-row${e.disabled?` is-disabled`:``}${t?` is-selected`:``}">
+              <label class="manage-checkbox" title="选择字卡">
+                <input
+                  type="checkbox"
+                  data-manage-action="select-card"
+                  data-card-id="${H(e.id)}"
+                  ${t?`checked`:``}
+                  aria-label="选择字卡：${H(e.content)}"
+                />
+                <span aria-hidden="true"></span>
+              </label>
+              <div class="manage-card-row__copy">
+                <p class="manage-card-row__content">${H(e.content||`（空白内容）`)}</p>
+                <div class="manage-card-row__meta">
+                  <span>${H(n?.name||`默认分组`)}</span>
+                  <span class="manage-status ${e.disabled?`is-disabled`:`is-enabled`}">${e.disabled?`已禁用`:`启用中`}</span>
+                </div>
+              </div>
+              <div class="manage-card-row__actions">
+                <button type="button" data-manage-action="edit-card" data-card-id="${H(e.id)}">编辑</button>
+                <button type="button" data-manage-action="toggle-card" data-card-id="${H(e.id)}">${e.disabled?`启用`:`禁用`}</button>
+                <button class="is-danger" type="button" data-manage-action="delete-card" data-card-id="${H(e.id)}">删除</button>
+              </div>
+            </article>
+          `}).join(``):`
+      <div class="manage-empty">
+        <span aria-hidden="true">☆</span>
+        <strong>这个分组还没有字卡</strong>
+        <p>新增一张字卡，或从文本、JSON 文件导入。</p>
+      </div>
+    `}function An(){L?.patCardList&&(L.patCardList.innerHTML=R.patCards.length?R.patCards.map(e=>`
+            <article class="manage-pat-row">
+              <div class="manage-pat-row__mark" aria-hidden="true">拍</div>
+              <div class="manage-pat-row__copy">
+                <p>${H(e.content)}</p>
+                <small>仅用于长按星回头像时的拍一拍回复</small>
+              </div>
+              <div class="manage-card-row__actions">
+                <button type="button" data-manage-action="edit-pat-card" data-pat-card-id="${H(e.id)}">编辑</button>
+                <button class="is-danger" type="button" data-manage-action="delete-pat-card" data-pat-card-id="${H(e.id)}">删除</button>
+              </div>
+            </article>
+          `).join(``):`
+      <div class="manage-empty manage-empty--compact">
+        <span aria-hidden="true">拍</span>
+        <strong>还没有拍一拍字卡</strong>
+        <p>新增后，星回只会在拍一拍时从这里抽取回复。</p>
+      </div>
+    `,L.patCardCount&&(L.patCardCount.textContent=`${R.patCards.length} 张`))}function q(){On(),kn(),An()}function jn(){return R.cards.filter(e=>R.selectedCardIds.has(e.id))}function Mn(e,t=``){return e?e.length>30?`分组名称不能超过 30 个字符。`:R.groups.some(n=>n.id!==t&&n.name.toLocaleLowerCase()===e.toLocaleLowerCase())?`已经有同名分组了。`:``:`请输入分组名称。`}function Nn(){K({title:`新建分组`,description:`分组用于整理字卡，之后可以随时重命名。`,confirmLabel:`创建`,body:`
+      <label class="manage-field">
+        <span>分组名称</span>
+        <input id="manageGroupName" type="text" maxlength="30" autocomplete="off" placeholder="例如：日常回应" />
+      </label>
+    `,onConfirm:()=>{let e=L.modal.querySelector(`#manageGroupName`).value.trim(),t=Mn(e);if(t)return G(t),!1;let n={id:z(`group`),name:e};return R.groups.push(n),R.currentGroupId=n.id,R.selectedCardIds.clear(),V(),q(),W(`已创建分组“${e}”`),!0}})}function Pn(e){let t=U(e);t&&!F.some(t=>t.id===e)&&K({title:`重命名字卡分组`,confirmLabel:`保存`,body:`
+      <label class="manage-field">
+        <span>分组名称</span>
+        <input id="manageGroupName" type="text" maxlength="30" value="${H(t.name)}" autocomplete="off" />
+      </label>
+    `,onConfirm:()=>{let n=L.modal.querySelector(`#manageGroupName`).value.trim(),r=Mn(n,e);return r?(G(r),!1):(t.name=n,V(),q(),W(`分组名称已更新`),!0)}})}function Fn(e){let t=U(e);if(!t||F.some(t=>t.id===e))return;let n=Tn(e).length;K({title:`删除分组“${t.name}”？`,description:n>0?`分组内的 ${n} 张字卡会移入“默认分组”，不会删除。`:`该分组没有字卡，删除后无法恢复。`,confirmLabel:`删除分组`,danger:!0,onConfirm:()=>(R.cards.forEach(t=>{t.groupId===e&&(t.groupId=P)}),R.groups=R.groups.filter(t=>t.id!==e),R.currentGroupId===e&&(R.currentGroupId=P),R.selectedCardIds.clear(),V(),q(),W(n>0?`分组已删除，${n} 张字卡已移入默认分组`:`分组已删除`),!0)})}function In(e=``){let t=e?R.cards.find(t=>t.id===e):null;if(e&&!t)return;let n=t?.groupId||R.currentGroupId;K({title:t?`编辑字卡`:`新增字卡`,description:t?`修改内容、所属分组或启用状态。`:`内容会保存在当前浏览器中。`,confirmLabel:t?`保存`:`新增`,body:`
+      <label class="manage-field">
+        <span>字卡内容</span>
+        <textarea id="manageCardContent" rows="5" maxlength="1000" placeholder="输入星回可能会说的话…">${H(t?.content||``)}</textarea>
+      </label>
+      <label class="manage-field">
+        <span>所属分组</span>
+        <select id="manageCardGroup">${En(n)}</select>
+      </label>
+      <label class="manage-switch-field">
+        <input id="manageCardDisabled" type="checkbox" ${t?.disabled?`checked`:``} />
+        <span class="manage-switch-field__control" aria-hidden="true"></span>
+        <span>
+          <strong>禁用这张字卡</strong>
+          <small>禁用后保留在库中，但不会参与随机抽取。</small>
+        </span>
+      </label>
+    `,onConfirm:()=>{let e=L.modal.querySelector(`#manageCardContent`).value.trim(),n=L.modal.querySelector(`#manageCardGroup`).value,r=L.modal.querySelector(`#manageCardDisabled`).checked;if(!e)return G(`字卡内容不能为空。`),!1;let i=U(n)?.id||P;return t?(t.content=e,t.groupId=i,t.disabled=r):R.cards.push({id:z(`card`),groupId:i,content:e,disabled:r}),V(),q(),W(t?`字卡已保存`:`字卡已新增`),!0}})}function Ln(e=``){let t=e?R.patCards.find(t=>t.id===e):null;(!e||t)&&K({title:t?`编辑拍一拍字卡`:`新增拍一拍字卡`,description:`这些内容只会在星回回应拍一拍时随机抽取。`,confirmLabel:t?`保存`:`新增`,body:`
+      <label class="manage-field">
+        <span>回复内容</span>
+        <textarea id="managePatCardContent" rows="4" maxlength="500" placeholder="例如：轻轻拍了拍你。">${H(t?.content||``)}</textarea>
+      </label>
+    `,onConfirm:()=>{let e=L.modal.querySelector(`#managePatCardContent`).value.trim();return e?(t?t.content=e:R.patCards.push({id:z(`pat`),content:e}),V(),q(),W(t?`拍一拍字卡已保存`:`拍一拍字卡已新增`),!0):(G(`拍一拍回复内容不能为空。`),!1)}})}function Rn(e){R.patCards.find(t=>t.id===e)&&K({title:`删除这张拍一拍字卡？`,description:`删除后无法恢复，后续拍一拍不会再抽到这条内容。`,confirmLabel:`确认删除`,danger:!0,onConfirm:()=>(R.patCards=R.patCards.filter(t=>t.id!==e),V(),q(),W(`拍一拍字卡已删除`),!0)})}function zn(e,t){let n=new Set(e),r=0;R.cards.forEach(e=>{n.has(e.id)&&e.disabled!==t&&(e.disabled=t,r+=1)}),r&&(V(),q(),W(`${r} 张字卡已${t?`禁用`:`启用`}`))}function Bn(e){let t=new Set(e),n=R.cards.filter(e=>t.has(e.id)).length;n&&K({title:`删除 ${n} 张字卡？`,description:`删除后无法恢复，此操作不会删除分组。`,confirmLabel:`确认删除`,danger:!0,onConfirm:()=>(R.cards=R.cards.filter(e=>!t.has(e.id)),e.forEach(e=>R.selectedCardIds.delete(e)),V(),q(),W(`已删除 ${n} 张字卡`),!0)})}function Vn(){let e=R.selectedCardIds.size;e&&K({title:`移动 ${e} 张字卡`,description:`请选择移动后的目标分组。`,confirmLabel:`移动`,body:`
+      <label class="manage-field">
+        <span>目标分组</span>
+        <select id="manageMoveTarget">${En(R.currentGroupId)}</select>
+      </label>
+    `,onConfirm:()=>{let e=L.modal.querySelector(`#manageMoveTarget`).value,t=U(e);if(!t)return G(`请选择有效的目标分组。`),!1;let n=0;return R.cards.forEach(e=>{R.selectedCardIds.has(e.id)&&e.groupId!==t.id&&(e.groupId=t.id,n+=1)}),R.selectedCardIds.clear(),V(),q(),W(n?`已将 ${n} 张字卡移动到“${t.name}”`:`字卡已在该分组中`),!0}})}function Hn(){let e=new Set,t=[],n=0;R.cards.forEach(r=>{if(e.has(r.content)){n+=1;return}e.add(r.content),t.push(r)}),K({title:`全库内容去重`,description:n?`检测到 ${n} 张内容完全相同的字卡，将保留每组重复内容中最先出现的一张。`:`全库没有内容完全相同的字卡，无需处理。`,confirmLabel:n?`开始去重`:`知道了`,danger:n>0,onConfirm:()=>!n||(R.cards=t,R.selectedCardIds.clear(),V(),q(),W(`去重完成，已移除 ${n} 张重复字卡`),!0)})}function Un(){K({title:`导入 JSON 字卡`,description:`先选择目标分组，再选择包含字卡数组的 JSON 文件。`,confirmLabel:`导入`,body:`
+      <label class="manage-field">
+        <span>目标分组</span>
+        <select id="manageImportGroup">${En(R.currentGroupId)}</select>
+      </label>
+      <label class="manage-field">
+        <span>JSON 文件</span>
+        <input id="manageImportFile" type="file" accept=".json,application/json" />
+      </label>
+      <p class="manage-field__hint">支持字卡数组，或带有 cards 数组的导出文件。</p>
+    `,onConfirm:async()=>{let e=L.modal.querySelector(`#manageImportGroup`).value,t=L.modal.querySelector(`#manageImportFile`).files?.[0],n=U(e);if(!n)return G(`请选择有效的目标分组。`),!1;if(!t)return G(`请先选择 JSON 文件。`),!1;let r;try{r=JSON.parse(await t.text())}catch{return G(`文件不是有效的 JSON，请检查后重试。`),!1}let i=Array.isArray(r)?r:Array.isArray(r?.cards)?r.cards:null;if(!i)return G(`JSON 中未找到字卡数组。`),!1;let a=i.map(e=>typeof e==`string`?{content:e}:e).filter(e=>e&&typeof e.content==`string`).map(e=>({id:z(`card`),groupId:n.id,content:e.content.replace(/\r\n?/g,`
+`),disabled:!!e.disabled}));return a.length?(R.cards.push(...a),R.currentGroupId=n.id,R.selectedCardIds.clear(),V(),q(),W(`已从 JSON 导入 ${a.length} 张字卡`),!0):(G(`JSON 中没有可导入的字卡内容。`),!1)}})}function Wn(){K({title:`粘贴文本导入`,description:`每行会生成一张字卡，空行会自动跳过。`,confirmLabel:`导入`,body:`
+      <label class="manage-field">
+        <span>目标分组</span>
+        <select id="manageTextGroup">${En(R.currentGroupId)}</select>
+      </label>
+      <label class="manage-field">
+        <span>字卡文本</span>
+        <textarea id="manageTextCards" rows="8" placeholder="今天也要好好休息。&#10;记得喝水。&#10;我一直都在。"></textarea>
+      </label>
+    `,onConfirm:()=>{let e=L.modal.querySelector(`#manageTextGroup`).value,t=U(e),n=L.modal.querySelector(`#manageTextCards`).value;if(!t)return G(`请选择有效的目标分组。`),!1;let r=n.split(/\r?\n/).map(e=>e.trim()).filter(Boolean);return r.length?(R.cards.push(...r.map(e=>({id:z(`card`),groupId:t.id,content:e,disabled:!1}))),R.currentGroupId=t.id,R.selectedCardIds.clear(),V(),q(),W(`已导入 ${r.length} 张字卡`),!0):(G(`请至少输入一行字卡内容。`),!1)}})}function Gn(){let e=jn();if(!e.length){W(`请先勾选要导出的字卡`,`warning`);return}let t=new Set(e.map(e=>e.groupId)),n={version:1,exportedAt:new Date().toISOString(),groups:R.groups.filter(e=>t.has(e.id)),cards:e},r=new Blob([JSON.stringify(n,null,2)],{type:`application/json`}),i=URL.createObjectURL(r),a=document.createElement(`a`),o=new Date().toISOString().slice(0,10);a.href=i,a.download=`xinghui-cards-${o}.json`,document.body.append(a),a.click(),a.remove(),URL.revokeObjectURL(i),W(`已导出 ${e.length} 张字卡`)}function Kn(e,t){switch(e){case`close-modal`:Dn();break;case`select-group`:{let e=t.dataset.groupId;if(!U(e))return;R.currentGroupId=e,R.selectedCardIds.clear(),Cn(),q();break}case`create-group`:Nn();break;case`rename-group`:Pn(t.dataset.groupId);break;case`delete-group`:Fn(t.dataset.groupId);break;case`create-card`:In();break;case`edit-card`:In(t.dataset.cardId);break;case`toggle-card`:{let e=R.cards.find(e=>e.id===t.dataset.cardId);e&&zn([e.id],!e.disabled);break}case`delete-card`:Bn([t.dataset.cardId]);break;case`create-pat-card`:Ln();break;case`edit-pat-card`:Ln(t.dataset.patCardId);break;case`delete-pat-card`:Rn(t.dataset.patCardId);break;case`batch-disable`:zn([...R.selectedCardIds],!0);break;case`batch-enable`:zn([...R.selectedCardIds],!1);break;case`batch-delete`:Bn([...R.selectedCardIds]);break;case`batch-move`:Vn();break;case`deduplicate`:Hn();break;case`import-json`:Un();break;case`import-text`:Wn();break;case`export-selected`:Gn()}}function qn(e){let t=e.target;if(t instanceof HTMLInputElement){if(t.dataset.manageAction===`select-card`){t.checked?R.selectedCardIds.add(t.dataset.cardId):R.selectedCardIds.delete(t.dataset.cardId),kn();return}t.id===`manageSelectAll`&&(Tn(R.currentGroupId).forEach(e=>{t.checked?R.selectedCardIds.add(e.id):R.selectedCardIds.delete(e.id)}),kn())}}async function Jn(e){if(e.preventDefault(),!_n)return;let t=e.submitter||e.currentTarget.querySelector(`button[type="submit"]`);t&&(t.disabled=!0);try{await _n()!==!1&&Dn()}catch{G(`操作没有完成，请重试。`)}finally{t&&t.isConnected&&(t.disabled=!1)}}function Yn(){I&&!hn&&(I.addEventListener(`click`,e=>{let t=e.target.closest(`[data-manage-action]`);if(!t)return;let n=t.dataset.manageAction;n!==`select-card`&&Kn(n,t)}),I.addEventListener(`change`,qn),I.addEventListener(`submit`,e=>{e.target.id===`manageModalForm`&&Jn(e)}),document.addEventListener(`keydown`,e=>{e.key===`Escape`&&L?.modal&&!L.modal.hidden&&Dn()}),hn=!0)}function Xn(e=document.getElementById(`view-manage`)){return e?(I=e,I.innerHTML=`
+    <div class="manage-page">
+      <header class="manage-header">
+        <div>
+          <p class="manage-eyebrow">CARD LIBRARY</p>
+          <h2 class="manage-title">字卡管理</h2>
+          <p class="manage-summary" id="manageSummary">正在读取字卡库…</p>
+        </div>
+        <button class="manage-button manage-button--primary manage-button--compact" type="button" data-manage-action="create-card">
+          <span aria-hidden="true">＋</span> 新增字卡
+        </button>
+      </header>
+
+      <section class="manage-panel manage-panel--groups" aria-labelledby="manageGroupsTitle">
+        <div class="manage-section-heading">
+          <div>
+            <p class="manage-kicker">分组</p>
+            <h3 id="manageGroupsTitle">选择字卡分组</h3>
+          </div>
+          <button class="manage-button manage-button--ghost manage-button--compact" type="button" data-manage-action="create-group">新建分组</button>
+        </div>
+        <div class="manage-group-list" id="manageGroupList" aria-label="字卡分组"></div>
+      </section>
+
+      <section class="manage-panel manage-panel--cards" aria-labelledby="manageCardsTitle">
+        <div class="manage-section-heading manage-section-heading--cards">
+          <div>
+            <p class="manage-kicker">字卡</p>
+            <h3 id="manageCardsTitle"><span id="manageCurrentGroupName">默认分组</span> <small id="manageVisibleCardCount">0 张</small></h3>
+          </div>
+          <div class="manage-selection-status" id="manageSelectionText">已选 0 张</div>
+        </div>
+
+        <div class="manage-toolbar">
+          <label class="manage-select-all">
+            <span class="manage-checkbox">
+              <input id="manageSelectAll" type="checkbox" />
+              <span aria-hidden="true"></span>
+            </span>
+            <span>全选当前分组</span>
+          </label>
+          <div class="manage-toolbar__actions">
+            <button type="button" data-manage-action="import-json">导入 JSON</button>
+            <button type="button" data-manage-action="import-text">粘贴导入</button>
+            <button type="button" data-manage-action="deduplicate">全库去重</button>
+            <button type="button" data-manage-action="export-selected">导出勾选</button>
+          </div>
+        </div>
+
+        <div class="manage-batch-bar" id="manageBatchBar" hidden>
+          <strong>批量操作</strong>
+          <div>
+            <button type="button" data-manage-action="batch-enable">启用</button>
+            <button type="button" data-manage-action="batch-disable">禁用</button>
+            <button type="button" data-manage-action="batch-move">移动</button>
+            <button class="is-danger" type="button" data-manage-action="batch-delete">删除</button>
+          </div>
+        </div>
+
+        <div class="manage-card-list" id="manageCardList"></div>
+      </section>
+
+      <section class="manage-panel manage-panel--pat" aria-labelledby="managePatCardsTitle">
+        <div class="manage-section-heading">
+          <div>
+            <p class="manage-kicker">拍一拍</p>
+            <h3 id="managePatCardsTitle">拍一拍字卡 <small id="managePatCardCount">0 张</small></h3>
+          </div>
+          <button class="manage-button manage-button--ghost manage-button--compact" type="button" data-manage-action="create-pat-card">
+            <span aria-hidden="true">＋</span> 新增拍一拍字卡
+          </button>
+        </div>
+        <p class="manage-pat-hint">长按星回头像时，只有这里的内容会参与拍一拍回复。</p>
+        <div class="manage-pat-list" id="managePatCardList"></div>
+      </section>
+    </div>
+    <div class="manage-modal" id="manageModal" hidden></div>
+    <div class="manage-toast" id="manageToast" role="status" aria-live="polite" hidden></div>
+  `,L={summary:I.querySelector(`#manageSummary`),groupList:I.querySelector(`#manageGroupList`),currentGroupName:I.querySelector(`#manageCurrentGroupName`),visibleCardCount:I.querySelector(`#manageVisibleCardCount`),selectionText:I.querySelector(`#manageSelectionText`),selectAll:I.querySelector(`#manageSelectAll`),batchBar:I.querySelector(`#manageBatchBar`),cardList:I.querySelector(`#manageCardList`),patCardList:I.querySelector(`#managePatCardList`),patCardCount:I.querySelector(`#managePatCardCount`),modal:I.querySelector(`#manageModal`),modalError:null,toast:I.querySelector(`#manageToast`)},wn(),Yn(),q(),!0):!1}function Zn(){I&&(wn(),q())}var Qn=2097152,J=null,Y=null,$n=null,er=null,tr=!1;function nr(e,t,n){return Math.min(n,Math.max(t,e))}function rr(e,t,n){let r=Number(e);return Number.isFinite(r)?nr(r,n,100):t}function X(e,t=`default`){Y?.toast&&(window.clearTimeout($n),Y.toast.textContent=e,Y.toast.dataset.tone=t,Y.toast.hidden=!1,$n=window.setTimeout(()=>{Y?.toast&&(Y.toast.hidden=!0)},2600))}function ir(){let{avatar:e}=v(),t=Y?.avatarPreview;if(t){if(t.replaceChildren(),e){let n=document.createElement(`img`);n.src=e,n.alt=`星回头像预览`,t.append(n),t.classList.add(`has-image`)}else{let e=document.createElement(`span`);e.textContent=`星`,t.append(e),t.classList.remove(`has-image`)}}}function ar(e,t){let n=Y?.[`${e}Range`],r=Y?.[`${e}Number`],i=Y?.[`${e}Output`];n&&(n.value=String(t)),r&&(r.value=String(t)),i&&(i.textContent=`${t}%`)}function or(){if(!Y)return;let e=g();Y.delayMin.value=String(e.replyDelayMin),Y.delayMax.value=String(e.replyDelayMax),Y.typingIndicator.checked=e.typingIndicator,Y.readNoReplyEnabled.checked=e.readNoReplyEnabled,Y.readNoReplyNumber.disabled=!e.readNoReplyEnabled,Y.readNoReplyRange.disabled=!e.readNoReplyEnabled,ar(`readNoReply`,e.readNoReply),ar(`stickerReply`,e.stickerReply),ar(`patReply`,e.patReply),Y.showTimestamp.checked=e.showTimestamp,Y.fontSize.value=e.fontSize,Y.darkMode.value=e.darkMode,J.querySelectorAll(`input[name="theme"]`).forEach(t=>{t.checked=t.value===e.theme}),ir()}function sr(e=!1){let t=g(),n=Number(Y.delayMin.value),r=Number(Y.delayMax.value);n=Number.isFinite(n)?nr(n,0,600):t.replyDelayMin,r=Number.isFinite(r)?nr(r,0,600):t.replyDelayMax,n>r&&(e?r=n:n=r),_({replyDelayMin:n,replyDelayMax:r}),Y.delayMin.value=String(n),Y.delayMax.value=String(r)}function cr(e,t,n=1){let r=rr(t,g()[e]??u[e],n);_({[e]:r}),ar(e,r)}function lr(e){let t=e.target,n=t.dataset.setting;if(n===`delay-min`||n===`delay-max`){if(Y.delayMin.value===``||Y.delayMax.value===``)return;window.clearTimeout(er),er=window.setTimeout(()=>{sr(n===`delay-min`)},120);return}if(t.dataset.setting===`probability-number`){cr(t.dataset.probability,t.value);return}let r=t.closest(`[data-probability-range]`);r&&cr(r.dataset.probabilityRange,r.value)}function ur(e){let t=e.target,n=t.dataset.setting;if(n===`delay-min`||n===`delay-max`){sr(n===`delay-min`);return}if(n===`probability-number`){cr(t.dataset.probability,t.value);return}if(n===`typing-indicator`){_({typingIndicator:t.checked});return}if(n===`read-no-reply-enabled`){_({readNoReplyEnabled:t.checked}),t.disabled=!1,Y.readNoReplyNumber.disabled=!t.checked,Y.readNoReplyRange.disabled=!t.checked;return}if(n===`show-timestamp`){_({showTimestamp:t.checked});return}if(n===`font-size`){_({fontSize:t.value});return}if(n===`dark-mode`){_({darkMode:t.value});return}n===`theme`&&_({theme:t.value})}function dr(e){let[t]=e.target.files||[];if(!t)return;if(!t.type.startsWith(`image/`)){X(`请选择本地图片文件。`,`warning`),e.target.value=``;return}if(t.size>Qn){X(`头像图片不能超过 2MB。`,`warning`),e.target.value=``;return}let n=new FileReader;n.addEventListener(`load`,()=>{let e=typeof n.result==`string`?n.result:``;if(!e.startsWith(`data:image/`)){X(`图片读取失败，请重试。`,`warning`);return}if(!_e({...v(),avatar:e})){X(`头像保存失败，图片可能过大。`,`warning`);return}Y.avatarFileName.textContent=t.name,ir(),X(`头像已更新并即时生效。`)}),n.addEventListener(`error`,()=>X(`图片读取失败，请重试。`,`warning`)),n.readAsDataURL(t)}function fr(e){let t=e.target.closest(`[data-settings-action]`);if(!t)return;let n=t.dataset.settingsAction;n===`login`&&X(`登录功能已预留，本版本不连接账号服务。`),n===`register`&&X(`注册功能已预留，本版本不连接账号服务。`),n===`clear-avatar`&&(_e({...v(),avatar:``}),Y.avatarInput.value=``,Y.avatarFileName.textContent=`未选择文件`,ir(),X(`已恢复默认星回头像。`))}function pr(){J&&!tr&&(J.addEventListener(`input`,lr),J.addEventListener(`change`,e=>{if(e.target===Y.avatarInput){dr(e);return}ur(e)}),J.addEventListener(`click`,fr),tr=!0)}function mr(e=document.getElementById(`view-settings`)){return e?(J=e,J.innerHTML=`
+    <div class="settings-page">
+      <header class="settings-header">
+        <p class="settings-eyebrow">PREFERENCES</p>
+        <h2 class="settings-title">设置</h2>
+        <p class="settings-intro">调整星回的回复方式、头像与界面外观。所有数据只保存在本机浏览器。</p>
+      </header>
+
+      <section class="settings-card" aria-labelledby="settingsAccountTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">账号</p>
+            <h3 id="settingsAccountTitle">登录与注册</h3>
+          </div>
+          <span class="settings-badge">预留</span>
+        </div>
+        <p class="settings-description">按钮仅作界面预留，不会发起网络请求，也不会写入登录状态。</p>
+        <div class="settings-actions">
+          <button class="settings-button settings-button--primary" type="button" data-settings-action="login">登录</button>
+          <button class="settings-button" type="button" data-settings-action="register">注册</button>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsChatTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">聊天设置</p>
+            <h3 id="settingsChatTitle">回复节奏</h3>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>回复延迟范围</span>
+            <small>0–600 秒，默认 1–3 秒</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最短</span>
+              <input id="settingDelayMin" data-setting="delay-min" type="number" min="0" max="600" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最长</span>
+              <input id="settingDelayMax" data-setting="delay-max" type="number" min="0" max="600" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-unit">秒</span>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>正在输入</strong>
+            <small>等待回复时显示“对方正在输入…”</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingTypingIndicator" data-setting="typing-indicator" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field settings-field--probability">
+          <label class="settings-switch-row settings-switch-row--compact" for="settingReadNoReplyEnabled">
+            <span>
+              <strong>已读不回</strong>
+              <small>命中时只标记已读，不发送回复</small>
+            </span>
+            <span class="settings-switch">
+              <input id="settingReadNoReplyEnabled" data-setting="read-no-reply-enabled" type="checkbox" />
+              <span aria-hidden="true"></span>
+            </span>
+          </label>
+          <div class="settings-probability" data-probability-control="readNoReply">
+            <input id="settingReadNoReplyRange" data-probability-range="readNoReply" type="range" min="1" max="100" step="1" />
+            <label>
+              <input id="settingReadNoReplyNumber" data-setting="probability-number" data-probability="readNoReply" type="number" min="1" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingReadNoReplyOutput">15%</output>
+          </div>
+        </div>
+      </section>
+      <section class="settings-card" aria-labelledby="settingsProbabilityTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">回复概率</p>
+            <h3 id="settingsProbabilityTitle">内容偏好</h3>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回回表情包</span>
+            <small>1%–100%，默认 10%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="stickerReply">
+            <input id="settingStickerReplyRange" data-probability-range="stickerReply" type="range" min="1" max="100" step="1" />
+            <label>
+              <input id="settingStickerReplyNumber" data-setting="probability-number" data-probability="stickerReply" type="number" min="1" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingStickerReplyOutput">10%</output>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>拍一拍回复</span>
+            <small>1%–100%，默认 70%，不回概率为剩余百分比</small>
+          </div>
+          <div class="settings-probability" data-probability-control="patReply">
+            <input id="settingPatReplyRange" data-probability-range="patReply" type="range" min="1" max="100" step="1" />
+            <label>
+              <input id="settingPatReplyNumber" data-setting="probability-number" data-probability="patReply" type="number" min="1" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingPatReplyOutput">70%</output>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsAvatarTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">头像</p>
+            <h3 id="settingsAvatarTitle">星回头像</h3>
+          </div>
+        </div>
+        <div class="settings-avatar">
+          <span class="settings-avatar__preview" id="settingsAvatarPreview" aria-hidden="true"><span>星</span></span>
+          <div class="settings-avatar__copy">
+            <strong>上传本地图片</strong>
+            <small>支持常见图片格式，最大 2MB；保存为 base64 并即时生效。</small>
+            <div class="settings-avatar__actions">
+              <label class="settings-button settings-button--primary" for="settingsAvatarInput">选择图片</label>
+              <input class="settings-file-input" id="settingsAvatarInput" type="file" accept="image/*" />
+              <button class="settings-text-button" type="button" data-settings-action="clear-avatar">恢复默认</button>
+            </div>
+            <span class="settings-file-name" id="settingsAvatarFileName">未选择文件</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsAppearanceTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">外观</p>
+            <h3 id="settingsAppearanceTitle">主题与显示</h3>
+          </div>
+        </div>
+
+        <fieldset class="settings-fieldset">
+          <legend>主题</legend>
+          <div class="settings-theme-grid">
+            <label class="settings-theme-option settings-theme-option--deep-blue">
+              <input type="radio" name="theme" value="deepBlue" data-setting="theme" />
+              <span class="settings-theme-option__swatch" aria-hidden="true"></span>
+              <span><strong>深蓝</strong><small>#1E3A5F</small></span>
+            </label>
+            <label class="settings-theme-option settings-theme-option--silver">
+              <input type="radio" name="theme" value="silver" data-setting="theme" />
+              <span class="settings-theme-option__swatch" aria-hidden="true"></span>
+              <span><strong>白银</strong><small>#C0C7D0</small></span>
+            </label>
+            <label class="settings-theme-option settings-theme-option--light-blue">
+              <input type="radio" name="theme" value="lightBlue" data-setting="theme" />
+              <span class="settings-theme-option__swatch" aria-hidden="true"></span>
+              <span><strong>浅蓝</strong><small>#A8C6E5</small></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>显示时间戳</strong>
+            <small>关闭后消息下方不再显示时间</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingShowTimestamp" data-setting="show-timestamp" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingFontSize">
+            <strong>字体大小</strong>
+            <small>调整全局字号</small>
+          </label>
+          <select id="settingFontSize" data-setting="font-size">
+            <option value="small">小</option>
+            <option value="medium">中</option>
+            <option value="large">大</option>
+          </select>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingDarkMode">
+            <strong>深浅模式</strong>
+            <small>跟随系统或手动指定</small>
+          </label>
+          <select id="settingDarkMode" data-setting="dark-mode">
+            <option value="system">跟随系统</option>
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+          </select>
+        </div>
+      </section>
+    </div>
+    <div class="settings-toast" id="settingsToast" role="status" aria-live="polite" hidden></div>
+  `,Y={toast:J.querySelector(`#settingsToast`),delayMin:J.querySelector(`#settingDelayMin`),delayMax:J.querySelector(`#settingDelayMax`),typingIndicator:J.querySelector(`#settingTypingIndicator`),readNoReplyEnabled:J.querySelector(`#settingReadNoReplyEnabled`),readNoReplyRange:J.querySelector(`#settingReadNoReplyRange`),readNoReplyNumber:J.querySelector(`#settingReadNoReplyNumber`),readNoReplyOutput:J.querySelector(`#settingReadNoReplyOutput`),stickerReplyRange:J.querySelector(`#settingStickerReplyRange`),stickerReplyNumber:J.querySelector(`#settingStickerReplyNumber`),stickerReplyOutput:J.querySelector(`#settingStickerReplyOutput`),patReplyRange:J.querySelector(`#settingPatReplyRange`),patReplyNumber:J.querySelector(`#settingPatReplyNumber`),patReplyOutput:J.querySelector(`#settingPatReplyOutput`),avatarPreview:J.querySelector(`#settingsAvatarPreview`),avatarInput:J.querySelector(`#settingsAvatarInput`),avatarFileName:J.querySelector(`#settingsAvatarFileName`),showTimestamp:J.querySelector(`#settingShowTimestamp`),fontSize:J.querySelector(`#settingFontSize`),darkMode:J.querySelector(`#settingDarkMode`)},pr(),or(),!0):!1}function hr(){or()}var Z=null,Q=null,gr=null,_r=!1;function vr(e){if(!e)return`尚无记录`;let t=new Date(Number(e));return Number.isNaN(t.getTime())?`尚无记录`:new Intl.DateTimeFormat(`zh-CN`,{year:`numeric`,month:`2-digit`,day:`2-digit`,hour:`2-digit`,minute:`2-digit`}).format(t)}function yr(e=new Date){return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,`0`)}-${String(e.getDate()).padStart(2,`0`)}`}function br(e,t=`default`){Q?.toast&&(window.clearTimeout(gr),Q.toast.textContent=e,Q.toast.dataset.tone=t,Q.toast.hidden=!1,gr=window.setTimeout(()=>{Q?.toast&&(Q.toast.hidden=!0)},2800))}function xr(e){return[e.role,e.type,e.timestamp,e.content].join(`\0`)}function Sr(e,t){let n=[],r=new Map,i=new Map;return[...e,...t].forEach(e=>{let t=y(e);if(!t)return;let a=r.get(t.id);if(a){a.favorited||=t.favorited,a.starFavorited||=t.starFavorited,a.read||=t.read,a.withdrawn||=t.withdrawn;return}let o=xr(t),s=i.get(o);if(s){s.favorited||=t.favorited,s.starFavorited||=t.starFavorited,s.read||=t.read,s.withdrawn||=t.withdrawn;return}n.push(t),r.set(t.id,t),i.set(o,t)}),n}function Cr(e,t,n){let r=[],i=new Set;return[...e,...t].forEach(e=>{let t=n(e);i.has(t)||(i.add(t),r.push(e))}),r}function wr(e){let t=He(e),n=Ce(),r=Te(),i=De(),a=we(),o=Ee(),s=[...t.favorites.mine.map(e=>({...e,favorited:!0})),...t.favorites.star.map(e=>({...e,starFavorited:!0}))],c=Sr(i,[...t.chatMessages,...s]),l=Cr(n,t.cards,e=>e.content),te=Cr(r,t.stickers,e=>e.image),ne=Cr(a,t.groups,e=>`${e.id}\u0000${e.name}`),u=Cr(o,t.patCards,e=>e.content);if(Oe(l),Ae(te),Me(c),ke(ne),je(u),t.settings){let e=g();he(h({...t.settings,...e}))}if(t.character){let e=v();_e({name:e.name===d.name?t.character.name:e.name,avatar:e.avatar||t.character.avatar})}let re={cardsAdded:l.length-n.length,stickersAdded:te.length-r.length,messagesAdded:c.length-i.length,groupsAdded:ne.length-a.length,patCardsAdded:u.length-o.length,duplicateCardsRemoved:t.cards.length-Math.max(0,l.length-n.length)};return window.dispatchEvent(new CustomEvent(ee,{detail:re})),window.dispatchEvent(new CustomEvent(`xinghui:manage-data-changed`,{detail:re})),re}function Tr(){let{avatar:e}=v(),t=Q?.avatarPreview;if(t){if(t.replaceChildren(),e){let n=document.createElement(`img`);n.src=e,n.alt=`当前星回头像`,t.append(n)}else t.textContent=`星`}}function Er(){if(!Q)return;let e=ze();Q.cardCount.textContent=String(e.cards.length),Q.stickerCount.textContent=String(e.stickers.length),Q.messageCount.textContent=String(e.chatMessages.length),Q.favoriteCount.textContent=String(e.favorites.mine.length+e.favorites.star.length)}function Dr(){if(!Q)return;let e=Le(),t=e.lastBackupAt?vr(e.lastBackupAt):`从未导出`,n=e.lastBackupAt?`备份周期从最近一次导出（${t}）开始计算。`:`从未导出，备份周期从首次启动日期（${vr(e.firstLaunchAt)}）开始计算。`;Q.reminderTitle.textContent=e.isDue?`已超过 7 天，建议立即备份`:`备份状态正常`,Q.reminderText.textContent=e.isDue?`${n} 当前已间隔约 ${e.elapsedDays} 天。`:`${n} 距离下次提醒阈值还有 ${Math.max(0,7-e.elapsedDays)} 天左右。`,Q.reminderLastExport.textContent=t,Q.reminder.classList.toggle(`is-due`,e.isDue)}function Or(){Tr(),Er(),Dr()}function kr(){let e=Be(),t=JSON.stringify(e,null,2),n=new Blob([t],{type:`application/json;charset=utf-8`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`xinghui-backup-${yr()}.json`,document.body.append(i),i.click(),i.remove(),window.setTimeout(()=>URL.revokeObjectURL(r),0),Ie(Date.now()),Or(),Q.importStatus.hidden=!0,br(`全部数据已导出，备份提醒已重置。`)}function Ar(e,t=`default`){Q?.importStatus&&(Q.importStatus.textContent=e,Q.importStatus.dataset.tone=t,Q.importStatus.hidden=!1)}function jr(e){if(!e)return;if(!e.name.toLowerCase().endsWith(`.json`)&&e.type!==`application/json`){Ar(`请选择 JSON 备份文件。`,`warning`);return}let t=new FileReader;t.addEventListener(`load`,()=>{try{let e=wr(String(t.result||``));Or(),Ar(`导入完成：新增 ${e.cardsAdded+e.stickersAdded+e.messagesAdded+e.groupsAdded+e.patCardsAdded} 项；字卡已按内容完全一致合并，现有数据未被覆盖。`,`success`),br(`JSON 已合并导入。`)}catch(e){Ar(e instanceof Error?e.message:`导入失败，请检查文件内容。`,`warning`)}finally{Q?.fileInput&&(Q.fileInput.value=``)}}),t.addEventListener(`error`,()=>{Ar(`文件读取失败，请重试。`,`warning`),Q?.fileInput&&(Q.fileInput.value=``)}),t.readAsText(e,`utf-8`)}function Mr(){Z&&!_r&&(Z.addEventListener(`click`,e=>{let t=e.target.closest(`[data-backup-action]`)?.dataset.backupAction;t===`export`&&kr(),t===`choose-import`&&Q.fileInput?.click()}),Q.fileInput.addEventListener(`change`,e=>{let[t]=e.target.files||[];jr(t)}),_r=!0)}function Nr(e=document.getElementById(`view-backup`)){return e?(Z=e,Z.innerHTML=`
+    <div class="backup-page">
+      <header class="backup-header">
+        <p class="backup-eyebrow">LOCAL BACKUP</p>
+        <h2 class="backup-title">数据备份</h2>
+        <p class="backup-intro">将字卡、表情包、聊天记录、收藏和设置打包为一个 JSON 文件，文件只会在本机生成。</p>
+      </header>
+
+      <section class="backup-card backup-card--export" aria-labelledby="backupExportTitle">
+        <div class="backup-card__heading">
+          <div>
+            <p class="backup-kicker">导出全部</p>
+            <h3 id="backupExportTitle">本机数据快照</h3>
+          </div>
+          <span class="backup-avatar" id="backupAvatarPreview" aria-hidden="true">星</span>
+        </div>
+        <div class="backup-stats" aria-label="备份数据统计">
+          <span><strong id="backupCardCount">0</strong><small>字卡</small></span>
+          <span><strong id="backupStickerCount">0</strong><small>表情包</small></span>
+          <span><strong id="backupMessageCount">0</strong><small>聊天</small></span>
+          <span><strong id="backupFavoriteCount">0</strong><small>收藏</small></span>
+        </div>
+        <button class="backup-button backup-button--primary" type="button" data-backup-action="export">导出全部 JSON</button>
+        <p class="backup-hint">成功导出后，“超过 7 天”提醒会从本次导出时间重新计算。</p>
+      </section>
+
+      <section class="backup-card" aria-labelledby="backupImportTitle">
+        <div class="backup-card__heading">
+          <div>
+            <p class="backup-kicker">导入 JSON</p>
+            <h3 id="backupImportTitle">与本机数据合并</h3>
+          </div>
+        </div>
+        <p class="backup-description">导入不会清空现有数据；字卡按内容完全一致去重并保留一条，重复聊天记录也不会重复追加。</p>
+        <button class="backup-dropzone" type="button" data-backup-action="choose-import">
+          <span class="backup-dropzone__icon" aria-hidden="true">↥</span>
+          <strong>选择 JSON 备份文件</strong>
+          <small>点击选择，导入后立即合并</small>
+        </button>
+        <input class="backup-file-input" id="backupFileInput" type="file" accept=".json,application/json" />
+        <p class="backup-import-status" id="backupImportStatus" role="status" hidden></p>
+      </section>
+
+      <section class="backup-card backup-reminder" id="backupReminder" aria-labelledby="backupReminderTitle">
+        <div class="backup-reminder__icon" aria-hidden="true">◷</div>
+        <div>
+          <p class="backup-kicker">自动备份提醒</p>
+          <h3 id="backupReminderTitle">备份状态正常</h3>
+          <p id="backupReminderText">正在计算备份周期…</p>
+          <small>上次导出：<span id="backupLastExport">尚无记录</span></small>
+        </div>
+      </section>
+    </div>
+    <div class="backup-toast" id="backupToast" role="status" aria-live="polite" hidden></div>
+  `,Q={avatarPreview:Z.querySelector(`#backupAvatarPreview`),cardCount:Z.querySelector(`#backupCardCount`),stickerCount:Z.querySelector(`#backupStickerCount`),messageCount:Z.querySelector(`#backupMessageCount`),favoriteCount:Z.querySelector(`#backupFavoriteCount`),fileInput:Z.querySelector(`#backupFileInput`),importStatus:Z.querySelector(`#backupImportStatus`),reminder:Z.querySelector(`#backupReminder`),reminderTitle:Z.querySelector(`#backupReminderTitle`),reminderText:Z.querySelector(`#backupReminderText`),reminderLastExport:Z.querySelector(`#backupLastExport`),toast:Z.querySelector(`#backupToast`)},Mr(),Or(),!0):!1}function Pr(){Or(),Q?.importStatus&&(Q.importStatus.hidden=!0)}var Fr=`xinghui_daily_greeting`,Ir=`问候语字卡`,Lr=[`home`,`chat`,`manage`,`favorites`,`settings`,`backup`,`pat`],Rr=[`home`,`manage`,`settings`],zr=6,Br={home:`首页`,chat:`聊天`,manage:`管理`,favorites:`收藏`,settings:`设置`,backup:`数据备份`,pat:`拍一拍`},$=0,Vr=null;function Hr(e=g()){let t=document.documentElement,n=Vr?.matches??window.matchMedia?.(`(prefers-color-scheme: dark)`).matches??!1,r=e.darkMode===`dark`||e.darkMode===`system`&&n;t.dataset.theme=e.theme,t.dataset.fontSize=e.fontSize,t.dataset.darkMode=e.darkMode,t.dataset.dark=r?`true`:`false`;let i=document.querySelector(`meta[name="theme-color"]`);if(i){let e=getComputedStyle(t).getPropertyValue(`--color-bg`).trim();e&&i.setAttribute(`content`,e)}}function Ur(){let e=document.getElementById(`homeStarAvatar`);if(!e)return;let{avatar:t}=v();if(e.replaceChildren(),t){let n=document.createElement(`img`);n.src=t,n.alt=`星回头像`,e.append(n)}else{let t=document.createElement(`span`);t.textContent=`星`,e.append(t)}}function Wr(){let e=document.getElementById(`homeBackupReminder`);if(!e)return;let t=Le();if(e.hidden=!t.isDue,!t.isDue)return;let n=e.querySelector(`[data-backup-reminder-text]`);n&&(n.textContent=t.lastBackupAt?`距离上次导出已超过 7 天，建议现在备份全部数据。`:`首次使用已超过 7 天且尚未导出，建议现在备份全部数据。`)}function Gr(){let e=window.location.hash.replace(/^#\/?/,``).trim();return Lr.includes(e)?e:`home`}function Kr(){let e=document.getElementById(`homeEntryGrid`),t=document.getElementById(`homePagination`),n=document.getElementById(`homePrevPage`),r=document.getElementById(`homeNextPage`),i=document.getElementById(`homePageStatus`);if(!e||!t||!n||!r||!i)return;let a=Array.from(e.querySelectorAll(`.entry-card`)),o=Math.max(1,Math.ceil(a.length/zr));$=Math.min(Math.max($,0),o-1);let s=$*zr,c=s+zr;a.forEach((e,t)=>{e.hidden=t<s||t>=c}),t.hidden=o<=1,n.disabled=$===0,r.disabled=$===o-1,i.textContent=`${$+1} / ${o}`,e.dataset.page=String($+1),e.setAttribute(`aria-label`,`首页功能板块，第 ${$+1} 页，共 ${o} 页`)}function qr(){let e=Gr();document.querySelectorAll(`.view`).forEach(t=>{t.classList.toggle(`is-active`,t.dataset.view===e)}),document.body.dataset.view=e;let t=document.getElementById(`app`);t&&(t.dataset.view=e);let n=Rr.includes(e),r=document.getElementById(`bottomNav`),i=document.getElementById(`backButton`);r&&r.classList.toggle(`is-visible`,n),i&&i.classList.toggle(`is-visible`,!n),document.querySelectorAll(`.nav-item`).forEach(t=>{let n=t.dataset.route===e;t.classList.toggle(`is-active`,n),n?t.setAttribute(`aria-current`,`page`):t.removeAttribute(`aria-current`)}),document.title=`${Br[e]||`星回`} · 星回`,e===`home`&&(Qr(),Ur(),Wr()),e===`chat`&&bt(),e===`favorites`&&Bt(),e===`manage`&&Zn(),e===`settings`&&hr(),e===`backup`&&Pr(),window.scrollTo({top:0,behavior:`auto`})}function Jr(e,t){return p(e,t)}function Yr(e=new Date){return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,`0`)}-${String(e.getDate()).padStart(2,`0`)}`}function Xr(){let e=Jr(r,[]),t=Jr(n,[]),i=new Set([s]);return Array.isArray(e)&&e.forEach(e=>{e?.name===Ir&&e.id&&i.add(String(e.id))}),Array.isArray(t)?t.filter(e=>e&&typeof e==`object`&&!e.disabled).filter(e=>i.has(String(e.groupId||``))).map(e=>({...e,content:typeof e.content==`string`?e.content.trim():``})).filter(e=>e.content):[]}function Zr(e=new Date){let t=document.getElementById(`greeting`);if(!t)return;let n=Yr(e),r=Xr();if(!r.length){fe(Fr),t.textContent=``,t.hidden=!0;return}let i=Jr(Fr,null),a=i?.date===n?r.find(e=>String(e.id)===String(i.cardId)):null;if(a){t.textContent=typeof i.content==`string`?i.content:a.content,t.hidden=!1;return}if(i?.date===n){t.textContent=``,t.hidden=!0;return}let o=Ct(r);if(!o){t.textContent=``,t.hidden=!0;return}m(Fr,{date:n,cardId:String(o.id||``),content:o.content}),t.textContent=o.content,t.hidden=!1}function Qr(){let e=document.getElementById(`clockTime`),t=document.getElementById(`clockDate`);if(!e||!t)return;let n=new Date,r=String(n.getHours()).padStart(2,`0`),i=String(n.getMinutes()).padStart(2,`0`),a=`${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日 ${[`星期日`,`星期一`,`星期二`,`星期三`,`星期四`,`星期五`,`星期六`][n.getDay()]}`;e.textContent=`${r}:${i}`,t.textContent=a,Zr(n)}document.getElementById(`backButton`)?.addEventListener(`click`,()=>{window.location.hash=`#/home`}),document.getElementById(`homePrevPage`)?.addEventListener(`click`,()=>{$!==0&&(--$,Kr())}),document.getElementById(`homeNextPage`)?.addEventListener(`click`,()=>{let e=document.getElementById(`homeEntryGrid`),t=Math.max(1,Math.ceil((e?.querySelectorAll(`.entry-card`).length||0)/zr));$>=t-1||($+=1,Kr())}),window.addEventListener(`hashchange`,qr),window.addEventListener(`xinghui:manage-data-changed`,()=>Zr()),window.addEventListener(c,e=>Hr(e.detail||g())),window.addEventListener(l,()=>Ur()),window.addEventListener(te,()=>Wr()),window.addEventListener(ee,()=>{Hr(g()),Zr(),Ur(),Wr()}),Vr=window.matchMedia?.(`(prefers-color-scheme: dark)`)||null,Re(),Hr(),Vr?.addEventListener?.(`change`,()=>{g().darkMode===`system`&&Hr()}),window.location.hash||window.location.replace(`#/home`),Kr(),yt(),At(),Xn(),zt(),un(),mr(),Nr(),Ur(),Wr(),qr(),setInterval(Qr,1e3);
+</script>
+    <style>
+:root{--color-primary:#1e3a5f;--color-primary-deep:#16314e;--color-primary-soft:#2e5a8f;--color-white:#fff;--color-silver:#c6d0db;--color-silver-soft:#e8eef5;--space-1:8px;--space-2:16px;--space-3:24px;--space-4:32px;--space-6:48px;--space-block-sm:24px;--space-block-md:32px;--space-block-lg:48px;--radius-bubble:18px;--radius-button:12px;--radius-card:22px;--radius-pill:999px;--font-title:system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--font-round:system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;--font-body:system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;--content-max:720px}:root,[data-theme=deepBlue]{--color-primary:#1e3a5f;--color-primary-deep:#16314e;--color-primary-soft:#2e5a8f;--color-accent:#c6d0db;--color-silver:#c6d0db;--color-accent-strong:#2e5a8f;--color-canvas:#d9eaf7;--color-bg:#eaf4fc;--color-bg-soft:#dfeefa;--color-surface:#fff;--color-surface-2:#f4f9fd;--color-border:#d9e8f5;--color-border-soft:#e7f1f9;--color-text:#1e3a5f;--color-text-muted:#6e89a3;--color-text-faint:#8fa7bc;--color-button-text:#fff;--color-app-top:#f7fbfe;--color-app-mid:#eaf4fc;--color-app-bottom:#e0eefa;--nav-bg:#ffffffe0}[data-theme=silver]{--color-primary:#2c3e50;--color-primary-deep:#1f2d3a;--color-primary-soft:#52677a;--color-accent:#c0c7d0;--color-silver:#c0c7d0;--color-accent-strong:#66717d;--color-canvas:#f5f6f8;--color-bg:#f5f6f8;--color-bg-soft:#eceef1;--color-surface:#fff;--color-surface-2:#f9fafb;--color-border:#dde1e6;--color-border-soft:#e9ebef;--color-text:#2c3e50;--color-text-muted:#6f7b87;--color-text-faint:#929da8;--color-button-text:#fff;--color-app-top:#fafbfc;--color-app-mid:#f5f6f8;--color-app-bottom:#eef0f3;--nav-bg:#ffffffe6}[data-theme=lightBlue]{--color-primary:#1e3a5f;--color-primary-deep:#16314e;--color-primary-soft:#4779aa;--color-accent:#a8c6e5;--color-silver:#a8c6e5;--color-accent-strong:#4779aa;--color-canvas:#eaf2fa;--color-bg:#eaf2fa;--color-bg-soft:#dfecf8;--color-surface:#fff;--color-surface-2:#f5f9fd;--color-border:#d3e3f2;--color-border-soft:#e3eef8;--color-text:#1e3a5f;--color-text-muted:#6885a1;--color-text-faint:#8ea6bc;--color-button-text:#fff;--color-app-top:#f7fbfe;--color-app-mid:#eaf2fa;--color-app-bottom:#dfecf8;--nav-bg:#ffffffe0}:root[data-dark=true]{--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark}[data-theme=deepBlue][data-dark=true]{--color-primary:#8cb7e3;--color-primary-deep:#5e8ec0;--color-primary-soft:#a7c9ea;--color-accent:#5e7185;--color-accent-strong:#9dc4e8;--color-canvas:#0e1d2e;--color-bg:#13283f;--color-bg-soft:#1b3551;--color-surface:#1a314b;--color-surface-2:#203a57;--color-border:#31506e;--color-border-soft:#27445f;--color-text:#e8f0f7;--color-text-muted:#a1b9cf;--color-text-faint:#7f9ab3;--color-button-text:#101e2e;--color-app-top:#152c45;--color-app-mid:#13283f;--color-app-bottom:#102337;--nav-bg:#193048e6}[data-theme=silver][data-dark=true]{--color-primary:#d7dce2;--color-primary-deep:#b9c0c8;--color-primary-soft:#e6e9ed;--color-accent:#6f7781;--color-accent-strong:#c0c7d0;--color-canvas:#171a1f;--color-bg:#1f242b;--color-bg-soft:#292f37;--color-surface:#272d35;--color-surface-2:#303740;--color-border:#444c57;--color-border-soft:#373e48;--color-text:#eceff3;--color-text-muted:#aeb6c0;--color-text-faint:#89929e;--color-button-text:#171a1f;--color-app-top:#242a32;--color-app-mid:#1f242b;--color-app-bottom:#1a1e24;--nav-bg:#272d35eb}[data-theme=lightBlue][data-dark=true]{--color-primary:#91bde8;--color-primary-deep:#68a0d3;--color-primary-soft:#b1d2f0;--color-accent:#547899;--color-accent-strong:#a8c6e5;--color-canvas:#101e2e;--color-bg:#152a40;--color-bg-soft:#1d3852;--color-surface:#1c354e;--color-surface-2:#24415d;--color-border:#345775;--color-border-soft:#294a66;--color-text:#eaf2fa;--color-text-muted:#a7c0d7;--color-text-faint:#819eb8;--color-button-text:#102034;--color-app-top:#19334d;--color-app-mid:#152a40;--color-app-bottom:#12263a;--nav-bg:#1c354eeb}*,:before,:after{box-sizing:border-box;margin:0;padding:0}html{-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;max-width:100%;font-size:16px;overflow-x:clip}html[data-font-size=small]{font-size:14px}html[data-font-size=large]{font-size:18px}body{font-family:var(--font-body);color:var(--color-text);background-color:var(--color-canvas);background-image:radial-gradient(circle at 18% 14%,#ffffffb8,#0000 26%),radial-gradient(circle at 82% 8%,#ffffff80,#0000 24%),radial-gradient(circle at 50% 100%,#a8c6e557,#0000 46%);background-attachment:fixed;max-width:100%;min-height:100dvh;font-size:16px;line-height:1.6;overflow-x:clip}h1,h2,h3,h4{font-family:var(--font-title);letter-spacing:-.01em;font-weight:600;line-height:1.25}a{color:inherit;text-decoration:none}button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;background:0 0;border:none}input,textarea,select{touch-action:manipulation}@media (pointer:coarse){a[href],button,[role=button]{min-height:44px}input,textarea,select{font-size:max(16px,1em)}}img{max-width:100%;display:block}[hidden]{display:none!important}.app{width:100%;max-width:calc(var(--content-max) + 48px);min-height:100dvh;padding:6px calc(var(--space-2) + env(safe-area-inset-right,0px)) calc(96px + env(safe-area-inset-bottom,0px)) calc(var(--space-2) + env(safe-area-inset-left,0px));background:linear-gradient(180deg, var(--color-app-top) 0%, var(--color-app-mid) 45%, var(--color-app-bottom) 100%);flex-direction:column;margin-inline:auto;display:flex;position:relative;overflow-x:clip}.app:before{content:"";top:calc(8px + env(safe-area-inset-top,0px));z-index:60;border-radius:var(--radius-pill);background:#12263d;width:108px;height:22px;position:absolute;left:50%;transform:translate(-50%);box-shadow:inset 0 1px 2px #00000073}.status-bar{z-index:50;width:100%;max-width:var(--content-max);min-height:calc(44px + env(safe-area-inset-top,0px));height:calc(44px + env(safe-area-inset-top,0px));padding:calc(7px + env(safe-area-inset-top,0px)) 10px 3px;color:var(--color-text);pointer-events:none;justify-content:space-between;align-items:center;margin-inline:auto;display:flex;position:relative}.status-bar__brand{font-family:var(--font-round);letter-spacing:.02em;font-size:.86rem;font-weight:700}.status-bar__icons{align-items:center;gap:6px;display:inline-flex}.status-bar__icons svg{width:15px;height:15px;display:block}.views{z-index:1;width:100%;max-width:var(--content-max);flex:1 0 auto;min-width:0;margin-inline:auto;position:relative}.view{min-width:0;padding-top:var(--space-2);display:none}.view.is-active{display:block}.view--back{padding-top:132px}.view-title{margin-bottom:var(--space-2);font-size:1.4rem}.view-placeholder{color:var(--color-text-muted)}.hero{text-align:center;padding:40px 0 28px}.clock-time{font-family:var(--font-round);letter-spacing:.01em;font-variant-numeric:tabular-nums;max-width:100%;color:var(--color-primary);font-size:clamp(2.4rem,12.5vw,3.6rem);font-weight:700;line-height:1}.clock-date{margin-top:var(--space-2);color:var(--color-text-muted);overflow-wrap:anywhere;font-size:clamp(.88rem,3.8vw,1rem);line-height:1.5}.greeting{max-width:100%;margin-top:var(--space-3);border-radius:var(--radius-pill);color:var(--color-primary);font-family:var(--font-round);overflow-wrap:anywhere;background:#ffffffad;border:1px solid #ffffffc7;justify-content:center;align-items:center;padding:8px 16px;font-size:1rem;font-weight:600;line-height:1.4;display:inline-flex}.home-star-avatar{width:64px;height:64px;margin:var(--space-3) auto 10px;border:1px solid color-mix(in srgb, var(--color-accent) 72%, transparent);background:color-mix(in srgb, var(--color-surface) 78%, transparent);color:var(--color-primary);font-family:var(--font-round);border-radius:50%;place-items:center;font-size:1.2rem;font-weight:700;display:grid;overflow:hidden;box-shadow:0 10px 26px #1e3a5f1a}.home-star-avatar img{object-fit:cover;width:100%;height:100%}.home-backup-reminder{margin:0 0 var(--space-block-sm);border:1px solid color-mix(in srgb, var(--color-accent) 72%, #e7b58b);background:color-mix(in srgb, var(--color-surface) 78%, #fff2e4);color:var(--color-text);border-radius:15px;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 13px;display:grid;box-shadow:0 8px 22px #593f2612}.home-backup-reminder__icon{background:color-mix(in srgb, #e7b58b 38%, var(--color-surface));color:#8b542c;border-radius:12px;place-items:center;width:38px;height:38px;font-size:1.1rem;display:grid}.home-backup-reminder>span:nth-child(2){flex-direction:column;gap:2px;min-width:0;display:flex}.home-backup-reminder strong{font-size:.78rem}.home-backup-reminder small{color:var(--color-text-muted);font-size:.66rem;line-height:1.45}.home-backup-reminder__arrow{color:var(--color-text-faint);font-size:.9rem}.home-board{width:100%;margin:var(--space-block-md) 0 0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:22px;padding:12px;box-shadow:0 8px 24px #29435e0d}.home-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;display:grid}.home-pagination{justify-content:center;align-items:center;gap:12px;margin-top:14px;display:flex}.home-pagination__button{min-width:64px;min-height:44px;color:var(--color-primary);background:#fff;border:1px solid #dce8f1;border-radius:12px;justify-content:center;align-items:center;padding:0 14px;font-size:.82rem;font-weight:600;transition:background .18s,border-color .18s,opacity .18s;display:inline-flex;box-shadow:0 4px 12px #29435e0a}.home-pagination__button:hover:not(:disabled){background:#f7fbfe;border-color:#c9dff2}.home-pagination__button:disabled{opacity:.42;cursor:not-allowed}.home-pagination__status{min-width:42px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;text-align:center;font-size:.82rem}@media (width<=360px){.home-board{padding:9px}.home-grid{gap:8px}.home-pagination{gap:10px;margin-top:12px}.home-pagination__button{min-width:56px;padding-inline:10px}}@media (width>=768px){.app{border:1px solid #ffffffc7;border-radius:30px;min-height:calc(100dvh - 36px);margin:18px auto;padding-top:6px;box-shadow:0 34px 80px #17314e38,0 10px 28px #17314e1a,inset 0 0 0 1px #ffffffb8}.hero{padding:var(--space-6) 0 var(--space-4)}.home-board{padding:14px}.home-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}}.btn{justify-content:center;align-items:center;gap:var(--space-1);border-radius:var(--radius-button);background:var(--color-primary);color:var(--color-white);padding:10px 18px;transition:background .18s,transform .18s;display:inline-flex}.btn:hover{background:var(--color-primary-soft)}.back-button{top:calc(56px + env(safe-area-inset-top,0px));z-index:40;border-radius:var(--radius-pill);-webkit-backdrop-filter:blur(10px);min-width:44px;min-height:44px;color:var(--color-text);touch-action:manipulation;-webkit-tap-highlight-color:transparent;background:#ffffffdb;border:1px solid #1e3a5f14;align-items:center;gap:6px;padding:8px 13px;display:none;position:fixed;left:max(16px,50% - 344px);box-shadow:0 6px 16px #1e3a5f1a}.back-button.is-visible{display:inline-flex}.back-arrow{font-size:1.1em;line-height:1}.home-page .entry-card{border-radius:var(--radius-card);background:var(--color-surface);touch-action:manipulation;-webkit-tap-highlight-color:transparent;border:1px solid #1e3a5f14;flex-direction:column;align-items:center;gap:12px;min-width:0;min-height:118px;padding:18px 10px;transition:transform .18s,box-shadow .18s,border-color .18s;display:flex;box-shadow:0 10px 24px #1e3a5f12}.home-page .entry-card:hover{background:var(--color-surface);border-color:#c9dff2;transform:translateY(-4px);box-shadow:0 16px 34px #1e3a5f24}.home-page .entry-card:active{transform:scale(.985)}.home-page .entry-card:focus-visible{outline-offset:2px;outline:2px solid #1e3a5f8c}.home-page .entry-icon{background:var(--color-bg-soft);width:50px;height:50px;color:var(--color-primary);border-radius:17px;flex:none;place-items:center;transition:transform .18s,background .18s;display:grid}.home-page .entry-card:hover .entry-icon{background:#e3f0fb;transform:scale(1.04)}.home-page .entry-icon svg{width:24px;height:24px;display:block}.home-page .entry-label{min-width:0;color:var(--color-text);text-align:center;overflow-wrap:anywhere;font-size:.85rem;font-weight:600;line-height:1.5}.bubble{border-radius:var(--radius-bubble);max-width:76%;padding:12px 16px;line-height:1.5}.bubble--user{background:var(--color-primary);color:var(--color-white);border-bottom-right-radius:5px;margin-left:auto}.bubble--star{background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-bottom-left-radius:5px;margin-right:auto}.chat-placeholder{gap:var(--space-2);flex-direction:column;display:flex}.bottom-nav{bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;border-radius:var(--radius-pill);background:var(--nav-bg);-webkit-backdrop-filter:blur(12px);border:1px solid #1e3a5f14;grid-template-columns:repeat(3,1fr);gap:4px;width:min(100% - 32px,360px);padding:8px;display:none;position:fixed;left:50%;transform:translate(-50%);box-shadow:0 12px 30px #1e3a5f29}.bottom-nav.is-visible{display:grid}.nav-item{border-radius:var(--radius-pill);min-height:48px;color:var(--color-text-faint);flex-direction:column;align-items:center;gap:3px;padding:7px 8px;transition:color .16s,background .16s;display:flex}.nav-item.is-active{color:var(--color-primary);background:#e3f0fb}.nav-icon{justify-content:center;align-items:center;width:22px;height:22px;display:inline-flex}.nav-icon svg{width:100%;height:100%;display:block}.nav-label{font-size:.72rem;font-weight:600}.footer{padding-top:var(--space-3);border-top:1px solid var(--color-border);text-align:center;color:var(--color-text-faint);margin-top:auto;font-size:.78rem;line-height:1.7}.footer-disclaimer{max-width:560px;margin-inline:auto}.footer-hint{margin-top:var(--space-1);color:var(--color-text-muted)}@media (width<=767px){.app{width:100%;min-height:100dvh;box-shadow:none;border-width:0;border-radius:0;margin:0}.app:before{width:96px;height:20px}.back-button{top:calc(56px + env(safe-area-inset-top,0px));left:16px}.bottom-nav{bottom:calc(10px + env(safe-area-inset-bottom,0px));width:min(100% - 28px,360px)}}@media (width>=768px){.back-button{top:82px;left:max(16px,50% - 344px)}}@media (hover:none){.home-page .entry-card:hover,.home-page .entry-card:hover .entry-icon{transform:none}}body[data-view=chat]{overscroll-behavior:none;overflow:hidden}body[data-view=chat] .footer{display:none}body[data-view=chat] .back-button{min-width:44px;min-height:44px;box-shadow:none;-webkit-backdrop-filter:none;background:0 0;border:0;border-radius:0;align-items:flex-start;gap:3px;padding:0 4px;font-size:.75rem;line-height:1.2;top:76px;transform:translateY(19px)}body[data-view=chat] .back-arrow{font-size:1em;line-height:1}.chat-view.is-active{top:112px;bottom:calc(20px + env(safe-area-inset-bottom,0px) + var(--keyboard-inset,0px));z-index:10;flex-direction:column;width:min(100% - 32px,680px);min-height:0;padding:0 0 64px;display:flex;position:fixed;left:50%;transform:translate(-50%)}.chat-panel{flex-direction:column;flex:auto;min-height:0;display:flex}.chat-profile{border-bottom:1px solid #1e3a5f0b;flex:none;align-items:center;gap:12px;min-height:68px;padding:4px 8px;display:flex}.chat-profile__avatar[data-pat-avatar],.home-star-avatar[data-pat-avatar]{cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.chat-profile__avatar[data-pat-avatar]:focus-visible,.home-star-avatar[data-pat-avatar]:focus-visible{outline-offset:3px;outline:3px solid #2e5a8f47}.chat-profile__avatar{width:54px;height:54px;color:var(--color-primary);font-family:var(--font-round);background:#fffc;border:1px solid #1e3a5f3d;border-radius:50%;flex:none;place-items:center;font-size:1.15rem;font-weight:700;display:grid;overflow:hidden}.chat-profile__avatar img,.chat-message__avatar img{object-fit:cover;width:100%;height:100%;display:block}.chat-profile__copy{flex-direction:column;flex:auto;gap:1px;min-width:0;display:flex}.chat-profile__title{align-items:center;gap:6px;min-width:0;display:flex}.chat-profile__copy strong{font-family:var(--font-title);font-size:.96rem;line-height:1.25}.chat-profile__copy small{color:var(--color-text-muted);font-size:.72rem;line-height:1.3}.chat-profile__status{color:var(--color-text-faint);white-space:nowrap;align-items:center;gap:4px;font-size:.68rem;font-weight:500;display:inline-flex}.chat-profile__status:before{content:"";background:#8fb8d8;border-radius:50%;width:5px;height:5px}.chat-message-list{overscroll-behavior:contain;scrollbar-color:#1e3a5f2e transparent;scrollbar-width:thin;flex-direction:column;flex:auto;min-height:0;padding:0 2px 18px;scroll-padding-bottom:12px;display:flex;overflow:clip auto}.chat-message-list::-webkit-scrollbar{width:5px}.chat-message-list::-webkit-scrollbar-thumb{border-radius:var(--radius-pill);background:#1e3a5f29}.chat-message{border-radius:var(--radius-bubble);cursor:pointer;outline:none;align-items:flex-start;gap:8px;margin-top:16px;padding:0 2px;display:flex;position:relative}.chat-message:first-child{margin-top:12px}.chat-message:focus-visible{box-shadow:0 0 0 2px #2e5a8f52}.chat-message--system{cursor:default;justify-content:center}.chat-message--system .chat-message__content{align-items:center;max-width:100%;padding-top:0}.chat-message--system .message-bubble{border-radius:var(--radius-pill);box-shadow:none;color:var(--color-text-muted);background:#1e3a5f0f;border:0;padding:5px 10px;font-size:.66rem}.chat-message--user{flex-direction:row-reverse}.chat-message__avatar{border:1px solid #1e3a5f2e;border-radius:50%;flex:none;place-items:center;width:42px;height:42px;font-size:.76rem;font-weight:700;display:grid;overflow:hidden}.chat-message__avatar--star{color:var(--color-primary);background:#fffc}.chat-message__avatar--user{color:var(--color-primary);background:#dcebf8c7}.chat-message__content{flex-direction:column;min-width:0;max-width:68%;padding-top:18px;display:flex}.chat-message--star .chat-message__content{align-items:flex-start}.chat-message--user .chat-message__content{align-items:flex-end}.chat-message .message-bubble{overflow-wrap:anywhere;border:1px solid #1e3a5f29;border-radius:11px;max-width:100%;padding:8px 11px;font-size:.875rem;line-height:1.45;box-shadow:0 1px 2px #1e3a5f09}.chat-message--user .message-bubble{color:var(--color-primary);background:#ffffffdb;border-color:#1e3a5f3d}.chat-message--star .message-bubble{color:var(--color-text);background:#ffffffb8;border-color:#1e3a5f24}.message-bubble--withdrawn{border-style:dashed;font-style:italic;color:var(--color-text-faint)!important;background:#f6f9fbd6!important}.message-bubble--sticker{text-align:center;border-style:dashed;align-content:center;place-items:center;gap:2px;width:116px;min-height:116px;padding:10px;display:grid}.chat-message--user .message-bubble--sticker{background:var(--color-primary-soft)}.message-sticker__image{object-fit:contain;border-radius:9px;width:100%;max-height:156px}.message-sticker__icon{font-size:2rem;line-height:1}.message-sticker__label{font-size:.76rem;font-weight:600}.message-bubble--sticker small{opacity:.62;letter-spacing:.12em;font-size:.58rem}.chat-message__meta{min-height:17px;color:var(--color-text-faint);font-variant-numeric:tabular-nums;align-items:center;gap:6px;margin-top:5px;padding:0 3px;font-size:.68rem;line-height:1.2;display:flex}.chat-message__read{color:var(--color-primary-soft);font-weight:600}.chat-message__actions{z-index:4;opacity:0;visibility:hidden;pointer-events:none;background:#fffffff0;border:1px solid #1e3a5f17;border-radius:10px;align-items:center;padding:3px;transition:opacity .16s,transform .16s,visibility .16s;display:flex;position:absolute;top:-36px;transform:translateY(4px);box-shadow:0 8px 20px #1e3a5f1c}.chat-message--star .chat-message__actions{left:50px}.chat-message--user .chat-message__actions{right:50px}.chat-message.is-actions-open .chat-message__actions{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}.chat-message__action{min-width:44px;min-height:44px;color:var(--color-text-muted);white-space:nowrap;border-radius:7px;padding:4px 8px;font-size:.7rem;line-height:1.4}.chat-message__action:hover:not(:disabled),.chat-message__action:focus-visible{background:var(--color-bg-soft);color:var(--color-primary)}.chat-message__action:disabled{color:#aebdca;cursor:not-allowed}.chat-empty{min-height:0;color:var(--color-text-muted);text-align:left;flex-direction:column;flex:none;justify-content:flex-start;align-items:flex-start;padding:14px 8px 0;display:flex}.chat-empty__icon{color:#6f9bc2;margin-bottom:8px;font-size:1.35rem}.chat-empty p{font-size:.86rem;font-weight:600}.chat-empty small{color:var(--color-text-faint);margin-top:3px;font-size:.72rem}.chat-composer{z-index:46;-webkit-backdrop-filter:blur(10px);background:#ffffffdb;border:1px solid #1e3a5f29;border-radius:22px;grid-template-columns:44px 44px minmax(0,1fr) auto;align-items:center;gap:6px;width:100%;padding:6px 7px;display:grid;position:absolute;bottom:0;left:0;right:0;box-shadow:0 4px 14px #1e3a5f14}.chat-composer__tool{background:var(--color-bg-soft);width:44px;height:44px;color:var(--color-primary);border-radius:13px;place-items:center;transition:background .16s,transform .16s;display:grid}.chat-composer__tool:hover{background:#d7e9f8;transform:translateY(-1px)}.chat-composer__tool svg{width:20px;height:20px}.chat-composer__input{width:100%;min-width:0;height:44px;color:var(--color-text);font:inherit;background:0 0;border:none;outline:none;padding:0 4px;font-size:.86rem}.chat-composer__input::placeholder{color:var(--color-text-faint)}.chat-composer__send{background:var(--color-primary);min-height:44px;color:var(--color-white);border-radius:13px;padding:0 14px;font-size:.8rem;font-weight:600;transition:background .16s,transform .16s}.chat-composer__send:hover{background:var(--color-primary-soft);transform:translateY(-1px)}@media (width<=767px){body[data-view=chat] .back-button{top:calc(54px + env(safe-area-inset-top,0px))}.chat-view.is-active{top:calc(90px + env(safe-area-inset-top,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px) + var(--keyboard-inset,0px));width:calc(100% - 24px);padding-bottom:62px}.chat-composer{width:calc(100% - 24px);margin-inline:auto}}@media (width>=768px){.chat-view.is-active{top:112px;bottom:calc(20px + env(safe-area-inset-bottom,0px) + var(--keyboard-inset,0px))}}@media (width<=360px){.chat-composer{grid-template-columns:44px 44px minmax(0,1fr) auto;gap:4px;padding-inline:4px}.chat-composer__send{padding-inline:10px}.chat-message__action{padding-inline:7px}}@media (height<=620px){.chat-message{margin-top:14px}}.chat-profile__status.is-typing{color:var(--color-primary)}.chat-profile__status.is-typing:before{background:#4f8fc4;box-shadow:0 0 0 3px #4f8fc41f}.favorites-page{flex-direction:column;gap:16px;padding-bottom:20px;display:flex}.favorites-header{padding:4px 2px 0}.favorites-eyebrow{color:var(--color-primary-soft);font-family:var(--font-title);letter-spacing:.14em;font-size:.62rem;font-weight:700}.favorites-title{color:var(--color-primary);margin-top:2px;font-size:1.5rem}.favorites-intro{color:var(--color-text-muted);margin-top:5px;font-size:.72rem;line-height:1.5}.favorites-grid{gap:13px;display:grid}.favorites-panel{background:#ffffffc7;border:1px solid #1e3a5f17;border-radius:18px;padding:14px;box-shadow:0 8px 22px #29435e0b}.favorites-panel--star{background:linear-gradient(145deg,#eaf5fdd1,#fffc),#ffffffc7}.favorites-panel__heading{border-bottom:1px solid #1e3a5f12;justify-content:space-between;align-items:center;gap:10px;padding-bottom:10px;display:flex}.favorites-panel__heading>div{align-items:center;gap:8px;min-width:0;display:flex}.favorites-panel__mark{width:28px;height:28px;color:var(--color-primary);background:#e6f2fb;border-radius:10px;place-items:center;font-size:.66rem;font-weight:700;display:grid}.favorites-panel__heading h3{font-size:.9rem}.favorites-panel__heading>span{color:var(--color-text-faint);white-space:nowrap;font-size:.66rem}.favorites-list{flex-direction:column;gap:9px;margin-top:11px;display:flex}.favorite-card{background:#ffffffdb;border:1px solid #e2edf5;border-radius:14px;padding:10px 11px}.favorite-card--star{background:#f7fcffeb;border-color:#d4e6f4}.favorite-card--system{background:#f4f8fbeb}.favorite-card__header{justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px;display:flex}.favorite-card__header strong{color:var(--color-primary-soft);font-size:.68rem;font-weight:700}.favorite-card__header time{color:var(--color-text-faint);font-variant-numeric:tabular-nums;font-size:.6rem}.favorite-card__content{color:var(--color-text);overflow-wrap:anywhere;white-space:pre-wrap;font-size:.78rem;line-height:1.55}.favorite-card__content.is-withdrawn{color:var(--color-text-faint);font-style:italic}.favorite-card__content.is-sticker{color:var(--color-text-muted)}.favorite-card__content img{object-fit:contain;border-radius:10px;width:min(100%,150px);max-height:150px}.favorites-empty{color:var(--color-text-muted);padding:14px 4px 8px}.favorites-empty>span{color:#7da8cc;margin-bottom:5px;font-size:1.1rem;display:block}.favorites-empty strong{color:var(--color-text);font-size:.76rem;display:block}.favorites-empty p{color:var(--color-text-faint);margin-top:3px;font-size:.65rem;line-height:1.5}.pat-page{flex-direction:column;gap:16px;padding-bottom:20px;display:flex}.pat-header{padding:4px 2px 0}.pat-eyebrow{color:var(--color-primary-soft);font-family:var(--font-title);letter-spacing:.14em;font-size:.62rem;font-weight:700}.pat-title{color:var(--color-primary);margin-top:2px;font-size:1.5rem}.pat-intro{color:var(--color-text-muted);margin-top:5px;font-size:.72rem;line-height:1.55}.pat-stage{background:radial-gradient(circle at 50% 38%,#dbeefce6,#0000 38%),linear-gradient(160deg,#ffffffe6,#edf7fdd1);border:1px solid #1e3a5f17;border-radius:24px;flex-direction:column;justify-content:center;align-items:center;min-height:214px;padding:22px 16px 18px;display:flex;position:relative;overflow:hidden;box-shadow:0 12px 30px #29435e0f}.pat-avatar-orbit{border:1px dashed #2e5a8f33;border-radius:50%;width:126px;height:126px;animation:8s linear infinite pat-orbit;position:absolute;top:30px;left:50%;transform:translate(-50%)}.pat-avatar-orbit:before,.pat-avatar-orbit:after{content:"";background:#8db7d8;border-radius:50%;width:5px;height:5px;position:absolute;box-shadow:0 0 0 4px #8db7d81f}.pat-avatar-orbit:before{top:10px;left:20px}.pat-avatar-orbit:after{bottom:20px;right:14px}@keyframes pat-orbit{to{transform:translate(-50%)rotate(360deg)}}.pat-avatar{z-index:1;width:104px;height:104px;color:var(--color-primary);font-family:var(--font-round);touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;background:#ffffffeb;border:2px solid #ffffffe6;border-radius:50%;place-items:center;font-size:2rem;font-weight:700;transition:transform .16s,box-shadow .16s;display:grid;position:relative;overflow:hidden;box-shadow:0 14px 34px #1e3a5f2e,0 0 0 8px #dbeefcb8}.pat-avatar img{object-fit:cover;width:100%;height:100%}.pat-avatar:focus-visible{outline-offset:5px;outline:3px solid #2e5a8f57}[data-pat-avatar]{-webkit-tap-highlight-color:transparent}[data-pat-avatar].is-pressing{transform:scale(.94)}[data-pat-avatar].is-patted{animation:.32s pat-press}@keyframes pat-press{0%{transform:scale(.94)}55%{transform:scale(1.05)}to{transform:scale(1)}}.pat-hint{z-index:1;border-radius:var(--radius-pill);color:var(--color-text-muted);background:#ffffffc7;align-items:center;gap:6px;margin-top:24px;padding:6px 11px;font-size:.68rem;display:inline-flex;position:relative}.pat-feed-panel{background:#ffffffc7;border:1px solid #1e3a5f17;border-radius:18px;padding:14px;box-shadow:0 8px 22px #29435e0b}.pat-feed-heading{border-bottom:1px solid #1e3a5f12;justify-content:space-between;align-items:center;gap:8px;padding-bottom:9px;display:flex}.pat-feed-heading h3{color:var(--color-text);font-size:.86rem}.pat-feed-heading span{color:var(--color-text-faint);font-size:.62rem}.pat-feed{overscroll-behavior:contain;scrollbar-width:thin;flex-direction:column;gap:9px;min-height:70px;max-height:252px;margin-top:10px;display:flex;overflow-y:auto}.pat-activity{align-items:flex-start;gap:8px;display:flex}.pat-activity--pat{justify-content:center;padding:4px 0}.pat-activity--pat p{border-radius:var(--radius-pill);color:var(--color-text-muted);background:#1e3a5f0f;padding:5px 10px;font-size:.66rem}.pat-activity__avatar{width:30px;height:30px;color:var(--color-primary);background:#e6f2fb;border-radius:50%;flex:none;place-items:center;font-size:.62rem;font-weight:700;display:grid}.pat-activity--reply p{max-width:76%;color:var(--color-text);overflow-wrap:anywhere;background:#fff;border:1px solid #d7e7f3;border-radius:4px 14px 14px;padding:8px 11px;font-size:.78rem;line-height:1.5}.pat-empty{color:var(--color-text-faint);align-items:center;gap:8px;padding:10px 4px;font-size:.68rem;display:flex}.pat-empty span{color:#82aacb;font-size:.95rem}.pat-floating{z-index:150;max-width:min(240px,100vw - 28px);color:var(--color-text);opacity:0;pointer-events:none;text-align:center;overflow-wrap:anywhere;background:#fffffff5;border:1px solid #1e3a5f1a;border-radius:12px;padding:7px 11px;font-size:.72rem;line-height:1.45;transition:opacity .16s,transform .16s;position:fixed;transform:translate(-50%,-100%)translateY(5px);box-shadow:0 10px 26px #1e3a5f29}.pat-floating--pat{border-radius:var(--radius-pill);color:#fff;background:#1e3a5fe8;font-size:.66rem}.pat-floating--reply{background:#fff;border-color:#d2e4f2}.pat-floating.is-visible{opacity:1;transform:translate(-50%,-100%)translateY(0)}@media (prefers-reduced-motion:reduce){.pat-avatar-orbit,[data-pat-avatar].is-patted{animation:none}.pat-floating{transition:none}}.manage-page{flex-direction:column;gap:16px;padding-bottom:20px;display:flex}.manage-header{justify-content:space-between;align-items:flex-start;gap:12px;padding:4px 2px 2px;display:flex}.manage-eyebrow,.manage-kicker{color:var(--color-primary-soft);font-family:var(--font-title);letter-spacing:.14em;text-transform:uppercase;font-size:.62rem;font-weight:700;line-height:1.3}.manage-title{color:var(--color-primary);margin-top:2px;font-size:1.5rem;line-height:1.2}.manage-summary{color:var(--color-text-muted);margin-top:5px;font-size:.72rem;line-height:1.4}.manage-button{border-radius:var(--radius-button);white-space:nowrap;border:1px solid #0000;justify-content:center;align-items:center;gap:4px;min-height:40px;padding:0 15px;font-size:.78rem;font-weight:650;line-height:1;transition:background .16s,border-color .16s,color .16s,transform .16s;display:inline-flex}.manage-button:hover:not(:disabled){transform:translateY(-1px)}.manage-button--compact{min-height:34px;padding:0 12px;font-size:.72rem}.manage-button--primary{background:var(--color-primary);color:var(--color-white);box-shadow:0 7px 16px #1e3a5f26}.manage-button--primary:hover:not(:disabled){background:var(--color-primary-soft)}.manage-button--ghost{color:var(--color-primary);background:#ffffffb8;border-color:#d9e7f2}.manage-button--ghost:hover:not(:disabled){background:#f6fbfe;border-color:#c5dbed}.manage-button--danger{color:var(--color-white);background:#a9474c}.manage-button--danger:hover:not(:disabled){background:#943b40}.manage-button:disabled{opacity:.5;cursor:wait}.manage-panel{background:#ffffffc7;border:1px solid #1e3a5f17;border-radius:18px;padding:15px;box-shadow:0 8px 22px #29435e0b}.manage-panel--groups{padding-bottom:12px}.manage-section-heading{justify-content:space-between;align-items:center;gap:12px;display:flex}.manage-section-heading h3{color:var(--color-text);margin-top:2px;font-size:.92rem;line-height:1.35}.manage-section-heading h3 small{color:var(--color-text-faint);font-family:var(--font-body);margin-left:4px;font-size:.65rem;font-weight:500}.manage-section-heading--cards{align-items:flex-end}.manage-selection-status{color:var(--color-text-faint);white-space:nowrap;padding-bottom:2px;font-size:.68rem}.manage-group-list{scrollbar-width:thin;gap:8px;margin-top:12px;padding:1px 1px 4px;display:flex;overflow-x:auto}.manage-group{background:#fffc;border:1px solid #dfeaf3;border-radius:12px;flex:none;align-items:center;min-height:34px;padding:3px 4px 3px 3px;transition:border-color .16s,background .16s,box-shadow .16s;display:inline-flex}.manage-group.is-active{background:#eaf5fd;border-color:#bdd7ec;box-shadow:0 5px 13px #3566901a}.manage-group__select{min-width:0;min-height:26px;color:var(--color-text-muted);white-space:nowrap;align-items:center;gap:7px;padding:0 6px;font-size:.72rem;font-weight:600;display:inline-flex}.manage-group.is-active .manage-group__select{color:var(--color-primary)}.manage-group__name{text-overflow:ellipsis;max-width:126px;overflow:hidden}.manage-group__count{min-width:18px;height:18px;color:var(--color-text-faint);font-variant-numeric:tabular-nums;background:#1e3a5f12;border-radius:999px;place-items:center;padding:0 4px;font-size:.6rem;display:inline-grid}.manage-group.is-active .manage-group__count{color:var(--color-primary-soft);background:#1e3a5f1c}.manage-group__builtin{color:#9bb1c3;white-space:nowrap;padding:0 7px 0 5px;font-size:.58rem;font-weight:600}.manage-group__action{width:25px;height:25px;color:var(--color-text-faint);border-radius:8px;place-items:center;margin-left:2px;font-size:.62rem;font-weight:700;display:grid}.manage-group__action:hover{color:var(--color-primary);background:#1e3a5f14}.manage-group__action--danger:hover{color:#a9474c;background:#fff0f0}.manage-toolbar{border-top:1px solid #1e3a5f11;justify-content:space-between;align-items:center;gap:8px;margin-top:13px;padding-top:11px;display:flex}.manage-select-all{color:var(--color-text-muted);white-space:nowrap;cursor:pointer;align-items:center;gap:6px;font-size:.68rem;display:inline-flex}.manage-checkbox{cursor:pointer;flex:none;place-items:center;width:18px;height:18px;display:inline-grid;position:relative}.manage-checkbox input{opacity:0;width:1px;height:1px;position:absolute;overflow:hidden}.manage-checkbox>span{background:#ffffffd9;border:1.5px solid #bfd1df;border-radius:6px;width:17px;height:17px;transition:background .15s,border-color .15s,box-shadow .15s;display:block}.manage-checkbox input:checked+span,.manage-checkbox input:indeterminate+span{border-color:var(--color-primary);background:var(--color-primary);box-shadow:0 2px 6px #1e3a5f1f}.manage-checkbox input:checked+span:after{content:"";border-bottom:1.8px solid #fff;border-left:1.8px solid #fff;width:7px;height:4px;transform:translateY(-1px)rotate(-45deg)}.manage-checkbox input:indeterminate+span:after{content:"";background:#fff;border-radius:2px;width:7px;height:1.5px}.manage-checkbox input:focus-visible+span{outline-offset:2px;outline:2px solid #2e5a8f59}.manage-toolbar__actions{flex-wrap:wrap;justify-content:flex-end;gap:3px;display:flex}.manage-toolbar__actions button{min-height:28px;color:var(--color-primary-soft);white-space:nowrap;border-radius:8px;padding:0 7px;font-size:.63rem;font-weight:650}.manage-toolbar__actions button:hover{background:#eaf4fb}.manage-batch-bar{background:#f1f8fd;border:1px solid #d5e6f3;border-radius:12px;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding:8px 9px;display:flex}.manage-batch-bar strong{color:var(--color-primary);white-space:nowrap;font-size:.67rem}.manage-batch-bar>div{flex-wrap:wrap;justify-content:flex-end;gap:3px;display:flex}.manage-batch-bar button{min-height:28px;color:var(--color-primary-soft);background:#ffffffbf;border-radius:8px;padding:0 8px;font-size:.63rem;font-weight:650}.manage-batch-bar button:hover{background:#fff}.manage-batch-bar button.is-danger{color:#a9474c}.manage-card-list{flex-direction:column;gap:8px;margin-top:12px;display:flex}.manage-card-row{background:#ffffffbd;border:1px solid #e3edf4;border-radius:14px;grid-template-columns:22px minmax(0,1fr) auto;align-items:start;gap:8px;padding:11px 10px;transition:border-color .16s,background .16s,opacity .16s;display:grid}.manage-card-row.is-selected{background:#f5fbff;border-color:#bdd7ec}.manage-card-row.is-disabled{background:#f8fafb}.manage-card-row.is-disabled .manage-card-row__content{color:#8c9baa;-webkit-text-decoration:line-through #b6c2cc;text-decoration:line-through #b6c2cc;text-decoration-thickness:1px}.manage-card-row .manage-checkbox{margin-top:1px}.manage-card-row__copy{min-width:0}.manage-card-row__content{color:var(--color-text);overflow-wrap:anywhere;white-space:pre-wrap;font-size:.8rem;line-height:1.5}.manage-card-row__meta{color:var(--color-text-faint);flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:.62rem;display:flex}.manage-status{border-radius:999px;align-items:center;min-height:18px;padding:0 6px;font-size:.58rem;font-weight:650;display:inline-flex}.manage-status.is-enabled{color:#39785d;background:#e6f5ef}.manage-status.is-disabled{color:#7c8a96;background:#f0f2f4}.manage-card-row__actions{flex-wrap:wrap;justify-content:flex-end;gap:2px;max-width:112px;display:flex}.manage-card-row__actions button{min-height:25px;color:var(--color-text-muted);white-space:nowrap;border-radius:7px;padding:0 6px;font-size:.62rem;font-weight:600}.manage-card-row__actions button:hover{color:var(--color-primary);background:#eaf4fb}.manage-card-row__actions button.is-danger:hover{color:#a9474c;background:#fff0f0}.manage-empty{color:var(--color-text-muted);text-align:center;border:1px dashed #dbe8f1;border-radius:14px;flex-direction:column;align-items:center;padding:25px 14px 20px;display:flex}.manage-empty>span{color:#91b4d0;margin-bottom:4px;font-size:1.35rem}.manage-empty strong{color:var(--color-text);font-size:.78rem}.manage-panel--pat{background:linear-gradient(135deg,#ebf6ffb3,#ffffffd6),#ffffffc7}.manage-pat-hint{color:var(--color-text-faint);margin-top:7px;font-size:.65rem;line-height:1.5}.manage-pat-list{flex-direction:column;gap:8px;margin-top:13px;display:flex}.manage-pat-row{background:#ffffffd1;border:1px solid #e2edf5;border-radius:14px;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px;display:grid}.manage-pat-row__mark{width:34px;height:34px;color:var(--color-primary);background:#e6f2fb;border-radius:12px;place-items:center;font-size:.72rem;font-weight:700;display:grid}.manage-pat-row__copy{min-width:0}.manage-pat-row__copy p{color:var(--color-text);overflow-wrap:anywhere;font-size:.76rem;line-height:1.5}.manage-pat-row__copy small{color:var(--color-text-faint);margin-top:2px;font-size:.6rem;line-height:1.4;display:block}.manage-empty--compact{padding-block:12px}.manage-empty p{color:var(--color-text-faint);margin-top:3px;font-size:.68rem}.manage-modal{z-index:100;place-items:center;padding:18px;display:grid;position:fixed;inset:0}.manage-modal__backdrop{-webkit-backdrop-filter:blur(3px);background:#10263d47;position:absolute;inset:0}.manage-modal__panel{z-index:1;background:#fff;border:1px solid #ffffffd9;border-radius:20px;width:min(100%,380px);max-height:min(88dvh,650px);position:relative;overflow-y:auto;box-shadow:0 22px 60px #142f493d}.manage-modal__header{border-bottom:1px solid #edf3f7;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 18px 13px;display:flex}.manage-modal__header h3{color:var(--color-text);font-size:1rem}.manage-modal__header p{color:var(--color-text-muted);margin-top:4px;font-size:.7rem;line-height:1.5}.manage-icon-button{width:28px;height:28px;color:var(--color-text-faint);border-radius:9px;flex:none;place-items:center;font-size:1.25rem;line-height:1;display:grid}.manage-icon-button:hover{color:var(--color-primary);background:#f0f5f8}.manage-modal__body{flex-direction:column;gap:13px;padding:15px 18px 10px;display:flex}.manage-modal__error{color:#a9474c;background:#fff1f1;border-radius:9px;margin:0 18px;padding:7px 9px;font-size:.68rem;line-height:1.4}.manage-modal__footer{justify-content:flex-end;gap:8px;padding:8px 18px 18px;display:flex}.manage-field{color:var(--color-text-muted);flex-direction:column;gap:6px;font-size:.7rem;font-weight:600;display:flex}.manage-field input[type=text],.manage-field input[type=file],.manage-field textarea,.manage-field select{width:100%;color:var(--color-text);font:inherit;background:#fbfdff;border:1px solid #d9e7f1;border-radius:10px;outline:none;font-size:.78rem;font-weight:400;transition:border-color .15s,box-shadow .15s,background .15s}.manage-field input[type=text],.manage-field select{min-height:38px;padding:0 10px}.manage-field input[type=file]{padding:8px 9px}.manage-field textarea{resize:vertical;min-height:88px;padding:9px 10px}.manage-field input:focus,.manage-field textarea:focus,.manage-field select:focus{background:#fff;border-color:#9dc2df;box-shadow:0 0 0 3px #4980af1a}.manage-field__hint{color:var(--color-text-faint);margin-top:-6px;font-size:.62rem;line-height:1.5}.manage-switch-field{cursor:pointer;background:#f9fcfe;border:1px solid #e3edf4;border-radius:12px;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;padding:10px;display:grid}.manage-switch-field input{opacity:0;width:1px;height:1px;position:absolute}.manage-switch-field__control{background:#ccd9e3;border-radius:999px;width:34px;height:20px;transition:background .16s;display:block;position:relative}.manage-switch-field__control:after{content:"";background:#fff;border-radius:50%;width:14px;height:14px;transition:transform .16s;position:absolute;top:3px;left:3px;box-shadow:0 1px 3px #1e3a5f33}.manage-switch-field input:checked+.manage-switch-field__control{background:var(--color-primary)}.manage-switch-field input:checked+.manage-switch-field__control:after{transform:translate(14px)}.manage-switch-field strong,.manage-switch-field small{display:block}.manage-switch-field strong{color:var(--color-text);font-size:.72rem;font-weight:650}.manage-switch-field small{color:var(--color-text-faint);margin-top:2px;font-size:.62rem;line-height:1.4}.manage-toast{z-index:120;color:#fff;background:#1e3a5ff0;border:1px solid #1e3a5f14;border-radius:11px;max-width:min(300px,100vw - 36px);padding:9px 12px;font-size:.7rem;line-height:1.45;position:fixed;bottom:88px;right:18px;box-shadow:0 10px 26px #1e3a5f33}.manage-toast[data-tone=warning]{background:#956d35}@media (width<=390px){.manage-page{gap:13px}.manage-header{align-items:center}.manage-title{font-size:1.35rem}.manage-panel{padding:13px}.manage-toolbar{flex-direction:column;align-items:flex-start}.manage-toolbar__actions{justify-content:flex-start}.manage-card-row{grid-template-columns:20px minmax(0,1fr)}.manage-pat-row{grid-template-columns:34px minmax(0,1fr)}.manage-pat-row .manage-card-row__actions{grid-column:2;justify-content:flex-start;max-width:none}.manage-card-row__actions{grid-column:2;justify-content:flex-start;max-width:none;margin-top:-2px}.manage-batch-bar{flex-direction:column;align-items:flex-start}.manage-batch-bar>div{justify-content:flex-start}}.settings-page{flex-direction:column;gap:18px;padding-bottom:24px;display:flex}.settings-header{padding:8px 2px 2px}.settings-eyebrow,.settings-kicker{color:var(--color-accent-strong,var(--color-primary-soft));font-family:var(--font-title);letter-spacing:.14em;text-transform:uppercase;font-size:.66rem;font-weight:700}.settings-title{color:var(--color-text);margin-top:4px;font-size:1.65rem}.settings-intro{max-width:31rem;color:var(--color-text-muted);margin-top:8px;font-size:.82rem;line-height:1.65}.settings-card{border:1px solid var(--color-border);background:color-mix(in srgb, var(--color-surface) 94%, transparent);border-radius:20px;padding:18px;box-shadow:0 10px 28px #1e3a5f0e}.settings-card__heading{justify-content:space-between;align-items:flex-start;gap:12px;display:flex}.settings-card__heading h3{color:var(--color-text);margin-top:3px;font-size:1.02rem}.settings-badge{border:1px solid var(--color-border);border-radius:var(--radius-pill);background:var(--color-bg-soft);color:var(--color-text-muted);flex:none;padding:4px 9px;font-size:.65rem;font-weight:600}.settings-description{color:var(--color-text-muted);margin-top:10px;font-size:.77rem;line-height:1.6}.settings-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px;display:grid}.settings-button{border:1px solid var(--color-border);background:var(--color-surface);min-height:42px;color:var(--color-text);border-radius:12px;justify-content:center;align-items:center;padding:0 15px;font-size:.8rem;font-weight:650;transition:transform .16s,border-color .16s,background .16s;display:inline-flex}.settings-button:hover{border-color:var(--color-accent);transform:translateY(-1px)}.settings-button--primary{border-color:var(--color-primary);background:var(--color-primary);color:var(--color-button-text,#fff)}.settings-field{border-top:1px solid var(--color-border-soft);margin-top:17px;padding-top:16px}.settings-field__label,.settings-field--inline>label{justify-content:space-between;align-items:baseline;gap:12px;display:flex}.settings-field__label span,.settings-field--inline strong{color:var(--color-text);font-size:.81rem;font-weight:650}.settings-field__label small,.settings-field--inline small{color:var(--color-text-faint);font-size:.68rem}.settings-delay-row{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:end;gap:8px;margin-top:12px;display:grid}.settings-delay-row label{color:var(--color-text-muted);flex-direction:column;gap:5px;font-size:.67rem;display:flex}.settings-delay-row input,.settings-probability input[type=number],.settings-field--inline select{border:1px solid var(--color-border);background:var(--color-surface);width:100%;min-height:40px;color:var(--color-text);font:inherit;font-variant-numeric:tabular-nums;border-radius:11px;outline:none;font-size:.8rem;transition:border-color .16s,box-shadow .16s}.settings-delay-row input{padding:0 11px}.settings-delay-row input:focus,.settings-probability input[type=number]:focus,.settings-field--inline select:focus{border-color:var(--color-accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent)}.settings-delay-separator,.settings-unit{color:var(--color-text-faint);padding-bottom:10px;font-size:.72rem}.settings-switch-row{border-top:1px solid var(--color-border-soft);cursor:pointer;justify-content:space-between;align-items:center;gap:16px;margin-top:17px;padding-top:16px;display:flex}.settings-switch-row--compact{border-top:0;margin-top:0;padding-top:0}.settings-switch-row>span:first-child{flex-direction:column;gap:3px;display:flex}.settings-switch-row strong{color:var(--color-text);font-size:.81rem}.settings-switch-row small{color:var(--color-text-muted);font-size:.68rem;line-height:1.45}.settings-switch{flex:none;width:46px;height:27px;display:inline-flex;position:relative}.settings-switch input{opacity:0;width:1px;height:1px;position:absolute}.settings-switch>span{border-radius:var(--radius-pill);background:var(--color-border);transition:background .18s;position:absolute;inset:0}.settings-switch>span:after{content:"";background:#fff;border-radius:50%;width:21px;height:21px;transition:transform .18s;position:absolute;top:3px;left:3px;box-shadow:0 2px 6px #1e3a5f33}.settings-switch input:checked+span{background:var(--color-primary)}.settings-switch input:checked+span:after{transform:translate(19px)}.settings-switch input:focus-visible+span{box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 30%, transparent)}.settings-probability{grid-template-columns:minmax(0,1fr) 78px 42px;align-items:center;gap:10px;margin-top:13px;display:grid}.settings-probability input[type=range]{width:100%;accent-color:var(--color-primary)}.settings-probability label{position:relative}.settings-probability label input{padding:0 22px 0 9px}.settings-probability label span{color:var(--color-text-faint);font-size:.7rem;position:absolute;top:50%;right:9px;transform:translateY(-50%)}.settings-probability output{color:var(--color-text);text-align:right;font-size:.72rem;font-weight:700}.settings-probability input:disabled{cursor:not-allowed;opacity:.48}.settings-avatar{grid-template-columns:76px minmax(0,1fr);align-items:center;gap:15px;margin-top:16px;display:grid}.settings-avatar__preview{border:1px solid var(--color-border);background:var(--color-bg-soft);width:76px;height:76px;color:var(--color-primary);font-family:var(--font-round);border-radius:50%;place-items:center;font-size:1.45rem;font-weight:700;display:grid;overflow:hidden}.settings-avatar__preview img{object-fit:cover;width:100%;height:100%}.settings-avatar__copy{flex-direction:column;gap:5px;min-width:0;display:flex}.settings-avatar__copy strong{color:var(--color-text);font-size:.82rem}.settings-avatar__copy small{color:var(--color-text-muted);font-size:.68rem;line-height:1.5}.settings-avatar__actions{align-items:center;gap:10px;margin-top:4px;display:flex}.settings-avatar__actions .settings-button{cursor:pointer;min-height:36px;padding:0 12px;font-size:.72rem}.settings-file-input{clip:rect(0 0 0 0);white-space:nowrap;clip-path:inset(50%);width:1px;height:1px;position:absolute;overflow:hidden}.settings-text-button{color:var(--color-text-muted);text-underline-offset:3px;padding:5px 2px;font-size:.69rem;text-decoration:underline}.settings-file-name{color:var(--color-text-faint);text-overflow:ellipsis;white-space:nowrap;font-size:.65rem;overflow:hidden}.settings-fieldset{border:0;border-top:1px solid var(--color-border-soft);margin-top:17px;padding-top:16px}.settings-fieldset legend{color:var(--color-text);padding:0 0 10px;font-size:.81rem;font-weight:650}.settings-theme-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;display:grid}.settings-theme-option{border:1px solid var(--color-border);background:var(--color-surface);cursor:pointer;border-radius:14px;flex-direction:column;gap:8px;min-width:0;padding:10px 9px;transition:border-color .16s,transform .16s,box-shadow .16s;display:flex;position:relative}.settings-theme-option:hover{transform:translateY(-1px)}.settings-theme-option:has(input:checked){border-color:var(--color-accent-strong,var(--color-primary));box-shadow:0 0 0 2px color-mix(in srgb, var(--color-accent) 23%, transparent)}.settings-theme-option input{opacity:0;position:absolute}.settings-theme-option__swatch{border:1px solid #1e3a5f1f;border-radius:9px;width:100%;height:28px}.settings-theme-option--deep-blue .settings-theme-option__swatch{background:#1e3a5f}.settings-theme-option--silver .settings-theme-option__swatch{background:linear-gradient(135deg,#f5f6f8 0 50%,#c0c7d0 50% 100%)}.settings-theme-option--light-blue .settings-theme-option__swatch{background:linear-gradient(135deg,#eaf2fa 0 50%,#a8c6e5 50% 100%)}.settings-theme-option>span:last-child{flex-direction:column;min-width:0;display:flex}.settings-theme-option strong{color:var(--color-text);font-size:.72rem}.settings-theme-option small{color:var(--color-text-faint);text-overflow:ellipsis;margin-top:1px;font-size:.57rem;overflow:hidden}.settings-field--inline{justify-content:space-between;align-items:center;gap:16px;display:flex}.settings-field--inline>label{flex-direction:column;flex:auto;align-items:flex-start;gap:3px}.settings-field--inline select{flex:none;width:116px;padding:0 10px}.settings-toast{z-index:70;right:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));border:1px solid var(--color-border);background:var(--color-surface);width:max-content;max-width:min(100% - 40px,360px);color:var(--color-text);text-align:center;border-radius:12px;padding:10px 14px;font-size:.75rem;line-height:1.45;position:fixed;transform:translate(50%);box-shadow:0 14px 34px #1e3a5f2e}.settings-toast[data-tone=warning]{color:#9a5b2d;border-color:#e7b58b}@media (width<=390px){.settings-card{padding:15px}.settings-theme-grid{grid-template-columns:1fr}.settings-theme-option{flex-direction:row;align-items:center}.settings-theme-option__swatch{flex:none;width:54px}}.backup-page{flex-direction:column;gap:18px;padding-bottom:24px;display:flex}.backup-header{padding:0 2px 2px}.backup-eyebrow,.backup-kicker{color:var(--color-accent-strong,var(--color-primary-soft));font-family:var(--font-title);letter-spacing:.14em;text-transform:uppercase;font-size:.66rem;font-weight:700}.backup-title{color:var(--color-text);margin-top:4px;font-size:1.65rem}.backup-intro{max-width:31rem;color:var(--color-text-muted);margin-top:8px;font-size:.82rem;line-height:1.65}.backup-card{border:1px solid var(--color-border);background:color-mix(in srgb, var(--color-surface) 94%, transparent);border-radius:20px;padding:18px;box-shadow:0 10px 28px #1e3a5f0e}.backup-card--export{background:radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-accent) 20%, transparent), transparent 42%), color-mix(in srgb, var(--color-surface) 96%, transparent)}.backup-card__heading{justify-content:space-between;align-items:flex-start;gap:12px;display:flex}.backup-card__heading h3,.backup-reminder h3{color:var(--color-text);margin-top:3px;font-size:1.02rem}.backup-avatar{border:1px solid var(--color-border);background:var(--color-bg-soft);width:48px;height:48px;color:var(--color-primary);font-family:var(--font-round);border-radius:50%;flex:none;place-items:center;font-size:1rem;font-weight:700;display:grid;overflow:hidden}.backup-avatar img{object-fit:cover;width:100%;height:100%}.backup-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px;display:grid}.backup-stats span{border:1px solid var(--color-border-soft);background:var(--color-bg-soft);border-radius:12px;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:10px 4px;display:flex}.backup-stats strong{color:var(--color-text);font-family:var(--font-title);font-variant-numeric:tabular-nums;font-size:1.05rem}.backup-stats small{color:var(--color-text-muted);font-size:.62rem}.backup-button{border:1px solid var(--color-border);background:var(--color-surface);width:100%;min-height:44px;color:var(--color-text);border-radius:12px;justify-content:center;align-items:center;margin-top:15px;font-size:.8rem;font-weight:650;transition:transform .16s,background .16s,border-color .16s;display:inline-flex}.backup-button:hover{border-color:var(--color-accent);transform:translateY(-1px)}.backup-button--primary{border-color:var(--color-primary);background:var(--color-primary);color:var(--color-button-text,#fff)}.backup-hint,.backup-description{color:var(--color-text-muted);margin-top:10px;font-size:.69rem;line-height:1.6}.backup-dropzone{border:1px dashed var(--color-accent);background:color-mix(in srgb, var(--color-bg-soft) 70%, transparent);width:100%;min-height:126px;color:var(--color-text);border-radius:16px;flex-direction:column;justify-content:center;align-items:center;gap:5px;margin-top:15px;padding:18px;transition:border-color .16s,background .16s,transform .16s;display:flex}.backup-dropzone:hover{border-color:var(--color-primary);background:var(--color-bg-soft);transform:translateY(-1px)}.backup-dropzone__icon{background:var(--color-primary);width:36px;height:36px;color:var(--color-button-text,#fff);border-radius:12px;place-items:center;margin-bottom:2px;font-size:1.15rem;display:grid}.backup-dropzone strong{font-size:.81rem}.backup-dropzone small{color:var(--color-text-muted);font-size:.67rem}.backup-file-input{clip:rect(0 0 0 0);white-space:nowrap;clip-path:inset(50%);width:1px;height:1px;position:absolute;overflow:hidden}.backup-import-status{border:1px solid var(--color-border);background:var(--color-bg-soft);color:var(--color-text-muted);border-radius:11px;margin-top:12px;padding:10px 12px;font-size:.7rem;line-height:1.55}.backup-import-status[data-tone=success]{color:#2d6b49;background:#eff9f3;border-color:#b7d8c6}.backup-import-status[data-tone=warning]{color:#97582d;background:#fff6ee;border-color:#e7b58b}.backup-reminder{grid-template-columns:42px minmax(0,1fr);align-items:start;gap:13px;display:grid}.backup-reminder__icon{background:var(--color-bg-soft);width:42px;height:42px;color:var(--color-primary);border-radius:14px;place-items:center;font-size:1.2rem;display:grid}.backup-reminder p{color:var(--color-text-muted);margin-top:7px;font-size:.72rem;line-height:1.55}.backup-reminder small{color:var(--color-text-faint);margin-top:7px;font-size:.64rem;display:block}.backup-reminder.is-due{background:#fff8f1;border-color:#e7b58b}.backup-reminder.is-due .backup-reminder__icon{color:#a45d2a;background:#fce7d5}.backup-toast{z-index:70;right:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));border:1px solid var(--color-border);background:var(--color-surface);width:max-content;max-width:min(100% - 40px,360px);color:var(--color-text);text-align:center;border-radius:12px;padding:10px 14px;font-size:.75rem;line-height:1.45;position:fixed;transform:translate(50%);box-shadow:0 14px 34px #1e3a5f2e}.backup-toast[data-tone=warning]{color:#9a5b2d;border-color:#e7b58b}@media (width<=390px){.backup-card{padding:15px}.backup-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+</style>
+  </head>
+  <body data-view="home">
+    <div class="app" id="app" data-view="home">
+      <div class="status-bar" aria-hidden="true">
+        <span class="status-bar__brand">星回</span>
+        <span class="status-bar__icons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18v-1M7 18v-3M10 18v-5M13 18v-3M16 18v-7M19 18V7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a9 9 0 0 1 16 0"/><path d="M7 13a5 5 0 0 1 10 0"/><path d="M10.5 16.5h3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="17" height="9" rx="2"/><path d="M21 11v3"/><path d="M5 11.5h7"/></svg>
+        </span>
+      </div>
+
+      <button class="back-button" id="backButton" type="button" aria-label="返回首页">
+        <span class="back-arrow" aria-hidden="true">←</span><span>返回</span>
+      </button>
+
+      <main class="views" id="views">
+        <!-- 首页 -->
+        <section class="view home-page is-active" id="view-home" data-view="home">
+          <header class="hero">
+            <div class="clock" aria-live="polite">
+              <p class="clock-time" id="clockTime">--:--</p>
+              <p class="clock-date" id="clockDate">····</p>
+            </div>
+            <div class="home-star-avatar" id="homeStarAvatar" data-pat-avatar role="button" tabindex="0" aria-label="星回头像，长按拍一拍"><span>星</span></div>
+            <p class="greeting" id="greeting">你好，星回</p>
+          </header>
+
+          <a class="home-backup-reminder" id="homeBackupReminder" href="#/backup" hidden>
+            <span class="home-backup-reminder__icon" aria-hidden="true">◷</span>
+            <span>
+              <strong>建议备份数据</strong>
+              <small data-backup-reminder-text>距离上次导出已超过 7 天。</small>
+            </span>
+            <span class="home-backup-reminder__arrow" aria-hidden="true">→</span>
+          </a>
+
+          <div class="home-board">
+            <div class="home-grid" id="homeEntryGrid" aria-label="首页功能板块">
+            <a class="entry-card" href="#/chat" data-route="chat">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h9A2.5 2.5 0 0 1 18 6.5v6a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5A2.5 2.5 0 0 1 4 12.5z"/><path d="M8.5 9h6"/></svg></span>
+              <span class="entry-label">聊天</span>
+            </a>
+            <a class="entry-card" href="#/favorites" data-route="favorites">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.5l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z"/></svg></span>
+              <span class="entry-label">收藏</span>
+            </a>
+            <a class="entry-card" href="#/manage" data-route="manage">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M8.5 12.5h7"/></svg></span>
+              <span class="entry-label">管理</span>
+            </a>
+            <a class="entry-card" href="#/settings" data-route="settings">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.36.95A7 7 0 0 0 14.2 5.4L14 3h-4l-.2 2.4a7 7 0 0 0-2.3 1.14L5.1 5.6l-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .47.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95a7 7 0 0 0 2.3 1.14L10 21h4l.2-2.4a7 7 0 0 0 2.3-1.14l2.36.95 2-3.46-2-1.55A7 7 0 0 0 19 12z"/></svg></span>
+              <span class="entry-label">设置</span>
+            </a>
+            <a class="entry-card" href="#/backup" data-route="backup" hidden>
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9l4-4 4 4"/><path d="M4 13v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4"/></svg></span>
+              <span class="entry-label">数据备份</span>
+            </a>
+            <a class="entry-card" href="#/pat" data-route="pat">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 12.5c-2.5.6-3.8 2.2-3.6 4.4.2 2 1.9 3.6 3.9 3.7 2.2.1 4.1-1.5 4.2-3.7.1-1.5-.5-2.8-1.8-3.8"/><path d="M12.5 8.5c1.5-2.1 4-3 6.1-2.2 2 .8 3.2 2.8 2.9 4.8-.3 1.9-1.9 3.5-3.9 3.9-1.4.3-2.9-.2-3.9-1.2"/><path d="M11 9.5c-2.3-.8-4.8-.1-6 1.7-1.1 1.7-.8 4 1 5.1"/></svg></span>
+              <span class="entry-label">拍一拍</span>
+            </a>
+            </div>
+          </div>
+
+          <nav class="home-pagination" id="homePagination" aria-label="首页功能板块分页" hidden>
+            <button class="home-pagination__button" id="homePrevPage" type="button">上一页</button>
+            <span class="home-pagination__status" id="homePageStatus" aria-live="polite">1 / 1</span>
+            <button class="home-pagination__button" id="homeNextPage" type="button">下一页</button>
+          </nav>
+        </section>
+
+        <!-- 聊天 -->
+        <section class="view view--back chat-view" id="view-chat" data-view="chat" aria-label="与星回聊天"></section>
+        <!-- 管理 -->
+        <section class="view" id="view-manage" data-view="manage">
+          <h2 class="view-title">管理</h2>
+          <p class="view-placeholder">字卡、表情包与拍一拍管理将在此处实现。</p>
+        </section>
+
+        <!-- 收藏 -->
+        <section class="view view--back" id="view-favorites" data-view="favorites">
+          <h2 class="view-title">收藏</h2>
+          <p class="view-placeholder">我收藏的与梦角收藏的将在此处展示。</p>
+        </section>
+
+        <!-- 设置 -->
+        <section class="view" id="view-settings" data-view="settings">
+          <h2 class="view-title">设置</h2>
+          <p class="view-placeholder">账号、聊天设置、头像与外观将在此处实现。</p>
+        </section>
+
+        <!-- 数据备份 -->
+        <section class="view view--back" id="view-backup" data-view="backup">
+          <h2 class="view-title">数据备份</h2>
+          <p class="view-placeholder">导出、导入与自动备份提醒将在此处实现。</p>
+        </section>
+
+        <!-- 拍一拍 -->
+        <section class="view view--back" id="view-pat" data-view="pat">
+          <h2 class="view-title">拍一拍</h2>
+          <p class="view-placeholder">长按星回头像即可触发拍一拍。</p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p class="footer-disclaimer">字卡回复均为随机代码生成，不具备任何真实效力。使用本站产生的一切后果由使用者自行承担。</p>
+        <p class="footer-hint">建议使用 Chrome 或 Edge 浏览器</p>
+      </footer>
+
+      <nav class="bottom-nav" id="bottomNav" aria-label="主导航">
+        <a class="nav-item is-active" href="#/home" data-route="home">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg></span>
+          <span class="nav-label">首页</span>
+        </a>
+        <a class="nav-item" href="#/manage" data-route="manage">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
+          <span class="nav-label">管理</span>
+        </a>
+        <a class="nav-item" href="#/settings" data-route="settings">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><circle cx="9" cy="7" r="2.2"/><path d="M4 17h16"/><circle cx="15" cy="17" r="2.2"/></svg></span>
+          <span class="nav-label">设置</span>
+        </a>
+      </nav>
+    </div>
+
+  </body>
+</html>
+

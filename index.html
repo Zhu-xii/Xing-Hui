@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F7FBFE" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E3A5F'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23FFFFFF'/%3E%3C/svg%3E" />
+    <title>星回 · Xing Hui-note</title>
+
+  </head>
+  <body data-view="home">
+    <div class="app" id="app" data-view="home">
+      <div class="status-bar" aria-hidden="true">
+        <span class="status-bar__brand">星回</span>
+        <span class="status-bar__icons">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18v-1M7 18v-3M10 18v-5M13 18v-3M16 18v-7M19 18V7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a9 9 0 0 1 16 0"/><path d="M7 13a5 5 0 0 1 10 0"/><path d="M10.5 16.5h3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="17" height="9" rx="2"/><path d="M21 11v3"/><path d="M5 11.5h7"/></svg>
+        </span>
+      </div>
+
+      <button class="back-button" id="backButton" type="button" aria-label="返回首页">
+        <span class="back-arrow" aria-hidden="true">←</span><span>返回</span>
+      </button>
+
+      <main class="views" id="views">
+        <!-- 首页 -->
+        <section class="view home-page is-active" id="view-home" data-view="home">
+          <header class="hero">
+            <div class="clock" aria-live="polite">
+              <p class="clock-time" id="clockTime">--:--</p>
+              <p class="clock-date" id="clockDate">····</p>
+            </div>
+            <div class="home-star-avatar" id="homeStarAvatar" data-pat-avatar role="button" tabindex="0" aria-label="星回头像，长按拍一拍"><span>星</span></div>
+            <p class="greeting" id="greeting">你好，星回</p>
+            <div class="home-status" id="homeStatus">
+              <span class="home-status__label">今日状态</span>
+              <strong id="homeStatusText">还没有设置状态</strong>
+            </div>
+          </header>
+
+          <a class="home-backup-reminder" id="homeBackupReminder" href="#/backup" hidden>
+            <span class="home-backup-reminder__icon" aria-hidden="true">◷</span>
+            <span>
+              <strong>建议备份数据</strong>
+              <small data-backup-reminder-text>距离上次导出已超过 7 天。</small>
+            </span>
+            <span class="home-backup-reminder__arrow" aria-hidden="true">→</span>
+          </a>
+
+          <div class="home-board">
+            <div class="home-grid" id="homeEntryGrid" aria-label="首页功能板块">
+            <a class="entry-card" href="#/chat" data-route="chat">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h9A2.5 2.5 0 0 1 18 6.5v6a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5v-3.5A2.5 2.5 0 0 1 4 12.5z"/><path d="M8.5 9h6"/></svg></span>
+              <span class="entry-label">聊天</span>
+            </a>
+            <a class="entry-card" href="#/questionnaire" data-route="questionnaire">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span>
+              <span class="entry-label">问卷</span>
+            </a>
+            <a class="entry-card" href="#/period" data-route="period">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5v3M17 3.5v3"/><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10h16"/><path d="M12 13v5M9.5 15.5h5"/></svg></span>
+              <span class="entry-label">经期记录</span>
+            </a>
+            <a class="entry-card" href="#/favorites" data-route="favorites">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.5l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z"/></svg></span>
+              <span class="entry-label">收藏</span>
+            </a>
+            <a class="entry-card" href="#/manage" data-route="manage">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M8.5 12.5h7"/></svg></span>
+              <span class="entry-label">管理</span>
+            </a>
+            <a class="entry-card" href="#/settings" data-route="settings">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.36.95A7 7 0 0 0 14.2 5.4L14 3h-4l-.2 2.4a7 7 0 0 0-2.3 1.14L5.1 5.6l-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .47.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95a7 7 0 0 0 2.3 1.14L10 21h4l.2-2.4a7 7 0 0 0 2.3-1.14l2.36.95 2-3.46-2-1.55A7 7 0 0 0 19 12z"/></svg></span>
+              <span class="entry-label">设置</span>
+            </a>
+            <a class="entry-card" href="#/backup" data-route="backup" hidden>
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9l4-4 4 4"/><path d="M4 13v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4"/></svg></span>
+              <span class="entry-label">数据备份</span>
+            </a>
+            <a class="entry-card" href="#/pat" data-route="pat">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 12.5c-2.5.6-3.8 2.2-3.6 4.4.2 2 1.9 3.6 3.9 3.7 2.2.1 4.1-1.5 4.2-3.7.1-1.5-.5-2.8-1.8-3.8"/><path d="M12.5 8.5c1.5-2.1 4-3 6.1-2.2 2 .8 3.2 2.8 2.9 4.8-.3 1.9-1.9 3.5-3.9 3.9-1.4.3-2.9-.2-3.9-1.2"/><path d="M11 9.5c-2.3-.8-4.8-.1-6 1.7-1.1 1.7-.8 4 1 5.1"/></svg></span>
+              <span class="entry-label">拍一拍</span>
+            </a>
+            </div>
+          </div>
+
+          <nav class="home-pagination" id="homePagination" aria-label="首页功能板块分页" hidden>
+            <button class="home-pagination__button" id="homePrevPage" type="button">上一页</button>
+            <span class="home-pagination__status" id="homePageStatus" aria-live="polite">1 / 1</span>
+            <button class="home-pagination__button" id="homeNextPage" type="button">下一页</button>
+          </nav>
+        </section>
+
+        <!-- 聊天 -->
+        <section class="view view--back chat-view" id="view-chat" data-view="chat" aria-label="与星回聊天"></section>
+        <!-- 问卷 -->
+        <section class="view view--back" id="view-questionnaire" data-view="questionnaire"></section>
+
+        <!-- 经期记录 -->
+        <section class="view view--back" id="view-period" data-view="period"></section>
+
+        <!-- 管理 -->
+        <section class="view" id="view-manage" data-view="manage">
+          <h2 class="view-title">管理</h2>
+          <p class="view-placeholder">字卡、表情包与拍一拍管理将在此处实现。</p>
+        </section>
+
+        <!-- 收藏 -->
+        <section class="view view--back" id="view-favorites" data-view="favorites">
+          <h2 class="view-title">收藏</h2>
+          <p class="view-placeholder">我收藏的与梦角收藏的将在此处展示。</p>
+        </section>
+
+        <!-- 设置 -->
+        <section class="view" id="view-settings" data-view="settings">
+          <h2 class="view-title">设置</h2>
+          <p class="view-placeholder">账号、聊天设置、头像与外观将在此处实现。</p>
+        </section>
+
+        <!-- 数据备份 -->
+        <section class="view view--back" id="view-backup" data-view="backup">
+          <h2 class="view-title">数据备份</h2>
+          <p class="view-placeholder">导出、导入与自动备份提醒将在此处实现。</p>
+        </section>
+
+        <!-- 拍一拍 -->
+        <section class="view view--back" id="view-pat" data-view="pat">
+          <h2 class="view-title">拍一拍</h2>
+          <p class="view-placeholder">长按星回头像即可触发拍一拍。</p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p class="footer-disclaimer">字卡回复均为随机代码生成，不具备任何真实效力。使用本站产生的一切后果由使用者自行承担。</p>
+        <p class="footer-hint">建议使用 Chrome 或 Edge 浏览器</p>
+      </footer>
+
+      <nav class="bottom-nav" id="bottomNav" aria-label="主导航">
+        <a class="nav-item is-active" href="#/home" data-route="home">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg></span>
+          <span class="nav-label">首页</span>
+        </a>
+        <a class="nav-item" href="#/manage" data-route="manage">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
+          <span class="nav-label">管理</span>
+        </a>
+        <a class="nav-item" href="#/settings" data-route="settings">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><circle cx="9" cy="7" r="2.2"/><path d="M4 17h16"/><circle cx="15" cy="17" r="2.2"/></svg></span>
+          <span class="nav-label">设置</span>
+        </a>
+      </nav>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
