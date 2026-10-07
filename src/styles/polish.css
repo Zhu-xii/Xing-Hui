@@ -1,9 +1,44 @@
-/* 首页与全局文字优化 */
+/* 星回极简奶油蓝主题覆盖 */
 :root {
+  --color-primary: #111111;
+  --color-primary-deep: #111111;
+  --color-primary-soft: #111111;
+  --color-accent: #CFE7F2;
+  --color-accent-strong: #9DC9DA;
+  --color-silver: #DDE9EE;
+  --color-canvas: #EDF6FA;
+  --color-bg: #EFF7FA;
+  --color-bg-soft: #F7FBFC;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #FBFDFE;
+  --color-border: #E3ECF0;
+  --color-border-soft: #EEF4F6;
   --color-text: #111111;
-  --color-text-muted: #111111;
-  --color-text-faint: #111111;
+  --color-text-muted: #5B666C;
+  --color-text-faint: #8D989D;
+  --color-button-text: #111111;
+  --color-app-top: #F8FBFC;
+  --color-app-mid: #F1F8FA;
+  --color-app-bottom: #EDF6FA;
+  --nav-bg: rgba(255, 255, 255, 0.96);
+  --bubble-color: #FFFFFF;
   --bubble-text: #111111;
+  --bubble-border: #E3ECF0;
+}
+
+html,
+body {
+  background: #EDF6FA;
+}
+
+body {
+  background-color: #EDF6FA;
+  background-image: none;
+  color: #111111;
+}
+
+.app {
+  background: linear-gradient(180deg, #F8FBFC 0%, #F1F8FA 48%, #EDF6FA 100%);
 }
 
 .clock-time,
@@ -22,6 +57,18 @@
   color: #111111;
 }
 
+button,
+.settings-button,
+.settings-button--primary,
+.manage-button,
+.home-pagination__button,
+.back-button,
+.chat-topbar__back,
+.chat-composer__tool,
+.chat-composer__send {
+  color: #111111;
+}
+
 .hero {
   padding: 14px 0 8px;
 }
@@ -35,11 +82,22 @@
   font-size: clamp(0.8rem, 3.5vw, 0.94rem);
 }
 
-.home-star-avatar {
-  width: 54px;
-  height: 54px;
-  margin: 14px auto 8px;
-  font-size: 1.05rem;
+.home-star-avatar,
+.settings-avatar__preview,
+.chat-profile__avatar,
+.chat-message__avatar {
+  border-color: var(--color-border);
+  background: #FFFFFF;
+  color: #111111;
+  box-shadow: none;
+}
+
+.greeting,
+.home-status {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  color: #111111;
+  box-shadow: none;
 }
 
 .greeting {
@@ -56,8 +114,11 @@
 
 .home-board {
   margin-top: 14px;
-  padding: 10px;
-  border-radius: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .home-grid {
@@ -69,13 +130,31 @@
   min-height: 92px;
   padding: 11px 6px;
   gap: 7px;
+  border: 1px solid var(--color-border);
   border-radius: 18px;
+  background: #FFFFFF;
+  box-shadow: none;
+}
+
+.home-page .entry-card:hover {
+  transform: none;
+  border-color: #CBE4EE;
+  background: #F8FCFD;
+  box-shadow: none;
 }
 
 .home-page .entry-icon {
   width: 40px;
   height: 40px;
+  border: 1px solid var(--color-border);
   border-radius: 14px;
+  background: #FFFFFF;
+  color: #111111;
+}
+
+.home-page .entry-card:hover .entry-icon {
+  transform: none;
+  background: #F1F9FC;
 }
 
 .home-page .entry-icon svg {
@@ -84,6 +163,7 @@
 }
 
 .home-page .entry-label {
+  color: #111111;
   font-size: 0.76rem;
 }
 
@@ -97,9 +177,16 @@
   min-width: 40px;
   min-height: 40px;
   padding: 0;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
-  color: #111111;
+  background: #FFFFFF;
+  box-shadow: none;
   font-size: 1rem;
+}
+
+.home-pagination__button:hover:not(:disabled) {
+  border-color: #CBE4EE;
+  background: #F8FCFD;
 }
 
 .home-pagination__status {
@@ -108,9 +195,152 @@
   font-size: 0.75rem;
 }
 
+.bottom-nav {
+  border-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(39, 65, 74, 0.06);
+}
+
+.nav-item {
+  color: #6B767B;
+}
+
+.nav-item.is-active {
+  color: #111111;
+  background: #E8F4F9;
+}
+
+.footer {
+  border-top-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* 聊天页：奶油蓝背景、白色气泡、白色按钮、黑色图标 */
+body[data-view='chat'] .app,
+body[data-view='chat'] .chat-shell {
+  background-color: #EFF7FA;
+}
+
+.chat-topbar,
+.chat-composer-area {
+  border-color: var(--color-border);
+  background: #FFFFFF;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.chat-topbar {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chat-composer-area {
+  border-top: 1px solid var(--color-border);
+}
+
+.chat-topbar__back,
+.chat-composer__tool,
+.chat-composer__send {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  color: #111111;
+  box-shadow: none;
+}
+
+.chat-topbar__back:hover,
+.chat-composer__tool:hover,
+.chat-composer__send:hover {
+  background: #F3FAFC;
+}
+
+.chat-composer__tool[aria-expanded='true'] {
+  background: #E8F4F9;
+}
+
+.chat-composer {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  box-shadow: none;
+}
+
+.chat-composer__input {
+  color: #111111;
+}
+
+.chat-composer__input::placeholder {
+  color: #8D989D;
+}
+
+.chat-message .message-bubble {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF !important;
+  color: #111111 !important;
+  box-shadow: none;
+}
+
+.chat-profile__status {
+  color: #667278;
+}
+
+.chat-profile__status::before,
+.chat-profile__status.is-typing::before {
+  background: #9DC9DA;
+  box-shadow: 0 0 0 3px rgba(157, 201, 218, 0.18);
+}
+
+.chat-tool-panel {
+  border-color: var(--color-border);
+  background: #FFFFFF;
+  color: #5B666C;
+}
+
+/* 设置页：白底细边框，减少厚重阴影 */
+.settings-card,
+:where(.manage-panel, .history-card, .favorites-panel, .pat-stage, .pat-feed-panel, .backup-summary, .backup-card, .period-card, .questionnaire-card) {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  box-shadow: none;
+}
+
+.settings-card {
+  border-radius: 18px;
+}
+
+.settings-card__heading h3,
+.settings-fieldset legend,
+.settings-avatar__copy strong {
+  color: #111111;
+}
+
+.settings-eyebrow,
+.settings-kicker {
+  color: #7EAEC2;
+}
+
+.settings-button,
+.settings-button--primary {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  color: #111111;
+  box-shadow: none;
+}
+
+.settings-button:hover {
+  border-color: #CBE4EE;
+  background: #F8FCFD;
+}
+
+.settings-switch input:checked + span {
+  background: #A9D3E5;
+}
+
+.settings-swatch.is-selected {
+  border-color: #111111;
+  box-shadow: 0 0 0 3px rgba(169, 211, 229, 0.32);
+}
+
 @media (max-width: 360px) {
   .home-grid {
-    gap: 8px;
+    gap: 12px;
   }
 
   .home-page .entry-card {
@@ -147,7 +377,6 @@
 
   .home-board {
     margin-top: 16px;
-    padding: 12px;
   }
 
   .home-grid {
