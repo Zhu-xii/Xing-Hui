@@ -16,6 +16,7 @@ import { initPeriodView, onPeriodViewEnter } from './views/period.js';
 import { initPromptEngine } from './lib/prompt-engine.js';
 import { initSettingsView, onSettingsViewEnter } from './views/settings.js';
 import { initBackupView, onBackupViewEnter } from './views/backup.js';
+import './styles/polish.css';
 import {
   BACKUP_STATUS_CHANGED_EVENT,
   CARD_STORAGE_KEY,
@@ -346,5 +347,6 @@ renderHomeStatus();
 renderBackupReminder();
 render();
 setInterval(updateClock, 1000);
+
 
 

@@ -1,0 +1,170 @@
+/* 首页与全局文字优化 */
+:root {
+  --color-text: #111111;
+  --color-text-muted: #111111;
+  --color-text-faint: #111111;
+  --bubble-text: #111111;
+}
+
+.clock-time,
+.clock-date,
+.greeting,
+.home-status,
+.home-status strong,
+.view-title,
+.manage-title,
+.favorites-title,
+.settings-title,
+.backup-title,
+.pat-title,
+.period-title,
+.questionnaire-title {
+  color: #111111;
+}
+
+.hero {
+  padding: 18px 0 10px;
+}
+
+.clock-time {
+  font-size: clamp(2rem, 10.5vw, 3.1rem);
+}
+
+.clock-date {
+  margin-top: 8px;
+  font-size: clamp(0.8rem, 3.5vw, 0.94rem);
+}
+
+.home-star-avatar {
+  width: 54px;
+  height: 54px;
+  margin: 14px auto 8px;
+  font-size: 1.05rem;
+}
+
+.greeting {
+  margin-top: 12px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.home-status {
+  margin-top: 6px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
+}
+
+.home-board {
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 18px;
+}
+
+.home-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-page .entry-card {
+  min-height: 92px;
+  padding: 11px 6px;
+  gap: 7px;
+  border-radius: 18px;
+}
+
+.home-page .entry-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+}
+
+.home-page .entry-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.home-page .entry-label {
+  font-size: 0.76rem;
+}
+
+.home-pagination {
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.home-pagination__button {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  color: #111111;
+  font-size: 1rem;
+}
+
+.home-pagination__status {
+  min-width: 36px;
+  color: #111111;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 360px) {
+  .home-grid {
+    gap: 8px;
+  }
+
+  .home-page .entry-card {
+    min-height: 86px;
+    padding: 9px 5px;
+  }
+
+  .home-page .entry-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .home-page .entry-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .home-page .entry-label {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .app {
+    padding-bottom: calc(124px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: 28px 0 16px;
+  }
+
+  .home-board {
+    margin-top: 16px;
+    padding: 12px;
+  }
+
+  .home-grid {
+    gap: 12px;
+  }
+
+  .home-page .entry-card {
+    min-height: 104px;
+    padding: 13px 8px;
+  }
+
+  .home-page .entry-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .home-page .entry-label {
+    font-size: 0.82rem;
+  }
+}

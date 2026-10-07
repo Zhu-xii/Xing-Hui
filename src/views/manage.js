@@ -402,7 +402,7 @@ function renderCardRows(visibleCards, currentGroup) {
       <div class="manage-empty">
         <span aria-hidden="true">☆</span>
         <strong>这个分组还没有字卡</strong>
-        <p>新增一张字卡，或从文本、JSON 文件导入。</p>
+        <p>新增一张字卡，或用“批量导入”一次粘贴多张。</p>
       </div>
     `;
   }
@@ -1244,8 +1244,8 @@ function importTextCards() {
   if (category?.type === 'questionnaire' || category?.type === 'status') {
     const collection = categoryItems(category.type);
     openModal({
-      title: `粘贴导入${category.name}`,
-      description: '每行会生成一条内容，空行会自动跳过。',
+      title: `批量导入${category.name}`,
+      description: '每行一条内容，空行会自动跳过。一次可以粘贴多条。',
       confirmLabel: '导入',
       body: `
         <label class="manage-field">
@@ -1273,8 +1273,8 @@ function importTextCards() {
   }
 
   openModal({
-    title: '粘贴文本导入',
-    description: '每行会生成一张字卡，空行会自动跳过。',
+    title: '批量导入字卡',
+    description: '每行一张字卡，空行会自动跳过。一次可以粘贴多张。',
     confirmLabel: '导入',
     body: `
       <label class="manage-field">
@@ -1559,7 +1559,7 @@ export function initManageView(root = document.getElementById('view-manage')) {
           </label>
           <div class="manage-toolbar__actions">
             <button type="button" data-manage-action="import-json">导入 JSON</button>
-            <button type="button" data-manage-action="import-text">粘贴导入</button>
+            <button type="button" data-manage-action="import-text">批量导入</button>
             <button type="button" data-manage-action="deduplicate">全库去重</button>
             <button type="button" data-manage-action="export-selected">导出勾选</button>
           </div>
@@ -1636,3 +1636,5 @@ export function getManageSnapshot() {
     currentGroupId: state.currentGroupId,
   };
 }
+
+
