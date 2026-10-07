@@ -36,6 +36,7 @@ import {
   writeStatuses,
   writeStickers,
 } from '../lib/storage.js';
+import { collectMediaAssets, getAvatarBlob, migrateLegacyMedia, restoreMediaAssets, setBlobImage } from '../lib/media-db.js';
 
 let viewRoot = null;
 let elements = null;
@@ -187,8 +188,10 @@ export function mergeBackupData(payload) {
 
   if (normalized.settings) {
     const currentSettings = readSettings();
-    // 当前值优先；导入设置只补充缺失字段，不覆盖本机已有选择。
-    writeSettings(normalizeSettings({ ...normalized.settings, ...currentSettings }));
+    // 当前值优先；空头像等缺失字段由备份补充。
+    const mergedSettings = { ...normalized.settings, ...currentSettings };
+    mergedSettings.userAvatar = currentSettings.userAvatar || normalized.settings.userAvatar || '';
+    writeSettings(normalizeSettings(mergedSettings));
   }
 
   if (normalized.character) {
@@ -219,22 +222,33 @@ export function mergeBackupData(payload) {
   return result;
 }
 
-function renderAvatar() {
+async function renderAvatar() {
   const { avatar } = readCharacter();
   const preview = elements?.avatarPreview;
   if (!preview) return;
-
   preview.replaceChildren();
-  if (avatar) {
-    const image = document.createElement('img');
-    image.src = avatar;
-    image.alt = '当前星回头像';
-    preview.append(image);
-  } else {
-    preview.textContent = '星';
-  }
-}
 
+  if (!avatar) {
+    preview.textContent = '星';
+    return;
+  }
+
+  const image = document.createElement('img');
+  image.alt = '当前星回头像';
+  preview.append(image);
+  if (avatar === 'idb:star') {
+    try {
+      const blob = await getAvatarBlob('star');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      preview.textContent = '星';
+    }
+    return;
+  }
+  image.src = avatar;
+}
 function renderStats() {
   if (!elements) return;
   const snapshot = getStorageSnapshot();
@@ -267,8 +281,18 @@ function renderBackupPage() {
   renderReminder();
 }
 
-function downloadBackup() {
+async function createPayloadWithMedia() {
   const payload = createBackupPayload();
+  try {
+    payload.mediaAssets = await collectMediaAssets();
+  } catch {
+    payload.mediaAssets = [];
+  }
+  return payload;
+}
+
+async function downloadBackup() {
+  const payload = await createPayloadWithMedia();
   const serialized = JSON.stringify(payload, null, 2);
   const blob = new Blob([serialized], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -301,9 +325,20 @@ function handleImportFile(file) {
   }
 
   const reader = new FileReader();
-  reader.addEventListener('load', () => {
+  reader.addEventListener('load', async () => {
     try {
-      const result = mergeBackupData(String(reader.result || ''));
+      const raw = String(reader.result || '');
+      const normalized = normalizeBackupPayload(raw);
+      const result = mergeBackupData(normalized);
+      await restoreMediaAssets(normalized.mediaAssets);
+      const migrated = await migrateLegacyMedia({
+        stickers: normalized.stickers,
+        character: normalized.character,
+        settings: normalized.settings,
+      });
+      writeStickers(migrated.stickers);
+      if (migrated.avatar) writeCharacter({ ...readCharacter(), avatar: migrated.avatar });
+      if (migrated.userAvatar) writeSettings({ ...readSettings(), userAvatar: migrated.userAvatar });
       renderBackupPage();
       const added = result.cardsAdded + result.stickersAdded + result.messagesAdded + result.groupsAdded + result.patCardsAdded + result.promptQuestionnairesAdded + result.periodRecordsAdded + result.questionnaireAnswersAdded + result.statusesAdded;
       setImportStatus(
@@ -329,7 +364,7 @@ function bindEvents() {
 
   viewRoot.addEventListener('click', (event) => {
     const action = event.target.closest('[data-backup-action]')?.dataset.backupAction;
-    if (action === 'export') downloadBackup();
+    if (action === 'export') void downloadBackup();
     if (action === 'choose-import') elements.fileInput?.click();
   });
 

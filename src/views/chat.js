@@ -23,6 +23,7 @@ import {
   startQuestionnaireEngine,
 } from '../lib/questionnaire.js';
 import { getCurrentChatMood, maybeChangeChatMood } from '../lib/mood.js';
+import { getAvatarBlob, getStickerBlob, setBlobImage } from '../lib/media-db.js';
 
 const MESSAGE_ACTION_EVENT = 'xinghui:message-action';
 const STAR_REPLY_TRIGGER_EVENT = 'xinghui:trigger-star-reply';
@@ -72,21 +73,42 @@ function writeStoredMessages(messages) {
   return Boolean(writeChatMessages(messages));
 }
 
-function fillStarAvatar(container) {
-  const { avatar } = readCharacter();
+async function fillAvatar(container, source, fallback) {
+  if (!container) return;
   container.replaceChildren();
-
-  if (avatar) {
-    const image = document.createElement('img');
-    image.src = avatar;
-    image.alt = '';
-    container.append(image);
+  if (!source) {
+    container.textContent = fallback;
     return;
   }
 
-  container.textContent = '星';
+  const image = document.createElement('img');
+  image.alt = '';
+  container.append(image);
+
+  if (source === 'idb:star' || source === 'idb:user') {
+    try {
+      const blob = await getAvatarBlob(source === 'idb:star' ? 'star' : 'user');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      container.textContent = fallback;
+    }
+    return;
+  }
+
+  image.src = source;
 }
 
+function fillStarAvatar(container) {
+  const { avatar } = readCharacter();
+  return fillAvatar(container, avatar, '星');
+}
+
+function fillUserAvatar(container) {
+  const { userAvatar } = readSettings();
+  return fillAvatar(container, userAvatar, '我');
+}
 function updateChatProfileAvatar() {
   const character = readCharacter();
   if (elements?.profileAvatar) fillStarAvatar(elements.profileAvatar);
@@ -105,7 +127,7 @@ function createMessageAvatar(role) {
   avatar.setAttribute('aria-hidden', 'true');
 
   if (role === 'star') fillStarAvatar(avatar);
-  else avatar.textContent = '我';
+  else fillUserAvatar(avatar);
 
   return avatar;
 }
@@ -206,7 +228,19 @@ function createMessageBubble(message) {
   if (message.type === 'sticker') {
     bubble.classList.add('message-bubble--sticker');
 
-    if (/^data:image\//i.test(message.content)) {
+    if (/^idb:/i.test(message.content)) {
+      const stickerId = message.content.slice(4);
+      const image = document.createElement('img');
+      image.className = 'message-sticker__image';
+      image.alt = '表情包';
+      bubble.append(image);
+      void getStickerBlob(stickerId)
+        .then((blob) => {
+          if (blob) setBlobImage(image, blob);
+          else image.alt = '表情包不可用';
+        })
+        .catch(() => { image.alt = '表情包读取失败'; });
+    } else if (/^data:image\//i.test(message.content)) {
       const image = document.createElement('img');
       image.className = 'message-sticker__image';
       image.src = message.content;

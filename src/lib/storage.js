@@ -67,6 +67,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   chatBackgroundType: 'color',
   chatBackgroundColor: '#F7FBFE',
   chatBackgroundImage: '',
+  userAvatar: '',
   showTimestamp: true,
   fontSize: 'medium',
   currentGroupId: DEFAULT_GROUP_ID,
@@ -214,6 +215,10 @@ export function normalizeSettings(settings = {}) {
     chatBackgroundImage: typeof source.chatBackgroundImage === 'string' && /^data:image\//i.test(source.chatBackgroundImage)
       ? source.chatBackgroundImage
       : '',
+    userAvatar: (() => {
+      const avatar = String(source.userAvatar || '').trim();
+      return avatar === 'idb:user' || /^data:image\//i.test(avatar) ? avatar : '';
+    })(),
     showTimestamp: source.showTimestamp !== false,
     fontSize: FONT_SIZES.has(source.fontSize) ? source.fontSize : DEFAULT_SETTINGS.fontSize,
     currentGroupId: String(source.currentGroupId || '').trim() || DEFAULT_GROUP_ID,
@@ -241,9 +246,8 @@ export function updateSettings(patch = {}) {
 
 export function normalizeCharacter(character = {}) {
   const source = character && typeof character === 'object' && !Array.isArray(character) ? character : {};
-  const avatar = typeof source.avatar === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(source.avatar)
-    ? source.avatar
-    : '';
+  const avatarValue = typeof source.avatar === 'string' ? source.avatar.trim() : '';
+  const avatar = avatarValue === 'idb:star' || /^data:image\//i.test(avatarValue) ? avatarValue : '';
 
   return {
     name: String(source.name || DEFAULT_CHARACTER.name).trim() || DEFAULT_CHARACTER.name,
@@ -287,10 +291,15 @@ export function normalizeCard(card) {
 export function normalizeSticker(sticker) {
   if (!sticker || typeof sticker !== 'object' || Array.isArray(sticker)) return null;
   const image = String(sticker.image || sticker.content || sticker.src || '').trim();
-  if (!image) return null;
+  const storage = sticker.storage === 'indexeddb' || (!image && sticker.id) ? 'indexeddb' : 'legacy';
+  if (!image && storage !== 'indexeddb') return null;
   return {
     id: String(sticker.id || createId('sticker')),
-    image,
+    ...(image ? { image } : {}),
+    storage,
+    mimeType: String(sticker.mimeType || ''),
+    size: Math.max(0, finiteNumber(sticker.size, 0)),
+    createdAt: Math.max(0, finiteNumber(sticker.createdAt, Date.now())),
     enabled: sticker.enabled !== false,
   };
 }
@@ -663,7 +672,7 @@ export function normalizeBackupPayload(input) {
     ? source.favorites
     : {};
 
-  const knownKeys = ['cards', 'stickers', 'chatMessages', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'periodRecords', 'questionnaireDraft', 'moodCache', 'patCards', 'questionnaireAnswers', 'statuses', 'character'];
+  const knownKeys = ['cards', 'stickers', 'chatMessages', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'periodRecords', 'questionnaireDraft', 'moodCache', 'mediaAssets', 'patCards', 'questionnaireAnswers', 'statuses', 'character'];
   if (!knownKeys.some((key) => Object.prototype.hasOwnProperty.call(source, key))) {
     throw new Error('没有找到可导入的星回数据。');
   }
@@ -700,6 +709,7 @@ export function normalizeBackupPayload(input) {
     moodCache: source.moodCache && typeof source.moodCache === 'object' && !Array.isArray(source.moodCache)
       ? source.moodCache
       : null,
+    mediaAssets: Array.isArray(source.mediaAssets) ? source.mediaAssets : [],
     patCards: Array.isArray(source.patCards) ? source.patCards.map(normalizePatCard).filter(Boolean) : [],
     questionnaireAnswers: Array.isArray(source.questionnaireAnswers)
       ? source.questionnaireAnswers.map(normalizeTextEntry).filter(Boolean)

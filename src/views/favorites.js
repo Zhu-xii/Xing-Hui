@@ -1,5 +1,6 @@
 import '../styles/favorites.css';
 import { CHAT_CHANGED_EVENT, DATA_RESTORED_EVENT, readChatMessages } from '../lib/storage.js';
+import { getStickerBlob, setBlobImage } from '../lib/media-db.js';
 
 let viewRoot = null;
 let elements = null;
@@ -70,7 +71,14 @@ function createMessageContent(message) {
 
   if (message.type === 'sticker') {
     content.classList.add('is-sticker');
-    if (/^data:image\//i.test(message.content)) {
+    if (/^idb:/i.test(message.content)) {
+      const image = document.createElement('img');
+      image.alt = '收藏的表情包';
+      content.append(image);
+      void getStickerBlob(message.content.slice(4))
+        .then((blob) => { if (blob) setBlobImage(image, blob); })
+        .catch(() => {});
+    } else if (/^data:image\//i.test(message.content)) {
       const image = document.createElement('img');
       image.src = message.content;
       image.alt = '收藏的表情包';

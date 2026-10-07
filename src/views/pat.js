@@ -1,5 +1,6 @@
 import '../styles/pat.css';
 import { pickRandom, randomChance } from '../lib/random.js';
+import { getAvatarBlob, setBlobImage } from '../lib/media-db.js';
 import {
   CHARACTER_CHANGED_EVENT,
   readCharacter,
@@ -28,24 +29,38 @@ function createMessageId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function fillAvatar(container) {
+async function fillAvatar(container) {
   if (!container) return;
   const { avatar } = readCharacter();
   container.replaceChildren();
 
-  if (avatar) {
-    const image = document.createElement('img');
-    image.src = avatar;
-    image.alt = '';
-    container.append(image);
+  if (!avatar) {
+    const fallback = document.createElement('span');
+    fallback.textContent = '星';
+    container.append(fallback);
     return;
   }
 
-  const fallback = document.createElement('span');
-  fallback.textContent = '星';
-  container.append(fallback);
-}
+  const image = document.createElement('img');
+  image.alt = '';
+  container.append(image);
 
+  if (avatar === 'idb:star') {
+    try {
+      const blob = await getAvatarBlob('star');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      const fallback = document.createElement('span');
+      fallback.textContent = '星';
+      container.append(fallback);
+    }
+    return;
+  }
+
+  image.src = avatar;
+}
 function renderAvatar() {
   fillAvatar(elements?.avatar);
 }

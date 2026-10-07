@@ -14,6 +14,7 @@ import { initManageView, onManageViewEnter } from './views/manage.js';
 import { initQuestionnaireView, onQuestionnaireViewEnter } from './views/questionnaire.js';
 import { initPeriodView, onPeriodViewEnter } from './views/period.js';
 import { initPromptEngine } from './lib/prompt-engine.js';
+import { getAvatarBlob, listStickerRecords, migrateLegacyMedia, setBlobImage } from './lib/media-db.js';
 import { initSettingsView, onSettingsViewEnter } from './views/settings.js';
 import { initBackupView, onBackupViewEnter } from './views/backup.js';
 import './styles/polish.css';
@@ -34,8 +35,12 @@ import {
   readJson,
   readSettings,
   readStatuses,
+  readStickers,
   removeStorage,
+  updateSettings,
+  writeCharacter,
   writeJson,
+  writeStickers,
 } from './lib/storage.js';
 
 const DAILY_GREETING_KEY = 'xinghui_daily_greeting';
@@ -73,24 +78,39 @@ function applyAppearance(settings = readSettings()) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F7FBFE');
 }
 
-function renderHomeStarAvatar() {
+async function renderHomeStarAvatar() {
   const container = document.getElementById('homeStarAvatar');
   if (!container) return;
   const { avatar } = readCharacter();
-
   container.replaceChildren();
-  if (avatar) {
-    const image = document.createElement('img');
-    image.src = avatar;
-    image.alt = '星回头像';
-    container.append(image);
-  } else {
+
+  if (!avatar) {
     const fallback = document.createElement('span');
     fallback.textContent = '星';
     container.append(fallback);
+    return;
   }
-}
 
+  const image = document.createElement('img');
+  image.alt = '星回头像';
+  container.append(image);
+
+  if (avatar === 'idb:star') {
+    try {
+      const blob = await getAvatarBlob('star');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      const fallback = document.createElement('span');
+      fallback.textContent = '星';
+      container.append(fallback);
+    }
+    return;
+  }
+
+  image.src = avatar;
+}
 function renderHomeStatus() {
   const container = document.getElementById('homeStatus');
   const label = document.getElementById('homeStatusText');
@@ -98,7 +118,6 @@ function renderHomeStatus() {
 
   const exists = hasManageCategory(STATUS_CATEGORY_NAME);
   container.classList.toggle('is-warning', !exists);
-
   if (!exists) {
     label.textContent = '请先重建该类别';
     return;
@@ -107,7 +126,6 @@ function renderHomeStatus() {
   const latest = readStatuses().at(-1);
   label.textContent = latest?.content || '还没有设置状态';
 }
-
 function renderBackupReminder() {
   const reminder = document.getElementById('homeBackupReminder');
   if (!reminder) return;
@@ -325,7 +343,30 @@ window.addEventListener(DATA_RESTORED_EVENT, () => {
   renderBackupReminder();
 });
 
+async function initializeMediaStorage() {
+  try {
+    const result = await migrateLegacyMedia({
+      stickers: readStickers(),
+      character: readCharacter(),
+      settings: readSettings(),
+    });
+    const indexedStickers = await listStickerRecords();
+    const stickerMap = new Map();
+    [...result.stickers, ...readStickers(), ...indexedStickers].forEach((sticker) => {
+      if (sticker?.id) stickerMap.set(sticker.id, sticker);
+    });
+    writeStickers([...stickerMap.values()]);
+    const character = readCharacter();
+    if (result.avatar && result.avatar !== character.avatar) writeCharacter({ ...character, avatar: result.avatar });
+    const settings = readSettings();
+    if (result.userAvatar && result.userAvatar !== settings.userAvatar) updateSettings({ userAvatar: result.userAvatar });
+    window.dispatchEvent(new CustomEvent('xinghui:manage-data-changed'));
+  } catch {
+    // Keep legacy data untouched when media migration is unavailable or fails.
+  }
+}
 initStorage();
+await initializeMediaStorage();
 applyAppearance();
 
 if (!window.location.hash) {

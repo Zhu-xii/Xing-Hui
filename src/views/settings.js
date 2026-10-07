@@ -6,8 +6,8 @@ import {
   updateSettings,
   writeCharacter,
 } from '../lib/storage.js';
+import { deleteAvatarBlob, getAvatarBlob, putAvatarBlob, setBlobImage } from '../lib/media-db.js';
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const MAX_CHAT_BACKGROUND_BYTES = 2 * 1024 * 1024;
 
 let viewRoot = null;
@@ -36,26 +36,49 @@ function showToast(message, tone = 'default') {
   }, 2600);
 }
 
-function renderAvatar() {
-  const { avatar } = readCharacter();
-  const preview = elements?.avatarPreview;
+async function renderAvatarPreview(preview, source, fallback, alt) {
   if (!preview) return;
-
   preview.replaceChildren();
-  if (avatar) {
-    const image = document.createElement('img');
-    image.src = avatar;
-    image.alt = '星回头像预览';
-    preview.append(image);
-    preview.classList.add('has-image');
-  } else {
-    const fallback = document.createElement('span');
-    fallback.textContent = '星';
-    preview.append(fallback);
+  if (!source) {
+    const fallbackNode = document.createElement('span');
+    fallbackNode.textContent = fallback;
+    preview.append(fallbackNode);
     preview.classList.remove('has-image');
+    return;
   }
+
+  const image = document.createElement('img');
+  image.alt = alt;
+  preview.append(image);
+  preview.classList.add('has-image');
+
+  if (source === 'idb:star' || source === 'idb:user') {
+    try {
+      const blob = await getAvatarBlob(source === 'idb:star' ? 'star' : 'user');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      const fallbackNode = document.createElement('span');
+      fallbackNode.textContent = fallback;
+      preview.append(fallbackNode);
+      preview.classList.remove('has-image');
+    }
+    return;
+  }
+
+  image.src = source;
 }
 
+function renderAvatar() {
+  const { avatar } = readCharacter();
+  return renderAvatarPreview(elements?.avatarPreview, avatar, '星', '星回头像预览');
+}
+
+function renderUserAvatar() {
+  const { userAvatar } = readSettings();
+  return renderAvatarPreview(elements?.userAvatarPreview, userAvatar, '我', '我的头像预览');
+}
 function syncAppearanceControls(settings = readSettings()) {
   if (!elements) return;
 
@@ -102,6 +125,7 @@ function syncSettings() {
   syncAppearanceControls(settings);
 
   renderAvatar();
+  renderUserAvatar();
 }
 
 function saveDelayRange(preferMin = false) {
@@ -257,44 +281,58 @@ function handleChatBackgroundUpload(event) {
   reader.readAsDataURL(file);
 }
 
+async function saveAvatarFile(file, avatarId, onSaved, onError) {
+  if (!file?.type?.startsWith('image/')) {
+    showToast('请选择本地图片文件。', 'warning');
+    return;
+  }
+  try {
+    await putAvatarBlob(avatarId, file, { createdAt: Date.now() });
+    onSaved(file);
+  } catch {
+    onError();
+  }
+}
+
 function handleAvatarUpload(event) {
   const [file] = event.target.files || [];
   if (!file) return;
-
-  if (!file.type.startsWith('image/')) {
-    showToast('请选择本地图片文件。', 'warning');
-    event.target.value = '';
-    return;
-  }
-
-  if (file.size > MAX_AVATAR_BYTES) {
-    showToast('头像图片不能超过 2MB。', 'warning');
-    event.target.value = '';
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.addEventListener('load', () => {
-    const avatar = typeof reader.result === 'string' ? reader.result : '';
-    if (!avatar.startsWith('data:image/')) {
-      showToast('图片读取失败，请重试。', 'warning');
-      return;
-    }
-
-    const saved = writeCharacter({ ...readCharacter(), avatar });
-    if (!saved) {
-      showToast('头像保存失败，图片可能过大。', 'warning');
-      return;
-    }
-
-    elements.avatarFileName.textContent = file.name;
-    renderAvatar();
-    showToast('头像已更新并即时生效。');
-  });
-  reader.addEventListener('error', () => showToast('图片读取失败，请重试。', 'warning'));
-  reader.readAsDataURL(file);
+  void saveAvatarFile(
+    file,
+    'star',
+    (selectedFile) => {
+      const saved = writeCharacter({ ...readCharacter(), avatar: 'idb:star' });
+      if (!saved) {
+        showToast('头像保存失败，请检查浏览器存储空间。', 'warning');
+        return;
+      }
+      elements.avatarFileName.textContent = selectedFile.name;
+      void renderAvatar();
+      showToast('星回头像已更新并即时生效。');
+    },
+    () => showToast('头像保存失败，请检查浏览器存储空间。', 'warning'),
+  );
 }
 
+function handleUserAvatarUpload(event) {
+  const [file] = event.target.files || [];
+  if (!file) return;
+  void saveAvatarFile(
+    file,
+    'user',
+    (selectedFile) => {
+      const saved = updateSettings({ userAvatar: 'idb:user' });
+      if (!saved) {
+        showToast('头像保存失败，请检查浏览器存储空间。', 'warning');
+        return;
+      }
+      elements.userAvatarFileName.textContent = selectedFile.name;
+      void renderUserAvatar();
+      showToast('我的头像已更新并即时生效。');
+    },
+    () => showToast('头像保存失败，请检查浏览器存储空间。', 'warning'),
+  );
+}
 function handleClick(event) {
   const actionButton = event.target.closest('[data-settings-action]');
   if (!actionButton) return;
@@ -306,8 +344,17 @@ function handleClick(event) {
     writeCharacter({ ...readCharacter(), avatar: '' });
     elements.avatarInput.value = '';
     elements.avatarFileName.textContent = '未选择文件';
-    renderAvatar();
+    void deleteAvatarBlob('star').catch(() => {});
+    void renderAvatar();
     showToast('已恢复默认星回头像。');
+  }
+  if (action === 'clear-user-avatar') {
+    updateSettings({ userAvatar: '' });
+    elements.userAvatarInput.value = '';
+    elements.userAvatarFileName.textContent = '未选择文件';
+    void deleteAvatarBlob('user').catch(() => {});
+    void renderUserAvatar();
+    showToast('已恢复默认我的头像。');
   }
   if (action === 'set-bubble-color') {
     updateSettings({ bubbleColor: actionButton.dataset.colorValue });
@@ -327,6 +374,10 @@ function bindEvents() {
 
   viewRoot.addEventListener('input', handleRangeInput);
   viewRoot.addEventListener('change', (event) => {
+    if (event.target === elements.userAvatarInput) {
+      handleUserAvatarUpload(event);
+      return;
+    }
     if (event.target === elements.avatarInput) {
       handleAvatarUpload(event);
       return;
@@ -493,13 +544,35 @@ export function initSettingsView(root = document.getElementById('view-settings')
           <span class="settings-avatar__preview" id="settingsAvatarPreview" aria-hidden="true"><span>星</span></span>
           <div class="settings-avatar__copy">
             <strong>上传本地图片</strong>
-            <small>支持常见图片格式，最大 2MB；保存为 base64 并即时生效。</small>
+            <small>支持常见图片格式，原图保存在 IndexedDB 并即时生效。</small>
             <div class="settings-avatar__actions">
               <label class="settings-button settings-button--primary" for="settingsAvatarInput">选择图片</label>
               <input class="settings-file-input" id="settingsAvatarInput" type="file" accept="image/*" />
               <button class="settings-text-button" type="button" data-settings-action="clear-avatar">恢复默认</button>
             </div>
             <span class="settings-file-name" id="settingsAvatarFileName">未选择文件</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsUserAvatarTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">头像</p>
+            <h3 id="settingsUserAvatarTitle">我的头像</h3>
+          </div>
+        </div>
+        <div class="settings-avatar">
+          <span class="settings-avatar__preview" id="settingsUserAvatarPreview" aria-hidden="true"><span>我</span></span>
+          <div class="settings-avatar__copy">
+            <strong>上传本地图片</strong>
+            <small>用于聊天气泡旁的用户头像，原图保存在 IndexedDB。</small>
+            <div class="settings-avatar__actions">
+              <label class="settings-button settings-button--primary" for="settingsUserAvatarInput">选择图片</label>
+              <input class="settings-file-input" id="settingsUserAvatarInput" type="file" accept="image/*" />
+              <button class="settings-text-button" type="button" data-settings-action="clear-user-avatar">恢复默认</button>
+            </div>
+            <span class="settings-file-name" id="settingsUserAvatarFileName">未选择文件</span>
           </div>
         </div>
       </section>
@@ -607,6 +680,9 @@ export function initSettingsView(root = document.getElementById('view-settings')
     avatarPreview: viewRoot.querySelector('#settingsAvatarPreview'),
     avatarInput: viewRoot.querySelector('#settingsAvatarInput'),
     avatarFileName: viewRoot.querySelector('#settingsAvatarFileName'),
+    userAvatarPreview: viewRoot.querySelector('#settingsUserAvatarPreview'),
+    userAvatarInput: viewRoot.querySelector('#settingsUserAvatarInput'),
+    userAvatarFileName: viewRoot.querySelector('#settingsUserAvatarFileName'),
     promptQuestionnaireChance: viewRoot.querySelector('#settingPromptQuestionnaireChance'),
     promptQuestionnaireIntervalHours: viewRoot.querySelector('#settingPromptQuestionnaireIntervalHours'),
     showTimestamp: viewRoot.querySelector('#settingShowTimestamp'),

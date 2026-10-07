@@ -23,7 +23,7 @@
 }
 
 .hero {
-  padding: 18px 0 10px;
+  padding: 14px 0 8px;
 }
 
 .clock-time {
@@ -62,7 +62,7 @@
 
 .home-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px;
 }
 
 .home-page .entry-card {
@@ -142,7 +142,7 @@
 
 @media (min-width: 768px) {
   .hero {
-    padding: 28px 0 16px;
+    padding: 24px 0 14px;
   }
 
   .home-board {
@@ -151,7 +151,7 @@
   }
 
   .home-grid {
-    gap: 12px;
+    gap: 18px;
   }
 
   .home-page .entry-card {

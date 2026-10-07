@@ -66,7 +66,7 @@ export function getEnabledStickers(stickers = readStickers()) {
       const image = String(sticker.image || sticker.content || sticker.src || '').trim();
       return { ...sticker, image };
     })
-    .filter((sticker) => sticker.image);
+    .filter((sticker) => sticker.image || (sticker.storage === 'indexeddb' && sticker.id));
 }
 
 export function createReplyPayload({ settings, cards, stickers } = {}) {
@@ -84,7 +84,7 @@ export function createReplyPayload({ settings, cards, stickers } = {}) {
   if (availableStickers.length > 0 && randomChance(options.stickerReply)) {
     const sticker = pickRandom(availableStickers);
     type = 'sticker';
-    content = sticker.image;
+    content = sticker.storage === 'indexeddb' ? `idb:${sticker.id}` : sticker.image;
   } else {
     const availableCards = getAvailableCards(
       options.currentGroupId,

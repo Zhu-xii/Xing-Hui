@@ -1,4 +1,5 @@
 import '../styles/manage.css';
+import { deleteStickerBlob, getStickerBlob, putStickerBlob, setBlobImage } from '../lib/media-db.js';
 import {
   CARD_STORAGE_KEY as STORAGE_CARD_KEY,
   DEFAULT_GROUP_ID as STORAGE_DEFAULT_GROUP_ID,
@@ -25,6 +26,8 @@ export const STATUS_STORAGE_KEY = STORAGE_STATUS_KEY;
 export const DEFAULT_GROUP_ID = STORAGE_DEFAULT_GROUP_ID;
 export const GREETING_GROUP_ID = STORAGE_GREETING_GROUP_ID;
 
+const CARD_PAGE_SIZE = 120;
+
 const BUILT_IN_GROUPS = [
   { id: DEFAULT_GROUP_ID, name: '默认分组' },
   { id: GREETING_GROUP_ID, name: '问候语字卡' },
@@ -44,6 +47,8 @@ const state = {
   statuses: [],
   patCards: [],
   currentGroupId: DEFAULT_GROUP_ID,
+  cardPage: 1,
+  searchQuery: '',
   selectedCardIds: new Set(),
 };
 
@@ -85,10 +90,15 @@ function normalizeCard(card, validGroupIds) {
 function normalizeSticker(sticker) {
   if (!sticker || typeof sticker !== 'object') return null;
   const image = String(sticker.image || sticker.content || sticker.src || '').trim();
-  if (!image) return null;
+  const storage = sticker.storage === 'indexeddb' || (!image && sticker.id) ? 'indexeddb' : 'legacy';
+  if (!image && storage !== 'indexeddb') return null;
   return {
     id: String(sticker.id || createId('sticker')),
-    image,
+    ...(image ? { image } : {}),
+    storage,
+    mimeType: String(sticker.mimeType || ''),
+    size: Math.max(0, Number(sticker.size) || 0),
+    createdAt: Math.max(0, Number(sticker.createdAt) || Date.now()),
     enabled: sticker.enabled !== false,
   };
 }
@@ -268,6 +278,17 @@ function currentCategory() {
   return categoryForGroup(state.currentGroupId);
 }
 
+function filteredCurrentItems() {
+  const items = currentItems();
+  const query = state.searchQuery.trim().toLocaleLowerCase();
+  if (!query) return items;
+  return items.filter((item) => {
+    const content = String(item.content || '').toLocaleLowerCase();
+    const question = String(item.question || '').toLocaleLowerCase();
+    const metadata = `${item.mimeType || ''} ${item.size || ''}`.toLocaleLowerCase();
+    return content.includes(query) || question.includes(query) || metadata.includes(query);
+  });
+}
 function currentItems() {
   const category = currentCategory();
   return category ? categoryItems(category.type) : cardsInGroup(state.currentGroupId);
@@ -305,6 +326,13 @@ function setModalError(message) {
   if (!elements?.modalError) return;
   elements.modalError.textContent = message;
   elements.modalError.hidden = !message;
+  if (message) setModalProgress('');
+}
+
+function setModalProgress(message) {
+  if (!elements?.modalProgress) return;
+  elements.modalProgress.textContent = message;
+  elements.modalProgress.hidden = !message;
 }
 
 function closeModal() {
@@ -313,6 +341,7 @@ function closeModal() {
   elements.modal.hidden = true;
   elements.modal.innerHTML = '';
   elements.modalError = null;
+  elements.modalProgress = null;
   modalConfirmHandler = null;
 }
 
@@ -340,6 +369,7 @@ function openModal({
       </header>
       <form class="manage-modal__form" id="manageModalForm">
         <div class="manage-modal__body">${body}</div>
+        <p class="manage-modal__progress" id="manageModalProgress" hidden></p>
         <p class="manage-modal__error" id="manageModalError" hidden></p>
         <footer class="manage-modal__footer">
           <button class="manage-button manage-button--ghost" type="button" data-manage-action="close-modal">${escapeHtml(cancelLabel)}</button>
@@ -349,6 +379,7 @@ function openModal({
     </section>
   `;
 
+  elements.modalProgress = elements.modal.querySelector('#manageModalProgress');
   elements.modalError = elements.modal.querySelector('#manageModalError');
   modalConfirmHandler = typeof onConfirm === 'function' ? onConfirm : null;
 
@@ -452,7 +483,7 @@ function renderStickerRows(visibleStickers) {
           <span aria-hidden="true"></span>
         </label>
         <div class="manage-card-row__copy">
-          <div class="manage-sticker-preview"><img src="${escapeHtml(sticker.image)}" alt="表情包" /></div>
+          <div class="manage-sticker-preview"><img data-sticker-image-id="${escapeHtml(sticker.id)}" alt="表情包" /></div>
           <div class="manage-card-row__meta">
             <span>本地图片</span>
             <span class="manage-status ${sticker.enabled === false ? 'is-disabled' : 'is-enabled'}">${sticker.enabled === false ? '已停用' : '启用中'}</span>
@@ -499,14 +530,31 @@ function renderTextEntryRows(entries, category) {
   }).join('');
 }
 
+async function hydrateStickerPreviewImages() {
+  const images = Array.from(elements?.cardList?.querySelectorAll('[data-sticker-image-id]') || []);
+  await Promise.all(images.map(async (image) => {
+    try {
+      const blob = await getStickerBlob(image.dataset.stickerImageId);
+      if (blob) setBlobImage(image, blob);
+      else image.alt = '表情包不可用';
+    } catch {
+      image.alt = '表情包读取失败';
+    }
+  }));
+}
 function renderCards() {
   if (!elements?.cardList || !elements?.summary) return;
 
+  if (elements.searchInput && elements.searchInput.value !== state.searchQuery) elements.searchInput.value = state.searchQuery;
+
   const category = currentCategory();
-  const visibleItems = currentItems();
-  const visibleCards = category ? [] : visibleItems;
+  const allItems = filteredCurrentItems();
+  const pageCount = Math.max(1, Math.ceil(allItems.length / CARD_PAGE_SIZE));
+  state.cardPage = Math.min(Math.max(1, state.cardPage), pageCount);
+  const pageStart = (state.cardPage - 1) * CARD_PAGE_SIZE;
+  const pageItems = allItems.slice(pageStart, pageStart + CARD_PAGE_SIZE);
   const currentGroup = groupById(state.currentGroupId);
-  const selectedVisibleCount = visibleItems.filter((item) => state.selectedCardIds.has(item.id)).length;
+  const selectedVisibleCount = allItems.filter((item) => state.selectedCardIds.has(item.id)).length;
   const disabledTotal = state.cards.filter((card) => card.disabled).length;
   const isStickerCategory = category?.type === 'stickers';
   const isTextCategory = category?.type === 'questionnaire' || category?.type === 'status';
@@ -514,12 +562,12 @@ function renderCards() {
 
   elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
   elements.currentGroupName.textContent = currentGroup?.name || '默认分组';
-  elements.visibleCardCount.textContent = `${visibleItems.length} ${unit}`;
+  elements.visibleCardCount.textContent = `${allItems.length} ${unit}`;
 
   if (elements.selectAll) {
-    elements.selectAll.checked = visibleItems.length > 0 && selectedVisibleCount === visibleItems.length;
-    elements.selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleItems.length;
-    elements.selectAll.disabled = visibleItems.length === 0;
+    elements.selectAll.checked = allItems.length > 0 && selectedVisibleCount === allItems.length;
+    elements.selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < allItems.length;
+    elements.selectAll.disabled = allItems.length === 0;
   }
 
   if (elements.selectionText) elements.selectionText.textContent = `已选 ${state.selectedCardIds.size} ${unit}`;
@@ -549,11 +597,19 @@ function renderCards() {
   if (batchMove) batchMove.hidden = Boolean(category);
 
   if (isStickerCategory) {
-    elements.cardList.innerHTML = renderStickerRows(visibleItems);
+    elements.cardList.innerHTML = renderStickerRows(pageItems);
+    void hydrateStickerPreviewImages();
   } else if (isTextCategory) {
-    elements.cardList.innerHTML = renderTextEntryRows(visibleItems, category.type);
+    elements.cardList.innerHTML = renderTextEntryRows(pageItems, category.type);
   } else {
-    elements.cardList.innerHTML = renderCardRows(visibleCards, currentGroup);
+    elements.cardList.innerHTML = renderCardRows(pageItems, currentGroup);
+  }
+
+  if (elements.cardPagination) {
+    elements.cardPagination.hidden = pageCount <= 1;
+    elements.cardPageStatus.textContent = `${state.cardPage} / ${pageCount}`;
+    elements.cardPrevPage.disabled = state.cardPage <= 1;
+    elements.cardNextPage.disabled = state.cardPage >= pageCount;
   }
 }
 function renderPatCards() {
@@ -712,26 +768,17 @@ function deleteGroup(groupId) {
   });
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener('load', () => resolve(typeof reader.result === 'string' ? reader.result : ''));
-    reader.addEventListener('error', () => reject(new Error('read-failed')));
-    reader.readAsDataURL(file);
-  });
-}
-
 function stickerImportEditor() {
   openModal({
     title: '导入表情包',
-    description: '选择本地图片，图片只保存在当前浏览器中，不会上传网络。',
+    description: '选择本地图片，图片二进制会保存到 IndexedDB，不会上传网络。',
     confirmLabel: '导入',
     body: `
       <label class="manage-field">
         <span>本地图片</span>
         <input id="manageStickerFiles" type="file" accept="image/*" multiple />
       </label>
-      <p class="manage-field__hint">支持一次导入多张，单张不超过 2MB，合计不超过 4MB。</p>
+      <p class="manage-field__hint">支持一次选择多张图片；没有自定义大小上限，仍受浏览器自身存储配额限制。</p>
     `,
     onConfirm: async () => {
       const files = Array.from(elements.modal.querySelector('#manageStickerFiles').files || []);
@@ -739,55 +786,69 @@ function stickerImportEditor() {
         setModalError('请先选择本地图片。');
         return false;
       }
-
       if (files.some((file) => !file.type.startsWith('image/'))) {
         setModalError('只能导入本地图片文件。');
         return false;
       }
 
-      if (files.some((file) => file.size > 2 * 1024 * 1024)) {
-        setModalError('单张表情包不能超过 2MB。');
-        return false;
-      }
-
       const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-      if (totalSize > 4 * 1024 * 1024) {
-        setModalError('一次导入的图片合计不能超过 4MB。');
-        return false;
+      setModalProgress(`正在读取 0/${files.length}`);
+      if (navigator.storage?.estimate) {
+        try {
+          const estimate = await navigator.storage.estimate();
+          const remaining = Math.max(0, (estimate.quota || 0) - (estimate.usage || 0));
+          if (estimate.quota && totalSize > remaining) {
+            setModalError('浏览器可用空间不足，请先释放存储空间或导出备份。');
+            return false;
+          }
+        } catch {
+          // Quota estimation is best-effort; continue with IndexedDB if it fails.
+        }
       }
 
-      let images;
-      try {
-        images = await Promise.all(files.map(readFileAsDataUrl));
-      } catch {
-        setModalError('图片读取失败，请重试。');
-        return false;
+      const imported = [];
+      let failed = 0;
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        const id = createId('sticker');
+        try {
+          await putStickerBlob(id, file, { enabled: true, createdAt: Date.now() });
+          imported.push({
+            id,
+            storage: 'indexeddb',
+            mimeType: file.type,
+            size: file.size,
+            createdAt: Date.now(),
+            enabled: true,
+          });
+        } catch {
+          failed += 1;
+        }
+        setModalProgress(`正在写入 ${index + 1}/${files.length}`);
+        await nextMainThreadTurn();
       }
-
-      const imported = images
-        .filter((image) => image.startsWith('data:image/'))
-        .map((image) => ({ id: createId('sticker'), image, enabled: true }));
 
       if (!imported.length) {
-        setModalError('没有读取到可用的图片。');
+        setModalError('图片保存失败，请检查浏览器存储空间。');
         return false;
       }
 
+      const beforeLength = state.stickers.length;
       state.stickers.push(...imported);
       state.selectedCardIds.clear();
       if (!saveData()) {
-        state.stickers.splice(state.stickers.length - imported.length, imported.length);
-        setModalError('图片保存失败，浏览器存储空间可能不足。');
+        state.stickers.splice(beforeLength, imported.length);
+        await Promise.all(imported.map((item) => deleteStickerBlob(item.id).catch(() => {})));
+        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
         return false;
       }
 
       render();
-      setToast(`已导入 ${imported.length} 张表情包`);
+      setToast(`已导入 ${imported.length} 张表情包，失败 ${failed} 张`);
       return true;
     },
   });
 }
-
 function textEntryEditor(entryId = '') {
   const category = currentCategory();
   if (!category || category.type === 'stickers') return;
@@ -1010,8 +1071,15 @@ function deleteCards(cardIds) {
     description: '删除后无法恢复，此操作不会删除当前类别或分组。',
     confirmLabel: '确认删除',
     danger: true,
-    onConfirm: () => {
+    onConfirm: async () => {
+      const previousStickers = state.stickers;
+      const previousQuestionnaireAnswers = state.questionnaireAnswers;
+      const previousStatuses = state.statuses;
+      const previousCards = state.cards;
+      let removedStickers = [];
+
       if (category?.type === 'stickers') {
+        removedStickers = state.stickers.filter((item) => idSet.has(item.id));
         state.stickers = state.stickers.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'questionnaire') {
         state.questionnaireAnswers = state.questionnaireAnswers.filter((item) => !idSet.has(item.id));
@@ -1021,14 +1089,25 @@ function deleteCards(cardIds) {
         state.cards = state.cards.filter((item) => !idSet.has(item.id));
       }
       cardIds.forEach((id) => state.selectedCardIds.delete(id));
-      saveData();
+
+      if (!saveData()) {
+        state.stickers = previousStickers;
+        state.questionnaireAnswers = previousQuestionnaireAnswers;
+        state.statuses = previousStatuses;
+        state.cards = previousCards;
+        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
+        return false;
+      }
+
+      if (removedStickers.length) {
+        await Promise.all(removedStickers.map((item) => deleteStickerBlob(item.id).catch(() => {})));
+      }
       render();
       setToast(`已删除 ${count} ${unit}`);
       return true;
     },
   });
 }
-
 function moveSelectedCards() {
   const count = state.selectedCardIds.size;
   if (!count || currentCategory()) return;
@@ -1149,9 +1228,14 @@ function importTextCategoryJson(category) {
         return false;
       }
 
+      const beforeLength = collection.length;
       collection.push(...imported);
       state.selectedCardIds.clear();
-      saveData();
+      if (!saveData()) {
+        collection.splice(beforeLength, imported.length);
+        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
+        return false;
+      }
       render();
       setToast(`已导入 ${imported.length} 条${category.name}内容`);
       return true;
@@ -1227,10 +1311,16 @@ function importJsonCards() {
         return false;
       }
 
+      const beforeLength = state.cards.length;
       state.cards.push(...imported);
       state.currentGroupId = group.id;
+      state.cardPage = 1;
       state.selectedCardIds.clear();
-      saveData();
+      if (!saveData()) {
+        state.cards.splice(beforeLength, imported.length);
+        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
+        return false;
+      }
       render();
       setToast(`已从 JSON 导入 ${imported.length} 张字卡`);
       return true;
@@ -1238,9 +1328,51 @@ function importJsonCards() {
   });
 }
 
+function cleanImportLines(text) {
+  const rawLines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const nonEmpty = rawLines.map((line) => line.trim()).filter(Boolean);
+  const seen = new Set();
+  const unique = [];
+  nonEmpty.forEach((line) => {
+    if (seen.has(line)) return;
+    seen.add(line);
+    unique.push(line);
+  });
+  return {
+    unique,
+    skipped: (rawLines.length - nonEmpty.length) + (nonEmpty.length - unique.length),
+  };
+}
+
+function nextMainThreadTurn() {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
+}
+
+async function buildChunkedImports(lines, existingContents, makeItem, onProgress) {
+  const additions = lines
+    .filter((content) => !existingContents.has(content))
+    .map(makeItem);
+  const skipped = lines.length - additions.length;
+  const batchSize = 150;
+
+  for (let index = 0; index < additions.length; index += batchSize) {
+    const completed = Math.min(additions.length, index + batchSize);
+    onProgress(completed, additions.length);
+    await nextMainThreadTurn();
+  }
+
+  return { additions, skipped };
+}
+
+function importStorageFailureMessage() {
+  return '浏览器存储空间不足，请先导出备份或清理字卡';
+}
+
 function importTextCards() {
+  window.__manageImportCalled = (window.__manageImportCalled || 0) + 1;
   const category = currentCategory();
   if (category?.type === 'stickers') return;
+
   if (category?.type === 'questionnaire' || category?.type === 'status') {
     const collection = categoryItems(category.type);
     openModal({
@@ -1253,19 +1385,31 @@ function importTextCards() {
           <textarea id="manageCategoryText" rows="8" placeholder="每行一条内容"></textarea>
         </label>
       `,
-      onConfirm: () => {
+      onConfirm: async () => {
         const textarea = elements.modal.querySelector('#manageCategoryText');
-        const lines = textarea.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-        if (!lines.length) {
+        const cleaned = cleanImportLines(textarea.value);
+        if (!cleaned.unique.length) {
           setModalError('请至少输入一行内容。');
           return false;
         }
 
-        collection.push(...lines.map((content) => ({ id: createId(category.type), content })));
+        const existing = new Set(collection.map((item) => String(item.content || '').trim()));
+        const { additions, skipped } = await buildChunkedImports(
+          cleaned.unique,
+          existing,
+          (content) => ({ id: createId(category.type), content }),
+          (completed, total) => setModalProgress(`正在导入 ${completed}/${total}`),
+        );
+        const beforeLength = collection.length;
+        collection.push(...additions);
+        if (!saveData()) {
+          collection.splice(beforeLength, additions.length);
+          setModalError(importStorageFailureMessage());
+          return false;
+        }
         state.selectedCardIds.clear();
-        saveData();
         render();
-        setToast(`已导入 ${lines.length} 条${category.name}内容`);
+        setToast(`已导入 ${additions.length} 条${category.name}内容，跳过 ${cleaned.skipped + skipped} 条`);
         return true;
       },
     });
@@ -1286,40 +1430,48 @@ function importTextCards() {
         <textarea id="manageTextCards" rows="8" placeholder="今天也要好好休息。&#10;记得喝水。&#10;我一直都在。"></textarea>
       </label>
     `,
-    onConfirm: () => {
+    onConfirm: async () => {
       const groupId = elements.modal.querySelector('#manageTextGroup').value;
       const group = groupById(groupId);
       const text = elements.modal.querySelector('#manageTextCards').value;
-
       if (!group) {
         setModalError('请选择有效的目标分组。');
         return false;
       }
 
-      const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      if (!lines.length) {
+      const cleaned = cleanImportLines(text);
+      if (!cleaned.unique.length) {
         setModalError('请至少输入一行字卡内容。');
         return false;
       }
 
-      state.cards.push(
-        ...lines.map((content) => ({
-          id: createId('card'),
-          groupId: group.id,
-          content,
-          disabled: false,
-        })),
+      const existing = new Set(
+        state.cards
+          .filter((card) => card.groupId === group.id)
+          .map((card) => String(card.content || '').trim()),
       );
+      const { additions, skipped } = await buildChunkedImports(
+        cleaned.unique,
+        existing,
+        (content) => ({ id: createId('card'), groupId: group.id, content, disabled: false }),
+        (completed, total) => setModalProgress(`正在导入 ${completed}/${total}`),
+      );
+      const beforeLength = state.cards.length;
+      state.cards.push(...additions);
+      if (!saveData()) {
+        state.cards.splice(beforeLength, additions.length);
+        setModalError(importStorageFailureMessage());
+        return false;
+      }
       state.currentGroupId = group.id;
+      state.cardPage = 1;
       state.selectedCardIds.clear();
-      saveData();
       render();
-      setToast(`已导入 ${lines.length} 张字卡`);
+      setToast(`已导入 ${additions.length} 张字卡，跳过 ${cleaned.skipped + skipped} 张`);
       return true;
     },
   });
 }
-
 function exportSelectedCards() {
   const items = selectedItems();
   const category = currentCategory();
@@ -1380,10 +1532,21 @@ function handleAction(action, target) {
     case 'close-modal':
       closeModal();
       break;
+    case 'card-prev-page':
+      if (state.cardPage > 1) {
+        state.cardPage -= 1;
+        renderCards();
+      }
+      break;
+    case 'card-next-page':
+      state.cardPage += 1;
+      renderCards();
+      break;
     case 'select-group': {
       const groupId = target.dataset.groupId;
       if (!groupById(groupId)) return;
       state.currentGroupId = groupId;
+      state.cardPage = 1;
       state.selectedCardIds.clear();
       writeCurrentGroupId();
       render();
@@ -1500,6 +1663,13 @@ function bindEvents() {
     handleAction(action, target);
   });
 
+  viewRoot.addEventListener('input', (event) => {
+    if (event.target.id !== 'manageCardSearch') return;
+    state.searchQuery = event.target.value;
+    state.cardPage = 1;
+    renderCards();
+  });
+
   viewRoot.addEventListener('change', handleChange);
   viewRoot.addEventListener('submit', (event) => {
     if (event.target.id === 'manageModalForm') void handleModalSubmit(event);
@@ -1550,6 +1720,10 @@ export function initManageView(root = document.getElementById('view-manage')) {
         </div>
 
         <div class="manage-toolbar">
+          <label class="manage-search">
+            <span class="manage-search__icon" aria-hidden="true">⌕</span>
+            <input id="manageCardSearch" type="search" placeholder="搜索当前分类" aria-label="搜索当前分类" />
+          </label>
           <label class="manage-select-all">
             <span class="manage-checkbox">
               <input id="manageSelectAll" type="checkbox" />
@@ -1576,6 +1750,11 @@ export function initManageView(root = document.getElementById('view-manage')) {
         </div>
 
         <div class="manage-card-list" id="manageCardList"></div>
+        <div class="manage-card-pagination" id="manageCardPagination" hidden>
+          <button type="button" id="manageCardPrevPage" data-manage-action="card-prev-page">上一页</button>
+          <span id="manageCardPageStatus">1 / 1</span>
+          <button type="button" id="manageCardNextPage" data-manage-action="card-next-page">下一页</button>
+        </div>
       </section>
 
       <section class="manage-panel manage-panel--pat" aria-labelledby="managePatCardsTitle">
@@ -1603,8 +1782,13 @@ export function initManageView(root = document.getElementById('view-manage')) {
     visibleCardCount: viewRoot.querySelector('#manageVisibleCardCount'),
     selectionText: viewRoot.querySelector('#manageSelectionText'),
     selectAll: viewRoot.querySelector('#manageSelectAll'),
+    searchInput: viewRoot.querySelector('#manageCardSearch'),
     batchBar: viewRoot.querySelector('#manageBatchBar'),
     cardList: viewRoot.querySelector('#manageCardList'),
+    cardPagination: viewRoot.querySelector('#manageCardPagination'),
+    cardPageStatus: viewRoot.querySelector('#manageCardPageStatus'),
+    cardPrevPage: viewRoot.querySelector('#manageCardPrevPage'),
+    cardNextPage: viewRoot.querySelector('#manageCardNextPage'),
     patCardList: viewRoot.querySelector('#managePatCardList'),
     patCardCount: viewRoot.querySelector('#managePatCardCount'),
     modal: viewRoot.querySelector('#manageModal'),
