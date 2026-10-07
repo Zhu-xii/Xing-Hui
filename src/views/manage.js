@@ -1196,278 +1196,100 @@ function importTextCategoryJson(category) {
       <p class="manage-field__hint">会读取 items、cards、questionnaireAnswers 或 statuses 数组。</p>
     `,
     onConfirm: async () => {
-      const file = elements.modal.querySelector('#manageCategoryImportFile').files?.[0];
-      if (!file) {
-        setModalError('请先选择 JSON 文件。');
-        return false;
-      }
+      const file = elements.modal.querySelector('#manageBatchImportFile')?.files?.[0] || null;
+      const textarea = elements.modal.querySelector('#manageBatchImportText');
+      const typedText = textarea?.value || '';
+      const parsedLines = [];
 
-      let parsed;
-      try {
-        parsed = JSON.parse(await file.text());
-      } catch {
-        setModalError('文件不是有效的 JSON，请检查后重试。');
-        return false;
-      }
-
-      const candidates = Array.isArray(parsed)
-        ? parsed
-        : parsed?.items || parsed?.cards || parsed?.questionnaireAnswers || parsed?.statuses || null;
-      if (!Array.isArray(candidates)) {
-        setModalError('JSON 中没有找到可导入的内容数组。');
-        return false;
-      }
-
-      const imported = candidates
-        .map((item) => (typeof item === 'string' ? { content: item } : item))
-        .filter((item) => item && typeof item.content === 'string' && item.content.trim())
-        .map((item) => ({ id: createId(category.type), content: item.content.trim() }));
-
-      if (!imported.length) {
-        setModalError('JSON 中没有可导入的文字内容。');
-        return false;
-      }
-
-      const beforeLength = collection.length;
-      collection.push(...imported);
-      state.selectedCardIds.clear();
-      if (!saveData()) {
-        collection.splice(beforeLength, imported.length);
-        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
-        return false;
-      }
-      render();
-      setToast(`已导入 ${imported.length} 条${category.name}内容`);
-      return true;
-    },
-  });
-}
-function importJsonCards() {
-  const category = currentCategory();
-  if (category?.type === 'stickers') {
-    stickerImportEditor();
-    return;
-  }
-  if (category?.type === 'questionnaire' || category?.type === 'status') {
-    importTextCategoryJson(category);
-    return;
-  }
-
-  openModal({
-    title: '导入 JSON 字卡',
-    description: '先选择目标分组，再选择包含字卡数组的 JSON 文件。',
-    confirmLabel: '导入',
-    body: `
-      <label class="manage-field">
-        <span>目标分组</span>
-        <select id="manageImportGroup">${groupOptionsHtml(state.currentGroupId)}</select>
-      </label>
-      <label class="manage-field">
-        <span>JSON 文件</span>
-        <input id="manageImportFile" type="file" accept=".json,application/json" />
-      </label>
-      <p class="manage-field__hint">支持字卡数组，或带有 cards 数组的导出文件。</p>
-    `,
-    onConfirm: async () => {
-      const groupId = elements.modal.querySelector('#manageImportGroup').value;
-      const file = elements.modal.querySelector('#manageImportFile').files?.[0];
-      const group = groupById(groupId);
-
-      if (!group) {
-        setModalError('请选择有效的目标分组。');
-        return false;
-      }
-      if (!file) {
-        setModalError('请先选择 JSON 文件。');
-        return false;
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(await file.text());
-      } catch {
-        setModalError('文件不是有效的 JSON，请检查后重试。');
-        return false;
-      }
-
-      const rawCards = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.cards) ? parsed.cards : null;
-      if (!rawCards) {
-        setModalError('JSON 中未找到字卡数组。');
-        return false;
-      }
-
-      const imported = rawCards
-        .map((item) => (typeof item === 'string' ? { content: item } : item))
-        .filter((item) => item && typeof item.content === 'string')
-        .map((item) => ({
-          id: createId('card'),
-          groupId: group.id,
-          content: item.content.replace(/\r\n?/g, '\n'),
-          disabled: Boolean(item.disabled),
-        }));
-
-      if (!imported.length) {
-        setModalError('JSON 中没有可导入的字卡内容。');
-        return false;
-      }
-
-      const beforeLength = state.cards.length;
-      state.cards.push(...imported);
-      state.currentGroupId = group.id;
-      state.cardPage = 1;
-      state.selectedCardIds.clear();
-      if (!saveData()) {
-        state.cards.splice(beforeLength, imported.length);
-        setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
-        return false;
-      }
-      render();
-      setToast(`已从 JSON 导入 ${imported.length} 张字卡`);
-      return true;
-    },
-  });
-}
-
-function cleanImportLines(text) {
-  const rawLines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
-  const nonEmpty = rawLines.map((line) => line.trim()).filter(Boolean);
-  const seen = new Set();
-  const unique = [];
-  nonEmpty.forEach((line) => {
-    if (seen.has(line)) return;
-    seen.add(line);
-    unique.push(line);
-  });
-  return {
-    unique,
-    skipped: (rawLines.length - nonEmpty.length) + (nonEmpty.length - unique.length),
-  };
-}
-
-function nextMainThreadTurn() {
-  return new Promise((resolve) => window.setTimeout(resolve, 0));
-}
-
-async function buildChunkedImports(lines, existingContents, makeItem, onProgress) {
-  const additions = lines
-    .filter((content) => !existingContents.has(content))
-    .map(makeItem);
-  const skipped = lines.length - additions.length;
-  const batchSize = 150;
-
-  for (let index = 0; index < additions.length; index += batchSize) {
-    const completed = Math.min(additions.length, index + batchSize);
-    onProgress(completed, additions.length);
-    await nextMainThreadTurn();
-  }
-
-  return { additions, skipped };
-}
-
-function importStorageFailureMessage() {
-  return '浏览器存储空间不足，请先导出备份或清理字卡';
-}
-
-function importTextCards() {
-  window.__manageImportCalled = (window.__manageImportCalled || 0) + 1;
-  const category = currentCategory();
-  if (category?.type === 'stickers') return;
-
-  if (category?.type === 'questionnaire' || category?.type === 'status') {
-    const collection = categoryItems(category.type);
-    openModal({
-      title: `批量导入${category.name}`,
-      description: '每行一条内容，空行会自动跳过。一次可以粘贴多条。',
-      confirmLabel: '导入',
-      body: `
-        <label class="manage-field">
-          <span>${category.name}文本</span>
-          <textarea id="manageCategoryText" rows="8" placeholder="每行一条内容"></textarea>
-        </label>
-      `,
-      onConfirm: async () => {
-        const textarea = elements.modal.querySelector('#manageCategoryText');
-        const cleaned = cleanImportLines(textarea.value);
-        if (!cleaned.unique.length) {
-          setModalError('请至少输入一行内容。');
+      if (file) {
+        try {
+          const fileText = await readImportFileText(file);
+          parsedLines.push(...parseImportedCardLines(fileText, file.name || ''));
+        } catch {
+          setModalError('文件读取失败，或 JSON 格式不正确。');
           return false;
         }
+      }
 
-        const existing = new Set(collection.map((item) => String(item.content || '').trim()));
-        const { additions, skipped } = await buildChunkedImports(
-          cleaned.unique,
-          existing,
-          (content) => ({ id: createId(category.type), content }),
-          (completed, total) => setModalProgress(`正在导入 ${completed}/${total}`),
-        );
-        const beforeLength = collection.length;
-        collection.push(...additions);
-        if (!saveData()) {
-          collection.splice(beforeLength, additions.length);
-          setModalError(importStorageFailureMessage());
+      if (typedText.trim()) {
+        try {
+          parsedLines.push(...parseImportedCardLines(typedText, ''));
+        } catch {
+          setModalError('粘贴内容解析失败，请检查格式。');
           return false;
         }
-        state.selectedCardIds.clear();
-        render();
-        setToast(`已导入 ${additions.length} 条${category.name}内容，跳过 ${cleaned.skipped + skipped} 条`);
-        return true;
-      },
-    });
-    return;
-  }
+      }
 
-  openModal({
-    title: '批量导入字卡',
-    description: '每行一张字卡，空行会自动跳过。一次可以粘贴多张。',
-    confirmLabel: '导入',
-    body: `
-      <label class="manage-field">
-        <span>目标分组</span>
-        <select id="manageTextGroup">${groupOptionsHtml(state.currentGroupId)}</select>
-      </label>
-      <label class="manage-field">
-        <span>字卡文本</span>
-        <textarea id="manageTextCards" rows="8" placeholder="今天也要好好休息。&#10;记得喝水。&#10;我一直都在。"></textarea>
-      </label>
-    `,
-    onConfirm: async () => {
-      const groupId = elements.modal.querySelector('#manageTextGroup').value;
-      const group = groupById(groupId);
-      const text = elements.modal.querySelector('#manageTextCards').value;
-      if (!group) {
-        setModalError('请选择有效的目标分组。');
+      const lines = parsedLines
+        .map((line) => String(line || '').trim())
+        .filter(Boolean);
+
+      if (!lines.length) {
+        setModalError('请粘贴内容或选择 TXT / JSON 文件。');
         return false;
       }
 
-      const cleaned = cleanImportLines(text);
-      if (!cleaned.unique.length) {
-        setModalError('请至少输入一行字卡内容。');
-        return false;
-      }
-
+      const sourceItems = isTextCategory
+        ? collection
+        : state.cards.filter((item) => item.groupId === group.id);
       const existing = new Set(
-        state.cards
-          .filter((card) => card.groupId === group.id)
-          .map((card) => String(card.content || '').trim()),
-      );
-      const { additions, skipped } = await buildChunkedImports(
-        cleaned.unique,
-        existing,
-        (content) => ({ id: createId('card'), groupId: group.id, content, disabled: false }),
-        (completed, total) => setModalProgress(`正在导入 ${completed}/${total}`),
-      );
-      const beforeLength = state.cards.length;
-      state.cards.push(...additions);
-      if (!saveData()) {
-        state.cards.splice(beforeLength, additions.length);
-        setModalError(importStorageFailureMessage());
+        sourceItems
+          .map((item) => String(item.content || '').trim())
+          .filter(Boolean),
+      );      const uniqueLines = [];
+      let skipped = 0;
+
+      for (let index = 0; index < lines.length; index += 1) {
+        const content = lines[index].replace(/\r\n?/g, '\n').trim();
+        if (!content) continue;
+        if (existing.has(content)) {
+          skipped += 1;
+        } else {
+          existing.add(content);
+          uniqueLines.push(content);
+        }
+
+        if ((index + 1) % 100 === 0) {
+          setModalProgress(`正在处理 ${index + 1} / ${lines.length} 行…`);
+          await new Promise((resolve) => window.setTimeout(resolve, 0));
+        }
+      }
+
+      if (!uniqueLines.length) {
+        setModalError(skipped ? '这些内容都已经存在，没有新增内容。' : '没有可导入的内容。');
         return false;
       }
-      state.currentGroupId = group.id;
+
+      setModalProgress(`正在保存 ${uniqueLines.length} ${unit}…`);
+      const newItems = uniqueLines.map((content) => (
+        isTextCategory
+          ? { id: createId(category.type), content }
+          : { id: createId('card'), groupId: group.id, content, disabled: false }
+      ));
+
+      if (isTextCategory) {
+        const previousLength = collection.length;
+        collection.push(...newItems);
+        if (!saveData()) {
+          collection.splice(previousLength);
+          setModalError('保存失败，浏览器存储空间可能不足。');
+          return false;
+        }
+      } else {
+        const previousLength = state.cards.length;
+        state.cards.push(...newItems);
+        state.currentGroupId = group.id;
+        if (!saveData()) {
+          state.cards.splice(previousLength);
+          setModalError('保存失败，浏览器存储空间可能不足。');
+          return false;
+        }
+      }
+
       state.cardPage = 1;
       state.selectedCardIds.clear();
       render();
-      setToast(`已导入 ${additions.length} 张字卡，跳过 ${cleaned.skipped + skipped} 张`);
+      setToast(`已导入 ${uniqueLines.length} ${unit}${skipped ? `，跳过 ${skipped} 条重复内容` : ''}`);
       return true;
     },
   });
@@ -1820,5 +1642,7 @@ export function getManageSnapshot() {
     currentGroupId: state.currentGroupId,
   };
 }
+
+
 
 
