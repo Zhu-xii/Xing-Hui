@@ -1,26 +1,26 @@
-# 星回 · Xing Hui-note
+#星回邢辉-注
 
-## 部署到 GitHub Pages
+##部署到GitHub页面
 
-本项目是无后端、无外部 API 的纯前端应用，可通过 GitHub Actions 自动部署到 GitHub Pages。
+本项目是无后端、无外部应用程序接口的纯前端应用,可通过GitHub操作自动部署到GitHub页面.
 
-- 构建命令：`npm run build`
-- 发布目录：`dist/`
-- 自动部署：向 `main` 分支推送后，工作流 `.github/workflows/deploy.yml` 会执行 `npm ci`、`npm run build`，并通过 GitHub Pages Actions 发布。
-- 手动部署：在 GitHub 仓库的 **Actions → Deploy to GitHub Pages → Run workflow** 中手动触发。
-- 首次使用前，需要在仓库 **Settings → Pages → Build and deployment** 中将 Source 设为 **GitHub Actions**。
-- 最终访问地址：`https://<用户名>.github.io/<仓库名>/`
+-构建命令：`npm运行构建`
+-发布目录：`距离/`
+-自动部署：向`主要的`分支推送后,工作流`。github/workflows/deploy.yml`会执行`npm ci`、`npm运行构建`,并通过GitHub页面操作发布。
+-手动部署：在开源代码库仓库的**操作→部署到GitHub页面→运行工作流**中手动触发。
+-首次使用前,需要在仓库**设置→页面→构建和部署**中将来源设为**GitHub操作**。
+-最终访问地址：`https://<用户名> . github.io/<仓库名>/`
 
-应用使用 Hash 路由（如 `#/chat`、`#/manage`），因此无需额外的 404 回退文件。
-纯前端、本地优先的字卡聊天应用。数据保存在浏览器 `localStorage`，不依赖登录、云端配置或外部 API。
+应用使用混杂路由（如`#/聊天`、`#/管理`),因此无需额外的 404 回退文件。
+纯前端、本地优先的字卡聊天应用。数据保存在浏览器`本地存储`,不依赖登录、云端配置或外部API .
 
-## 本地运行
+##本地运行
 
 环境要求：
 
-- Node.js `^20.19.0` 或 `>=22.12.0`
-- npm `10+`
-- Chrome 或 Edge（推荐）
+-节点. js`^20.19.0` 或 `>=22.12.0`
+-npm`10+`
+-铬或边缘(推荐)
 
 安装并启动开发服务器：
 
