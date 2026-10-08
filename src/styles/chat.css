@@ -559,6 +559,53 @@ body[data-view='chat'] .views {
   pointer-events: none;
 }
 
+.sticker-grid__repair {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #E7B58B;
+  border-radius: 12px;
+  background: #FFF7EF;
+}
+
+.sticker-grid__repair p {
+  flex: 1 1 auto;
+  margin: 0;
+  color: #9A5B2D;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.sticker-grid__repair-btn {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border: 1px solid #E7B58B;
+  border-radius: 9px;
+  background: #FFE8D6;
+  color: #9A5B2D;
+  font-size: 0.74rem;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sticker-grid__repair-btn:hover {
+  background: #FFD9C0;
+}
+
+.sticker-grid__repair-dismiss {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .chat-composer {
   display: grid;
   grid-template-columns: 44px 44px minmax(0, 1fr) 44px;

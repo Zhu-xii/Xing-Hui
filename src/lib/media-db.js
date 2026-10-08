@@ -79,6 +79,15 @@ export async function deleteStickerBlob(id) {
   return deleteRecord(STICKER_STORE, id);
 }
 
+export async function detectOrphanStickers(stickers) {
+  if (!Array.isArray(stickers) || !stickers.length) return [];
+  const idbRecords = await listStickerRecords();
+  const idbIds = new Set(idbRecords.map((record) => record.id));
+  return stickers
+    .filter((sticker) => sticker.storage === 'indexeddb' && sticker.enabled !== false && !idbIds.has(sticker.id))
+    .map((sticker) => sticker.id);
+}
+
 export async function putAvatarBlob(id, blob, metadata = {}) {
   return putRecord(AVATAR_STORE, {
     id,

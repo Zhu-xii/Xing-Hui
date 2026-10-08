@@ -23,7 +23,7 @@ import {
   startQuestionnaireEngine,
 } from '../lib/questionnaire.js';
 import { getCurrentChatMood, maybeChangeChatMood } from '../lib/mood.js';
-import { getAvatarBlob, getStickerBlob, setBlobImage } from '../lib/media-db.js';
+import { getAvatarBlob, getStickerBlob, setBlobImage, detectOrphanStickers, putStickerBlob } from '../lib/media-db.js';
 
 const MESSAGE_ACTION_EVENT = 'xinghui:message-action';
 const STAR_REPLY_TRIGGER_EVENT = 'xinghui:trigger-star-reply';
@@ -630,6 +630,29 @@ function renderStickerGrid() {
     return;
   }
 
+  const idbStickers = stickers.filter((s) => s.storage === 'indexeddb');
+  void detectOrphanStickers(idbStickers).then((orphanIds) => {
+    if (orphanIds.length > 0 && panel.dataset.kind === 'sticker') {
+      const existing = panel.querySelector('.sticker-grid__repair');
+      if (existing) existing.remove();
+      const repair = document.createElement('div');
+      repair.className = 'sticker-grid__repair';
+      repair.innerHTML = `<p>${orphanIds.length} 张表情包图片丢失，需要重新导入。</p>`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sticker-grid__repair-btn';
+      button.dataset.stickerRepair = '';
+      button.textContent = '重新导入表情包';
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.className = 'sticker-grid__repair-dismiss';
+      dismiss.dataset.stickerRepairDismiss = '';
+      dismiss.textContent = '忽略';
+      repair.append(button, dismiss);
+      panel.prepend(repair);
+    }
+  });
+
   const grid = document.createElement('div');
   grid.className = 'sticker-grid';
 
@@ -674,6 +697,54 @@ function renderStickerGrid() {
   });
 
   panel.append(grid);
+}
+
+async function handleStickerRepair() {
+  const panel = elements?.toolPanel;
+  if (!panel) return;
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.style.display = 'none';
+  document.body.append(input);
+
+  input.click();
+
+  const files = await new Promise((resolve) => {
+    input.addEventListener('change', () => {
+      const result = Array.from(input.files || []);
+      input.remove();
+      resolve(result);
+    });
+  });
+
+  if (!files.length) return;
+
+  const stickers = readStickers();
+  const idbStickers = stickers.filter((s) => s.storage === 'indexeddb');
+  const orphanIds = await detectOrphanStickers(idbStickers);
+  if (!orphanIds.length) return;
+
+  let repaired = 0;
+  const maxRepairs = Math.min(files.length, orphanIds.length);
+  for (let i = 0; i < maxRepairs; i += 1) {
+    const stickerId = orphanIds[i];
+    const file = files[i];
+    try {
+      const sticker = stickers.find((s) => s.id === stickerId);
+      await putStickerBlob(stickerId, file, {
+        enabled: true,
+        createdAt: sticker?.createdAt || Date.now(),
+      });
+      repaired += 1;
+    } catch {
+      // skip failed repair
+    }
+  }
+
+  if (repaired > 0) renderStickerGrid();
 }
 
 function sendSticker(sticker) {
@@ -1035,6 +1106,16 @@ function bindEvents() {
   elements.toolPanel?.addEventListener('click', (event) => {
     if (event.target.closest('[data-sticker-id]')) {
       handleStickerGridClick(event);
+    }
+    if (event.target.closest('[data-sticker-repair]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleStickerRepair();
+    }
+    if (event.target.closest('[data-sticker-repair-dismiss]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      elements.toolPanel.querySelector('.sticker-grid__repair')?.remove();
     }
   });
 
