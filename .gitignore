@@ -5,3 +5,4 @@ dist-upload.zip
 *.log
 .DS_Store
 .pnpm-store/
+.env
