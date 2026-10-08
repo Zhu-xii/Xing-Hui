@@ -200,25 +200,37 @@ body[data-view='chat'] .views {
 .chat-message {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
+  width: auto;
+  max-width: 100%;
   gap: 8px;
   margin-top: 16px;
   padding: 0 2px;
   border-radius: var(--radius-bubble);
   outline: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .chat-message:first-child {
   margin-top: 0;
 }
 
-.chat-message:focus-visible {
-  box-shadow: 0 0 0 2px rgba(43, 95, 143, 0.28);
+.chat-message--star {
+  align-self: flex-start;
+}
+
+.chat-message--user {
+  align-self: flex-end;
 }
 
 .chat-message--system {
   justify-content: center;
+  align-self: center;
+  max-width: 86%;
   cursor: default;
 }
 
@@ -240,6 +252,7 @@ body[data-view='chat'] .views {
 
 .chat-message--user {
   flex-direction: row-reverse;
+  max-width: 88%;
 }
 
 .chat-message__avatar {
@@ -277,11 +290,17 @@ body[data-view='chat'] .views {
   align-items: flex-start;
 }
 
+.chat-message--star {
+  max-width: 88%;
+}
+
 .chat-message--user .chat-message__content {
   align-items: flex-end;
 }
 
 .chat-message .message-bubble {
+  flex: 0 0 auto;
+  min-width: 0;
   max-width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--bubble-border);
@@ -290,6 +309,17 @@ body[data-view='chat'] .views {
   font-size: 0.875rem;
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(43, 95, 143, 0.07);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.chat-message .message-bubble:focus-visible {
+  box-shadow: 0 0 0 2px rgba(43, 95, 143, 0.28);
+}
+
+.chat-message:focus-visible {
+  outline: none;
 }
 
 .chat-message--user .message-bubble,
@@ -324,6 +354,7 @@ body[data-view='chat'] .views {
 
 .message-sticker__image {
   width: 100%;
+  max-width: 180px;
   max-height: 156px;
   border-radius: 9px;
   object-fit: contain;
@@ -730,8 +761,11 @@ body[data-view='chat'] .views {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  max-height: 180px;
   margin-top: 8px;
   padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
 }
 
