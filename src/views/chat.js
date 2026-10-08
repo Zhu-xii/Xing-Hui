@@ -591,9 +591,7 @@ function toggleToolPanel(kind) {
     openQuestionnairePanel();
     return;
   } else if (kind === 'sticker') {
-    panel.textContent = hasManageCategory(STICKER_CATEGORY_NAME)
-      ? `表情包已保存 ${readStickers().filter((sticker) => sticker.enabled !== false).length} 张。`
-      : '请先重建该类别';
+    renderStickerGrid();
   } else {
     panel.textContent = '';
   }
@@ -608,6 +606,127 @@ function appendMessage(message) {
 
   list.querySelector('.chat-empty')?.remove();
   list.append(createMessageElement(message));
+}
+
+function renderStickerGrid() {
+  const panel = elements?.toolPanel;
+  if (!panel) return;
+  panel.replaceChildren();
+
+  if (!hasManageCategory(STICKER_CATEGORY_NAME)) {
+    const hint = document.createElement('p');
+    hint.className = 'sticker-grid__empty';
+    hint.textContent = '请先在管理页面创建表情包类别';
+    panel.append(hint);
+    return;
+  }
+
+  const stickers = readStickers().filter((sticker) => sticker.enabled !== false);
+  if (!stickers.length) {
+    const hint = document.createElement('p');
+    hint.className = 'sticker-grid__empty';
+    hint.textContent = '还没有表情包，去管理页面添加吧';
+    panel.append(hint);
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'sticker-grid';
+
+  stickers.forEach((sticker) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'sticker-grid__item';
+    item.dataset.stickerId = sticker.id;
+    item.dataset.stickerStorage = sticker.storage;
+    item.setAttribute('aria-label', '发送表情包');
+
+    const img = document.createElement('img');
+    img.className = 'sticker-grid__image';
+    img.alt = '表情包';
+    item.append(img);
+
+    if (sticker.storage === 'indexeddb') {
+      void getStickerBlob(sticker.id)
+        .then((blob) => {
+          if (blob) {
+            setBlobImage(img, blob);
+          } else {
+            item.classList.add('is-unavailable');
+            item.disabled = true;
+            img.alt = '不可用';
+          }
+        })
+        .catch(() => {
+          item.classList.add('is-unavailable');
+          item.disabled = true;
+          img.alt = '不可用';
+        });
+    } else if (sticker.image) {
+      img.src = sticker.image;
+    } else {
+      item.classList.add('is-unavailable');
+      item.disabled = true;
+      img.alt = '不可用';
+    }
+
+    grid.append(item);
+  });
+
+  panel.append(grid);
+}
+
+function sendSticker(sticker) {
+  const content = sticker.storage === 'indexeddb' ? `idb:${sticker.id}` : sticker.image;
+  if (!content) return null;
+
+  const turnId = createTurnId();
+  const message = {
+    id: createMessageId(),
+    role: 'user',
+    type: 'sticker',
+    content,
+    timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
+    read: false,
+    favorited: false,
+    starFavorited: false,
+  };
+
+  const saved = addChatMessage(message, { persist: true, scroll: true });
+  if (!saved) return null;
+
+  closeToolPanel();
+  maybeChangeChatMood(0.35);
+  updateChatMood();
+  scheduleLatestScroll();
+
+  window.dispatchEvent(
+    new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
+      detail: { message: saved, storageKey: CHAT_STORAGE_KEY },
+    }),
+  );
+  return saved;
+}
+
+function handleStickerGridClick(event) {
+  const item = event.target.closest('[data-sticker-id]');
+  if (!item || item.disabled) return;
+
+  const stickerId = item.dataset.stickerId;
+  const storage = item.dataset.stickerStorage;
+  const stickers = readStickers();
+  const sticker = stickers.find((s) => s.id === stickerId && s.enabled !== false);
+  if (!sticker) return;
+
+  if (storage === 'indexeddb') {
+    sticker.storage = 'indexeddb';
+  } else {
+    sticker.storage = 'legacy';
+  }
+
+  sendSticker(sticker);
 }
 
 export function getChatMessages() {
@@ -913,6 +1032,12 @@ function bindEvents() {
     });
   });
 
+  elements.toolPanel?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-sticker-id]')) {
+      handleStickerGridClick(event);
+    }
+  });
+
   elements.questionnaireForm?.addEventListener('submit', handleQuestionnaireSubmit);
   elements.questionnaireType?.addEventListener('change', updateQuestionnairePanelControls);
   elements.questionnaireClear?.addEventListener('click', () => {
@@ -925,7 +1050,7 @@ function bindEvents() {
     if (!viewRoot?.contains(event.target) || !event.target.closest('.chat-message')) {
       closeActiveMessage();
     }
-    if (!event.target.closest('.chat-composer__tool') && !event.target.closest('.chat-tool-panel, .chat-questionnaire-panel')) {
+    if (!event.target.closest('.chat-composer__tool') && !event.target.closest('.chat-tool-panel, .chat-questionnaire-panel, .sticker-grid')) {
       closeToolPanel();
     }
   });

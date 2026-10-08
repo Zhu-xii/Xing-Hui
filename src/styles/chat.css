@@ -499,6 +499,66 @@ body[data-view='chat'] .views {
   text-align: center;
 }
 
+.chat-tool-panel[data-kind='sticker'] {
+  max-height: min(56dvh, 420px);
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  text-align: left;
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.sticker-grid__empty {
+  padding: 20px 10px;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.sticker-grid__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-soft);
+  transition: border-color 0.16s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sticker-grid__item:hover:not(:disabled) {
+  border-color: #7FAFCB;
+  transform: translateY(-2px);
+}
+
+.sticker-grid__item:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.sticker-grid__item.is-unavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sticker-grid__item:disabled {
+  cursor: not-allowed;
+}
+
+.sticker-grid__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
 .chat-composer {
   display: grid;
   grid-template-columns: 44px 44px minmax(0, 1fr) 44px;
@@ -628,6 +688,15 @@ body[data-view='chat'] .views {
 
   .chat-tool-panel {
     min-height: 64px;
+  }
+
+  .chat-tool-panel[data-kind='sticker'] {
+    max-height: 40dvh;
+  }
+
+  .sticker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 6px;
   }
 }
 
@@ -811,6 +880,11 @@ body[data-view='chat'] .views {
 
   .chat-questionnaire-panel {
     padding: 10px;
+  }
+
+  .sticker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 6px;
   }
 }
 
