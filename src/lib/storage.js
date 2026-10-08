@@ -439,6 +439,8 @@ export function normalizeChatMessage(message) {
   if (!message || typeof message !== 'object' || Array.isArray(message)) return null;
   const role = message.role === 'star' ? 'star' : message.role === 'system' ? 'system' : 'user';
   const type = message.type === 'sticker' ? 'sticker' : message.type === 'pat' ? 'pat' : message.type === 'questionnaire' ? 'questionnaire' : 'text';
+  const turnId = message.turnId ? String(message.turnId) : '';
+  const sequence = Number.isFinite(Number(message.sequence)) ? Number(message.sequence) : 0;
   return {
     id: String(message.id || createId('msg')),
     role,
@@ -449,6 +451,8 @@ export function normalizeChatMessage(message) {
     favorited: Boolean(message.favorited),
     starFavorited: Boolean(message.starFavorited),
     withdrawn: Boolean(message.withdrawn),
+    turnId,
+    sequence,
     questionnaire: type === 'questionnaire'
       ? (() => {
           const questionnaire = normalizeQuestionnaire(message.questionnaire || message.questionnaireData);

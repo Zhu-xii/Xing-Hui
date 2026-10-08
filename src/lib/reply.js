@@ -132,6 +132,9 @@ export async function scheduleStarReply(
     const payload = createPayload({ settings: options });
     if (!payload) return null;
 
+    payload.turnId = userMessage?.turnId || '';
+    payload.sequence = 0;
+
     return addMessage(payload, { persist: true, scroll: true });
   } finally {
     if (typingShown) onTypingChange(false);

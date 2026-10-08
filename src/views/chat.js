@@ -35,9 +35,33 @@ let activeMessageId = null;
 let typingRequestCount = 0;
 let eventsBound = false;
 let visualViewportFrame = null;
+let messageSequenceCounter = 0;
 
 function createMessageId() {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createTurnId() {
+  return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextSequence() {
+  messageSequenceCounter += 1;
+  return messageSequenceCounter;
+}
+
+function sortMessages(messages) {
+  return messages.slice().sort((a, b) => {
+    const aHas = Boolean(a.turnId);
+    const bHas = Boolean(b.turnId);
+    if (aHas && bHas && a.turnId !== b.turnId) {
+      return a.timestamp - b.timestamp;
+    }
+    if (aHas && !bHas) return 1;
+    if (!aHas && bHas) return -1;
+    if (a.sequence !== b.sequence) return a.sequence - b.sequence;
+    return a.timestamp - b.timestamp;
+  });
 }
 
 function formatMessageTime(timestamp) {
@@ -236,8 +260,12 @@ function createMessageBubble(message) {
       bubble.append(image);
       void getStickerBlob(stickerId)
         .then((blob) => {
-          if (blob) setBlobImage(image, blob);
-          else image.alt = '表情包不可用';
+          if (blob) {
+            setBlobImage(image, blob);
+            image.addEventListener('load', () => scrollToLatestIfAtBottom(), { once: true });
+          } else {
+            image.alt = '表情包不可用';
+          }
         })
         .catch(() => { image.alt = '表情包读取失败'; });
     } else if (/^data:image\//i.test(message.content)) {
@@ -245,6 +273,7 @@ function createMessageBubble(message) {
       image.className = 'message-sticker__image';
       image.src = message.content;
       image.alt = '表情包';
+      image.addEventListener('load', () => scrollToLatestIfAtBottom(), { once: true });
       bubble.append(image);
     } else {
       const icon = document.createElement('span');
@@ -363,6 +392,12 @@ function createEmptyState() {
   return empty;
 }
 
+function isAtBottom() {
+  const list = elements?.messageList;
+  if (!list) return true;
+  return list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+}
+
 function scrollToLatest({ behavior = 'auto' } = {}) {
   const list = elements?.messageList;
   if (!list) return;
@@ -375,6 +410,10 @@ function scrollToLatest({ behavior = 'auto' } = {}) {
 
     list.scrollTop = list.scrollHeight;
   });
+}
+
+function scrollToLatestIfAtBottom() {
+  if (isAtBottom()) scrollToLatest();
 }
 
 function syncVisualViewport() {
@@ -498,6 +537,7 @@ function handleQuestionnaireSubmit(event) {
   }
 
   writeQuestionnaireDraft(draft);
+  const turnId = createTurnId();
   const questionnaire = buildQuestionnaireMessage(draft);
   const message = {
     id: createMessageId(),
@@ -505,6 +545,8 @@ function handleQuestionnaireSubmit(event) {
     type: 'questionnaire',
     content: questionnaire.question,
     timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
     read: false,
     favorited: false,
     starFavorited: false,
@@ -576,10 +618,17 @@ export function addChatMessage(message, { persist = true, scroll = true } = {}) 
   const normalized = normalizeChatMessage(message);
   if (!normalized) return null;
 
+  if (!normalized.sequence) {
+    normalized.sequence = nextSequence();
+  } else {
+    messageSequenceCounter = Math.max(messageSequenceCounter, normalized.sequence);
+  }
+
   const messages = readStoredMessages();
   messages.push(normalized);
+  const sorted = sortMessages(messages);
 
-  if (persist && !writeStoredMessages(messages)) return null;
+  if (persist && !writeStoredMessages(sorted)) return null;
 
   appendMessage(normalized);
   if (scroll) scrollToLatest({ behavior: 'smooth' });
@@ -617,7 +666,7 @@ export function renderChatMessages() {
   const list = elements?.messageList;
   if (!list) return;
 
-  const messages = readStoredMessages();
+  const messages = sortMessages(readStoredMessages());
   list.replaceChildren();
   activeMessageId = null;
 
@@ -795,12 +844,15 @@ function handleSendMessage(event) {
     return;
   }
 
+  const turnId = createTurnId();
   const message = {
     id: createMessageId(),
     role: 'user',
     type: 'text',
     content,
     timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
     read: false,
     favorited: false,
     starFavorited: false,
@@ -816,7 +868,6 @@ function handleSendMessage(event) {
   input.focus({ preventScroll: true });
   scheduleLatestScroll();
 
-  // 阶段 4 通过该事件接入随机回复引擎，当前阶段不产生任何回复。
   window.dispatchEvent(
     new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
       detail: { message: savedMessage, storageKey: CHAT_STORAGE_KEY },
@@ -1058,7 +1109,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
       renderChatMessages();
       scheduleLatestScroll();
     },
-    addSystemMessage: (content) => {
+    addSystemMessage: (content, turnId) => {
       addChatMessage(
         {
           id: createMessageId(),
@@ -1066,6 +1117,8 @@ export function initChatView(root = document.getElementById('view-chat')) {
           type: 'text',
           content,
           timestamp: Date.now(),
+          turnId,
+          sequence: nextSequence(),
           read: true,
           favorited: false,
           starFavorited: false,
