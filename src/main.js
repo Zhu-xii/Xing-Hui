@@ -13,11 +13,13 @@ import { initPatView } from './views/pat.js';
 import { initManageView, onManageViewEnter } from './views/manage.js';
 import { initQuestionnaireView, onQuestionnaireViewEnter } from './views/questionnaire.js';
 import { initPeriodView, onPeriodViewEnter } from './views/period.js';
+import { initFeedView, onFeedViewEnter } from './views/feed.js';
 import { initPromptEngine } from './lib/prompt-engine.js';
 import { getAvatarBlob, listStickerRecords, migrateLegacyMedia, setBlobImage } from './lib/media-db.js';
 import { initSettingsView, onSettingsViewEnter } from './views/settings.js';
 import { initBackupView, onBackupViewEnter } from './views/backup.js';
 import './styles/polish.css';
+import './styles/mochi-theme.css';
 import {
   BACKUP_STATUS_CHANGED_EVENT,
   CARD_STORAGE_KEY,
@@ -46,13 +48,14 @@ import {
 const DAILY_GREETING_KEY = 'xinghui_daily_greeting';
 const GREETING_GROUP_NAME = '问候语字卡';
 
-const VIEWS = ['home', 'chat', 'questionnaire', 'period', 'manage', 'favorites', 'settings', 'backup', 'pat'];
+const VIEWS = ['home', 'chat', 'questionnaire', 'feed', 'period', 'manage', 'favorites', 'settings', 'backup', 'pat'];
 const NAV_VIEWS = ['home', 'manage', 'settings'];
 const HOME_PAGE_SIZE = 6;
 const TITLES = {
   home: '首页',
   chat: '聊天',
   questionnaire: '问卷',
+  feed: '朋友圈',
   period: '经期记录',
   manage: '管理',
   favorites: '收藏',
@@ -81,18 +84,20 @@ function applyAppearance(settings = readSettings()) {
 async function renderHomeStarAvatar() {
   const container = document.getElementById('homeStarAvatar');
   if (!container) return;
-  const { avatar } = readCharacter();
+  const { name, avatar } = readCharacter();
+  const starName = String(name || '星回').trim().slice(0, 20) || '星回';
   container.replaceChildren();
+  container.setAttribute('aria-label', starName + '头像，长按拍一拍');
 
   if (!avatar) {
     const fallback = document.createElement('span');
-    fallback.textContent = '星';
+    fallback.textContent = starName.slice(0, 1);
     container.append(fallback);
     return;
   }
 
   const image = document.createElement('img');
-  image.alt = '星回头像';
+  image.alt = starName + '头像';
   container.append(image);
 
   if (avatar === 'idb:star') {
@@ -103,7 +108,7 @@ async function renderHomeStarAvatar() {
     } catch {
       image.remove();
       const fallback = document.createElement('span');
-      fallback.textContent = '星';
+      fallback.textContent = starName.slice(0, 1);
       container.append(fallback);
     }
     return;
@@ -207,6 +212,7 @@ function render() {
   }
   if (view === 'chat') onChatViewEnter();
   if (view === 'questionnaire') onQuestionnaireViewEnter();
+  if (view === 'feed') onFeedViewEnter();
   if (view === 'period') onPeriodViewEnter();
   if (view === 'favorites') onFavoritesViewEnter();
   if (view === 'manage') onManageViewEnter();
@@ -377,6 +383,7 @@ initChatView();
 initReplyEngine();
 initQuestionnaireView();
 initPeriodView();
+initFeedView();
 initPromptEngine();
 initManageView();
 initFavoritesView();
@@ -388,6 +395,4 @@ renderHomeStatus();
 renderBackupReminder();
 render();
 setInterval(updateClock, 1000);
-
-
 
