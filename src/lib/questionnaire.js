@@ -39,7 +39,7 @@ export function buildQuestionnaireMessage(form) {
     type,
     thinkMin: Math.min(60, Math.max(1, Number(form.thinkMin) || 10)),
     thinkMax: Math.min(60, Math.max(1, Number(form.thinkMax) || 15)),
-    answerNow: Math.min(1, Math.max(0, Number(form.answerNow) ?? 0.6)),
+    answerNow: Math.min(100, Math.max(0, Number(form.answerNow) || 60)),
     multiMin,
     multiMax,
     status: 'pending',
@@ -153,7 +153,7 @@ async function processQueue() {
       if (!current || current.withdrawn) continue;
       if (!current.questionnaire || !ACTIVE_STATUSES.has(current.questionnaire.status)) continue;
 
-      if (Math.random() >= current.questionnaire.answerNow) {
+      if (Math.random() * 100 >= current.questionnaire.answerNow) {
         current.questionnaire.status = 'delayed';
         current.questionnaire.delayNotice = true;
         updateMessage(current);

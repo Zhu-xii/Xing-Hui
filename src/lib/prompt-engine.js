@@ -1,5 +1,6 @@
 import { pickRandom, randomChance } from './random.js';
 import {
+  applyNicknamePlaceholders,
   readChatMessages,
   readPromptQuestionnaires,
   readSettings,
@@ -18,13 +19,14 @@ function isAwaitingAnswer(message) {
 }
 
 function createPromptMessage(preset) {
+  const question = applyNicknamePlaceholders(preset.question);
   const questionnaire = {
-    question: preset.question,
+    question,
     options: preset.options,
     type: preset.type,
     thinkMin: 1,
     thinkMax: 1,
-    answerNow: 1,
+    answerNow: 100,
     multiMin: 1,
     multiMax: preset.options.length || 1,
     status: 'awaiting-answer',
@@ -40,7 +42,7 @@ function createPromptMessage(preset) {
     id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     role: 'star',
     type: 'questionnaire',
-    content: preset.question,
+    content: question,
     timestamp: Date.now(),
     read: false,
     favorited: false,

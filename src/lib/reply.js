@@ -1,13 +1,17 @@
-import { pickRandom, randomBetween, randomChance } from './random.js';
+import { pickRandom, randomBetween, randomChance, randomInt } from './random.js';
 import {
   CARD_STORAGE_KEY,
   DEFAULT_GROUP_ID,
   SETTINGS_KEY,
   STICKER_STORAGE_KEY,
+  applyNicknamePlaceholders,
   normalizeSettings,
   readCards,
+  readImages,
+  readRoasts,
   readSettings,
   readStickers,
+  updateSettings,
 } from './storage.js';
 import {
   addChatMessage,
@@ -15,6 +19,7 @@ import {
   setStarTyping,
   STAR_REPLY_TRIGGER_EVENT,
 } from '../views/chat.js';
+import { MULTI_REPLY_TAG, SPELL_CARD_TAG, joinSpellCards } from './spell-cards.js';
 
 export {
   CARD_STORAGE_KEY,
@@ -36,6 +41,36 @@ export const DEFAULT_REPLY_SETTINGS = Object.freeze({
 });
 
 let initialized = false;
+
+// 连发多条时，上一条落地后先留一小段“在线”间隙，再重新显示“正在输入…”（对齐 mochi addInTyped 的节奏）
+const MULTI_REPLY_BEAT_MS = 360;
+
+// 「他的吐槽」：星回偶尔主动吐槽一句，受总冷却限制。
+export const ROAST_TAG = '他的吐槽';
+const ROAST_FALLBACK = [
+  '你今天是不是又熬夜了，黑眼圈都快掉到下巴了。',
+  '说好的早睡呢，怎么还在这儿玩手机。',
+  '突然想吐槽你一句：你是不是又想我了。',
+  '别光顾着笑，我说的就是你。',
+];
+
+let lastRoastAt = 0;
+
+function maybeCreateRoastPayload(options, now = Date.now()) {
+  if (!options.roastEnabled) return null;
+  const gap = Math.max(0, Number(options.roastIntervalMinutes) || 0) * 60 * 1000;
+  const last = Math.max(lastRoastAt, Number(options.lastRoastAt) || 0);
+  if (gap > 0 && now - last < gap) return null;
+  if (!randomChance(options.roastProbability)) return null;
+
+  const card = pickRandom(readRoasts())?.content;
+  const content = applyNicknamePlaceholders(String(card || pickRandom(ROAST_FALLBACK) || '').trim());
+  if (!content) return null;
+
+  lastRoastAt = now;
+  updateSettings({ lastRoastAt: now });
+  return createPayload(options, { content, tag: ROAST_TAG });
+}
 
 export const readReplySettings = readSettings;
 export const normalizeReplySettings = normalizeSettings;
@@ -69,40 +104,142 @@ export function getEnabledStickers(stickers = readStickers()) {
     .filter((sticker) => sticker.image || (sticker.storage === 'indexeddb' && sticker.id));
 }
 
-export function createReplyPayload({ settings, cards, stickers } = {}) {
-  const options = normalizeSettings(settings || readSettings());
+function shuffle(items) {
+  const copy = items.slice();
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const target = randomInt(0, index);
+    [copy[index], copy[target]] = [copy[target], copy[index]];
+  }
+  return copy;
+}
 
-  // 已读不回是最高优先级：命中后不产生任何星回消息。
-  if (options.readNoReplyEnabled && randomChance(options.readNoReply)) return null;
+// 同一批拼字优先抽不同字卡；张数超过去重后数量时允许复用，但绝不让相邻两张重复。
+function pickUniqueTextCards(cards, count) {
+  const texts = cards.map((card) => applyNicknamePlaceholders(card.content)).filter(Boolean);
+  if (!texts.length) return [];
 
-  let type = 'text';
-  let content = '';
+  const uniquePool = Array.from(new Set(texts));
+  const segments = [];
+  let last = '';
 
-  const availableStickers = getEnabledStickers(
-    stickers === undefined ? readStickers() : stickers,
-  );
-  if (availableStickers.length > 0 && randomChance(options.stickerReply)) {
-    const sticker = pickRandom(availableStickers);
-    type = 'sticker';
-    content = sticker.storage === 'indexeddb' ? `idb:${sticker.id}` : sticker.image;
-  } else {
-    const availableCards = getAvailableCards(
-      options.currentGroupId,
-      cards === undefined ? readCards() : cards,
-    );
-    const card = pickRandom(availableCards);
-    content = card?.content || FALLBACK_REPLY;
+  for (let index = 0; index < count; index += 1) {
+    const unused = uniquePool.filter((text) => !segments.includes(text));
+    let candidates = (unused.length ? unused : uniquePool).filter((text) => text !== last);
+    if (!candidates.length) candidates = texts.filter((text) => text !== last);
+    if (!candidates.length) candidates = uniquePool;
+    const picked = pickRandom(candidates);
+    if (!picked) break;
+    segments.push(picked);
+    last = picked;
   }
 
+  return segments;
+}
+
+function createPayload(options, { type = 'text', content = '', tag = '' } = {}) {
   return {
     role: 'star',
     type,
     content,
+    tag,
     timestamp: Date.now(),
     read: false,
     favorited: false,
-    starFavorited: randomChance(options.starFavorite),
+    starFavorited: false,
   };
+}
+
+function stickerPayload(options, sticker) {
+  if (!sticker) return null;
+  return createPayload(options, {
+    type: 'sticker',
+    content: sticker.storage === 'indexeddb' ? `idb:${sticker.id}` : sticker.image,
+  });
+}
+
+export function createReplyBatch({ settings, cards, stickers } = {}) {
+  const options = normalizeSettings(settings || readSettings());
+
+  // 已读不回是最高优先级：命中后不产生任何星回消息。
+  if (options.readNoReplyEnabled && randomChance(options.readNoReply)) return [];
+
+  // 「他的吐槽」：命中时星回主动吐槽一句。
+  const roastPayload = maybeCreateRoastPayload(options);
+  if (roastPayload) return [roastPayload];
+
+  const availableCards = getAvailableCards(
+    options.currentGroupId,
+    cards === undefined ? readCards() : cards,
+  );
+  const availableStickers = getEnabledStickers(
+    stickers === undefined ? readStickers() : stickers,
+  );
+  // 「图片」字卡与表情包共用同一发送管线。
+  const availableImages = getEnabledStickers(readImages());
+  const availableMedia = [...availableStickers, ...availableImages];
+
+  if (
+    options.spellCardEnabled
+    && availableCards.length >= 2
+    && randomChance(options.spellCardChance)
+  ) {
+    const maxCount = Math.min(options.spellCardMax, availableCards.length);
+    const count = randomInt(Math.min(options.spellCardMin, maxCount), maxCount);
+
+    // 「连发时也拼接」：连发 N 条，每条各自拼接 1 组字卡。
+    if (options.spellCardMode === 'each') {
+      const messageCount = options.multiReplyEnabled
+        ? randomInt(options.multiReplyMin, options.multiReplyMax)
+        : 1;
+      const joined = [];
+      for (let index = 0; index < messageCount; index += 1) {
+        const segments = pickUniqueTextCards(availableCards, count);
+        const content = joinSpellCards(segments, options);
+        if (!content) continue;
+        const payload = createPayload(options, { content, tag: SPELL_CARD_TAG });
+        payload.timestamp = Date.now() + index;
+        joined.push(payload);
+      }
+      if (joined.length) return joined;
+    }
+
+    const segments = pickUniqueTextCards(availableCards, count);
+    if (segments.length >= 2) {
+      if (options.spellCardMode === 'split') {
+        return segments.map((content, index) => {
+          const payload = createPayload(options, { content, tag: SPELL_CARD_TAG });
+          payload.timestamp = Date.now() + index;
+          return payload;
+        });
+      }
+      return [createPayload(options, { content: joinSpellCards(segments, options), tag: SPELL_CARD_TAG })];
+    }
+  }
+
+  const payloadCount = options.multiReplyEnabled
+    ? randomInt(options.multiReplyMin, options.multiReplyMax)
+    : 1;
+  const textDeck = shuffle(availableCards);
+  const payloads = [];
+  for (let index = 0; index < payloadCount; index += 1) {
+    const canSendSticker = availableMedia.length > 0 && randomChance(options.stickerReply);
+    const payload = canSendSticker
+      ? stickerPayload(options, pickRandom(availableMedia))
+      : createPayload(options, {
+          content: applyNicknamePlaceholders(textDeck[index % Math.max(1, textDeck.length)]?.content || FALLBACK_REPLY),
+          tag: payloadCount > 1 ? MULTI_REPLY_TAG : '',
+        });
+    if (payload) {
+      payload.timestamp = Date.now() + index;
+      payloads.push(payload);
+    }
+  }
+
+  return payloads.length ? payloads : [createPayload(options, { content: FALLBACK_REPLY })];
+}
+
+export function createReplyPayload(options = {}) {
+  return createReplyBatch(options)[0] || null;
 }
 
 export async function scheduleStarReply(
@@ -111,7 +248,7 @@ export async function scheduleStarReply(
     settings = readSettings(),
     wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds)),
     onTypingChange = setStarTyping,
-    createPayload = createReplyPayload,
+    createPayload = createReplyBatch,
     addMessage = addChatMessage,
     markRead = markChatMessageRead,
   } = {},
@@ -120,21 +257,49 @@ export async function scheduleStarReply(
   const delayMs = getReplyDelayMs(options);
   let typingShown = false;
 
-  if (options.typingIndicator) {
+  const showTyping = () => {
+    if (!options.typingIndicator || typingShown) return;
     onTypingChange(true);
     typingShown = true;
-  }
+  };
+  const hideTyping = () => {
+    if (!typingShown) return;
+    onTypingChange(false);
+    typingShown = false;
+  };
 
   try {
+    showTyping();
     await wait(delayMs);
     if (userMessage?.id) markRead(userMessage.id);
 
-    const payload = createPayload({ settings: options });
-    if (!payload) return null;
+    const generated = createPayload({ settings: options });
+    const payloads = (Array.isArray(generated) ? generated : [generated]).filter(Boolean);
+    if (!payloads.length) return null;
 
-    return addMessage(payload, { persist: true, scroll: true });
+    const added = [];
+    let lastSentAt = 0;
+    for (let index = 0; index < payloads.length; index += 1) {
+      if (index > 0) {
+        // 上一条已落地：先保持“在线”一小会儿，再重新显示“对方正在输入…”等待下一条。
+        await wait(MULTI_REPLY_BEAT_MS);
+        showTyping();
+        await wait(randomBetween(options.multiReplyGapMin, options.multiReplyGapMax) * 1000);
+      }
+      hideTyping();
+
+      // 时间戳按真实发送时刻单调递增，保证追加顺序与显示时间一致。
+      const payload = payloads[index];
+      if (payload) {
+        payload.timestamp = Math.max(Date.now(), lastSentAt + 1);
+        lastSentAt = payload.timestamp;
+      }
+      added.push(addMessage(payload, { persist: true, scroll: true }));
+    }
+
+    return added.length === 1 ? added[0] : added;
   } finally {
-    if (typingShown) onTypingChange(false);
+    hideTyping();
   }
 }
 

@@ -29,27 +29,86 @@ function dateOnly(value) {
   return new Date(`${value}T00:00:00`);
 }
 
+function daysBetween(first, second) {
+  return Math.round((dateOnly(second) - dateOnly(first)) / DAY_MS);
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = values.slice().sort((first, second) => first - second);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function periodStats(records) {
+  const sorted = records.slice().sort((first, second) => first.startDate.localeCompare(second.startDate));
+  const intervals = sorted.slice(1)
+    .map((record, index) => daysBetween(sorted[index].startDate, record.startDate))
+    .filter((value) => value >= 15 && value <= 60);
+  const periodLengths = sorted
+    .filter((record) => record.endDate && record.endDate >= record.startDate)
+    .map((record) => daysBetween(record.startDate, record.endDate) + 1)
+    .filter((value) => value >= 1 && value <= 15);
+  const cycleLength = intervals.length ? Math.round(median(intervals)) : 30;
+  const periodLength = periodLengths.length ? Math.round(median(periodLengths)) : 5;
+  const mean = intervals.length ? intervals.reduce((sum, value) => sum + value, 0) / intervals.length : 0;
+  const variance = intervals.length
+    ? intervals.reduce((sum, value) => sum + (value - mean) ** 2, 0) / intervals.length
+    : 0;
+  const standardDeviation = Math.sqrt(variance);
+  const regularity = intervals.length < 3
+    ? '数据较少'
+    : standardDeviation <= 2
+      ? '规律'
+      : standardDeviation <= 5
+        ? '较规律'
+        : '波动较大';
+  return { cycleLength, periodLength, regularity };
+}
+
 function formatDate(value) {
   if (!value) return '未记录';
   const date = dateOnly(value);
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
-function predictionText(records) {
-  if (!records.length) return { date: '', text: '添加一次开始日期后显示预测' };
+function predictionText(records, stats) {
+  if (!records.length) return { date: '', text: '添加一次开始日期后显示预测', status: '暂无数据' };
   const latest = records.slice().sort((first, second) => second.startDate.localeCompare(first.startDate))[0];
-  const next = dateOnly(latest.startDate);
-  next.setDate(next.getDate() + 30);
   const today = dateOnly(todayString());
+  const start = dateOnly(latest.startDate);
+  if (latest.endDate && today >= start && today <= dateOnly(latest.endDate)) {
+    return {
+      date: `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`,
+      text: `经期中第 ${daysBetween(latest.startDate, todayString()) + 1} 天`,
+      status: '经期中',
+    };
+  }
+  if (!latest.endDate && today >= start) {
+    return {
+      date: `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`,
+      text: `从开始日算起第 ${daysBetween(latest.startDate, todayString()) + 1} 天`,
+      status: '未填结束日',
+    };
+  }
+  const next = dateOnly(latest.startDate);
+  next.setDate(next.getDate() + stats.cycleLength);
   const days = Math.round((next - today) / DAY_MS);
   const text = days > 0 ? `还有 ${days} 天` : days === 0 ? '预计就在今天' : `已超过 ${Math.abs(days)} 天`;
-  return { date: `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日`, text };
+  const status = days < 0 ? '可能推迟' : days <= 3 ? '临近经期' : '周期平稳';
+  return { date: `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日`, text, status };
 }
 
 function renderPrediction() {
-  const prediction = predictionText(readPeriodRecords());
+  const records = readPeriodRecords();
+  const stats = periodStats(records);
+  const prediction = predictionText(records, stats);
   elements.predictionDate.textContent = prediction.date || '--';
   elements.predictionText.textContent = prediction.text;
+  if (elements.predictionStatus) elements.predictionStatus.textContent = prediction.status;
+  if (elements.cycleLength) elements.cycleLength.textContent = `${stats.cycleLength} 天`;
+  if (elements.periodLength) elements.periodLength.textContent = `${stats.periodLength} 天`;
+  if (elements.regularity) elements.regularity.textContent = stats.regularity;
 }
 
 function renderRecords() {
@@ -61,7 +120,7 @@ function renderRecords() {
           <div class="period-record__copy">
             <div class="period-record__dates">
               <strong>${escapeHtml(formatDate(record.startDate))}</strong>
-              <span>至 ${escapeHtml(formatDate(record.endDate))}</span>
+              <span>至 ${escapeHtml(formatDate(record.endDate))}${record.endDate ? ` · 持续 ${daysBetween(record.startDate, record.endDate) + 1} 天` : ' · 进行中'}</span>
             </div>
             <p><small>症状</small>${escapeHtml(record.symptoms || '未记录')}</p>
             <p><small>情绪</small>${escapeHtml(record.mood || '未记录')}</p>
@@ -139,6 +198,12 @@ function handleClick(event) {
     render();
     elements.startDate.focus();
   }
+  if (action === 'quick-start') {
+    elements.startDate.value = todayString();
+    elements.endDate.value = '';
+    elements.startDate.focus();
+    return;
+  }
   if (action === 'delete') {
     if (!window.confirm('删除这条经期记录？')) return;
     writePeriodRecords(readPeriodRecords().filter((record) => record.id !== button.dataset.id));
@@ -169,13 +234,23 @@ export function initPeriodView(root = document.getElementById('view-period')) {
       <header class="period-header">
         <p class="period-eyebrow">CYCLE NOTES</p>
         <h2 class="period-title">经期记录</h2>
-        <p class="period-intro">记录开始、结束、症状和情绪，按 30 天周期预测下一次。</p>
+        <p class="period-intro">记录开始、结束、症状和情绪，按历史间隔计算平均周期并预测下一次。</p>
       </header>
 
       <section class="period-prediction" aria-label="下一次经期预测">
-        <span class="period-prediction__label">下一次预计</span>
+        <div class="period-prediction__head">
+          <span class="period-prediction__label">下一次预计</span>
+          <span class="period-prediction__status" id="periodPredictionStatus">暂无数据</span>
+        </div>
         <strong id="periodPredictionDate">--</strong>
         <span id="periodPredictionText">添加一次开始日期后显示预测</span>
+        <button class="period-quick-start" type="button" data-period-action="quick-start">标记今天开始</button>
+      </section>
+
+      <section class="period-summary" aria-label="经期统计">
+        <div><small>平均周期</small><strong id="periodCycleLength">30 天</strong></div>
+        <div><small>平均经期</small><strong id="periodLength">5 天</strong></div>
+        <div><small>规律性</small><strong id="periodRegularity">数据较少</strong></div>
       </section>
 
       <section class="period-card" aria-labelledby="periodFormTitle">
@@ -225,6 +300,10 @@ export function initPeriodView(root = document.getElementById('view-period')) {
   elements = {
     predictionDate: viewRoot.querySelector('#periodPredictionDate'),
     predictionText: viewRoot.querySelector('#periodPredictionText'),
+    predictionStatus: viewRoot.querySelector('#periodPredictionStatus'),
+    cycleLength: viewRoot.querySelector('#periodCycleLength'),
+    periodLength: viewRoot.querySelector('#periodLength'),
+    regularity: viewRoot.querySelector('#periodRegularity'),
     form: viewRoot.querySelector('#periodForm'),
     formTitle: viewRoot.querySelector('#periodFormTitle'),
     startDate: viewRoot.querySelector('#periodStartDate'),

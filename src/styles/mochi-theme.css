@@ -1,30 +1,6 @@
-:root {
-  color-scheme: light;
-  --color-primary: #111111;
-  --color-primary-deep: #000000;
-  --color-primary-soft: #111111;
-  --color-accent: #A9CFEA;
-  --color-accent-strong: #7FB6DC;
-  --color-silver: #D9E7F1;
-  --color-canvas: #EAF3FA;
-  --color-bg: #EAF3FA;
-  --color-bg-soft: #F5FAFD;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #FBFDFE;
-  --color-border: #D9E7F1;
-  --color-border-soft: #E7F1F8;
-  --color-text: #111111;
-  --color-text-muted: #111111;
-  --color-text-faint: #111111;
-  --color-button-text: #111111;
-  --color-app-top: #F6FBFE;
-  --color-app-mid: #EAF3FA;
-  --color-app-bottom: #E4F0F8;
-  --nav-bg: rgba(255, 255, 255, 0.94);
-  --bubble-color: #FFFFFF;
-  --bubble-text: #111111;
-  --bubble-border: #D9E7F1;
-}
+/* ===== 墨白纸感主题层（对齐参考站 mochi 的无彩度配色） =====
+   加载顺序最后，用 !important 覆盖既有蓝色方案；
+   聊天气泡：星回（对方）白底黑字，我（自己）墨黑底白字。 */
 
 body,
 button,
@@ -97,7 +73,7 @@ body,
 }
 
 .home-page .entry-card:hover {
-  border-color: var(--color-accent) !important;
+  border-color: #111111 !important;
   background: #FFFFFF !important;
   box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04) !important;
 }
@@ -149,6 +125,11 @@ button svg,
   box-shadow: none !important;
 }
 
+/* ===== 聊天页：就近对齐参考站的墨白气泡 ===== */
+.chat-shell {
+  position: relative;
+}
+
 .chat-topbar {
   border-radius: 0 0 16px 16px !important;
 }
@@ -166,45 +147,102 @@ button svg,
 
 .chat-composer__input::placeholder {
   color: #111111 !important;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
-.bubble,
-.chat-message .message-bubble,
-.chat-message--user .message-bubble,
-.chat-message--star .message-bubble,
-.message-bubble--sticker {
-  background: #FFFFFF !important;
-  color: #111111 !important;
-  border: 1px solid var(--color-border) !important;
+.chat-message .message-bubble {
   box-shadow: none !important;
+  border-width: 1px !important;
+}
+
+/* 双方气泡颜色各自独立，文字色按底色自动取高对比色（见 main.js bubbleInk）。 */
+.chat-message--star .message-bubble {
+  background: var(--bubble-color-star, #FFFFFF) !important;
+  color: var(--bubble-ink-star, #111111) !important;
+  border-color: color-mix(in srgb, var(--bubble-ink-star, #111111) 14%, transparent) !important;
 }
 
 .chat-message--user .message-bubble {
-  border-color: var(--color-accent) !important;
+  background: var(--bubble-color-user, #111111) !important;
+  color: var(--bubble-ink-user, #FFFFFF) !important;
+  border-color: color-mix(in srgb, var(--bubble-ink-user, #FFFFFF) 20%, transparent) !important;
+}
+
+.chat-message--star .message-bubble--sticker,
+.chat-message--user .message-bubble--sticker,
+.chat-message--user .message-bubble--image,
+.chat-message--star .message-bubble--image {
+  background: var(--bubble-color-star, #FFFFFF) !important;
+  color: var(--bubble-ink-star, #111111) !important;
+  border-color: var(--color-border) !important;
+}
+
+.chat-message--user .message-bubble__tag {
+  background: color-mix(in srgb, currentColor 16%, transparent) !important;
+  border-color: color-mix(in srgb, currentColor 30%, transparent) !important;
+  color: inherit !important;
+}
+
+/* 聊天图片消息 */
+.message-bubble--image {
+  padding: 6px !important;
+}
+
+.message-image__image {
+  display: block;
+  width: auto;
+  max-width: min(240px, 100%);
+  max-height: 280px;
+  border-radius: 14px;
+}
+
+.message-bubble--withdrawn {
+  background: #EFEFEF !important;
+  color: #7A7A7A !important;
 }
 
 .chat-message__meta,
 .chat-message__read,
-.chat-message__actions,
-.chat-message__action,
-.chat-profile__status,
-.chat-topbar__mood {
-  color: #111111 !important;
+.chat-profile__status {
+  color: var(--color-text-muted) !important;
 }
 
 .chat-message__actions {
   background: #FFFFFF !important;
   border: 1px solid var(--color-border) !important;
-  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04) !important;
+  box-shadow: 0 2px 10px rgba(17, 17, 17, 0.08) !important;
 }
 
+.chat-message__action {
+  background: #FFFFFF !important;
+  color: #111111 !important;
+  border-color: var(--color-border) !important;
+}
+
+.chat-message__action:hover {
+  border-color: #111111 !important;
+}
+
+/* 收藏 / 吐槽 / 提示：底部浮出的墨黑胶囊 */
+.chat-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: 78%;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #FFFFFF !important;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== 按钮 ===== */
 .back-button,
-button,
-button[class*='primary'],
-button[class*='send'],
-button[class*='tool'],
-button[class*='submit'],
 .home-pagination__button,
 .manage-card-pagination button,
 .manage-icon-button,
@@ -212,32 +250,45 @@ button[class*='submit'],
 .settings-text-button,
 .chat-composer__tool,
 .chat-composer__send,
-.chat-topbar__back,
-.chat-message__action {
+.chat-topbar__back {
   background: #FFFFFF !important;
   color: #111111 !important;
   border: 1px solid var(--color-border) !important;
   box-shadow: none !important;
 }
 
-button[class*='primary']:hover,
-button[class*='send']:hover,
-button[class*='tool']:hover,
-button[class*='submit']:hover,
+button[class*='primary'],
+.settings-button--primary,
 .home-pagination__button:hover:not(:disabled),
 .manage-card-pagination button:hover:not(:disabled),
 .settings-button:hover,
 .chat-composer__tool:hover,
 .chat-composer__send:hover {
-  background: var(--color-bg-soft) !important;
-  border-color: var(--color-accent) !important;
+  background: #111111 !important;
+  color: #FFFFFF !important;
+  border-color: #111111 !important;
+}
+
+.settings-button--primary {
+  background: #111111 !important;
+  color: #FFFFFF !important;
+}
+
+.chat-composer__send {
+  background: #111111 !important;
+  color: #FFFFFF !important;
+  border-color: #111111 !important;
+}
+
+.chat-composer__send svg {
+  color: #FFFFFF !important;
 }
 
 .manage-button--danger,
 button.is-danger,
 button[class*='danger'] {
   background: #FFFFFF !important;
-  color: #B05258 !important;
+  color: #A32D2D !important;
   border-color: #E8C6C8 !important;
 }
 
@@ -247,8 +298,13 @@ button[class*='danger'] {
 }
 
 .nav-item.is-active {
-  background: var(--color-bg-soft) !important;
-  color: #111111 !important;
+  background: #111111 !important;
+  color: #FFFFFF !important;
+}
+
+.nav-item.is-active .nav-label,
+.nav-item.is-active svg {
+  color: #FFFFFF !important;
 }
 
 .bottom-nav {
@@ -266,6 +322,9 @@ button[class*='danger'] {
 .manage-field select,
 .settings-delay-row input,
 .settings-probability input[type='number'],
+.settings-number-input,
+.settings-text-input,
+.settings-textarea,
 .settings-field--inline select,
 .chat-sticker-item {
   background: #FFFFFF !important;
@@ -275,12 +334,12 @@ button[class*='danger'] {
 
 .manage-switch-field__control,
 .settings-switch > span {
-  background: #D9E7F1 !important;
+  background: #D6D6D6 !important;
 }
 
 .manage-switch-field input:checked + .manage-switch-field__control,
 .settings-switch input:checked + span {
-  background: #A9CFEA !important;
+  background: #111111 !important;
 }
 
 .settings-switch > span::after,
@@ -308,3 +367,167 @@ button[class*='danger'] {
   border-color: var(--color-border) !important;
 }
 
+/* ===== 设置页：底部「保存」按钮 ===== */
+.settings-page {
+  padding-bottom: 24px;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0 8px;
+}
+
+.settings-save {
+  min-width: 200px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* ===== 收藏页：统计与取消收藏 ===== */
+.favorites-stats {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted) !important;
+}
+
+.favorite-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 14px 12px;
+}
+
+.favorite-card__remove {
+  border: 1px solid var(--color-border);
+  background: #FFFFFF;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.favorite-card__remove:hover {
+  color: #111111;
+  border-color: #111111;
+}
+
+.favorites-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #FFFFFF !important;
+  font-size: 0.8rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== 设置页：气泡配色 ===== */
+.settings-schemes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.settings-scheme {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 999px !important;
+  background: #FFFFFF !important;
+  color: #111111 !important;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.settings-scheme:hover {
+  border-color: #111111 !important;
+}
+
+.settings-scheme__chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  background: linear-gradient(135deg, var(--chip-a) 50%, var(--chip-b) 50%);
+}
+
+.settings-bubble-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.settings-bubble-row > strong {
+  font-size: 0.8rem;
+}
+
+/* ===== 朋友圈：收藏与提示 ===== */
+.feed-card__actions button.is-active {
+  border-color: #111111 !important;
+  color: #111111 !important;
+  font-weight: 700;
+}
+
+.feed-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #FFFFFF !important;
+  font-size: 0.8rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== 收藏页：分类标签与媒体 ===== */
+.favorite-card__kind {
+  display: inline-block;
+  margin: 0 14px 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #F3F3F3;
+  color: #7A7A7A !important;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.favorite-card__image img,
+.favorite-card__sticker img {
+  display: block;
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 12px;
+}
+
+.favorite-card__post-text {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+}
+
+.favorite-card__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.favorite-card__images img {
+  width: 74px;
+  height: 74px;
+  object-fit: cover;
+  border-radius: 10px;
+}

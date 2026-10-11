@@ -1,11 +1,11 @@
 :root {
-  /* 单一浅色方案：偏白淡蓝 */
-  --color-primary: #2B5F8F;
-  --color-primary-deep: #214B73;
-  --color-primary-soft: #5D86AD;
+  /* 单一浅色方案：墨白纸感（对齐参考站 mochi 的无彩度配色） */
+  --color-primary: #111111;
+  --color-primary-deep: #000000;
+  --color-primary-soft: #4A4A4A;
   --color-white: #FFFFFF;
-  --color-silver: #C9D9E6;
-  --color-silver-soft: #EDF5FA;
+  --color-silver: #D6D6D6;
+  --color-silver-soft: #F2F2F2;
 
   /* 间距基准 8px */
   --space-1: 8px;
@@ -20,13 +20,20 @@
   /* 圆角 */
   --radius-bubble: 18px;
   --radius-button: 12px;
-  --radius-card: 22px;
+  --radius-card: 20px;
   --radius-pill: 999px;
 
+  /* 细边框 + 轻阴影：头像 / 卡片 / 按钮统一风格 */
+  --border-hairline: rgba(17, 17, 17, 0.08);
+  --border-hairline-strong: rgba(17, 17, 17, 0.14);
+  --shadow-soft: 0 6px 18px rgba(17, 17, 17, 0.06);
+  --shadow-card: 0 8px 24px rgba(17, 17, 17, 0.05);
+  --shadow-float: 0 12px 30px rgba(17, 17, 17, 0.1);
+
   /* 字体：全部使用本机系统字体，离线不发起字体请求 */
-  --font-title: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-round: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-title: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', sans-serif;
+  --font-round: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', sans-serif;
+  --font-body: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
 
   --content-max: 720px;
 }

@@ -490,7 +490,7 @@
 }
 
 .settings-swatch--custom {
-  background: conic-gradient(#DDEEFF, #DDF3F5, #F7E8F1, #FFF0D9, #E5EBFF, #DDEEFF);
+  background: conic-gradient(#FFFFFF, #F2F2F2, #E6E6E6, #FAF7F0, #EDEDED, #FFFFFF);
 }
 
 .settings-swatch--custom input {
@@ -560,6 +560,25 @@
   }
 }
 
+.settings-text-input {
+  width: 156px;
+  min-height: 40px;
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  outline: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.settings-text-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
 .settings-number-input {
   width: 116px;
   min-height: 40px;
@@ -578,4 +597,49 @@
 .settings-number-input:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+/* 梦角拼字卡：自定义连接符与拼接预览 */
+.settings-textarea {
+  width: 100%;
+  min-height: 74px;
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  outline: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.settings-textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.settings-preview {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 14px;
+  background: var(--color-bg-soft);
+}
+
+.settings-preview__summary {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.settings-preview__text {
+  margin-top: 8px;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

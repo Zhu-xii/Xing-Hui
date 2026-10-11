@@ -228,3 +228,27 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+/* 收藏的拼字卡：来源标签 + 换行文字 */
+.favorite-card__content.is-tagged {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.favorite-card__tag {
+  padding: 1px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.favorite-card__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

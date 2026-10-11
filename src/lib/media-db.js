@@ -54,6 +54,7 @@ export async function putStickerBlob(id, blob, metadata = {}) {
     size: blob.size,
     createdAt: metadata.createdAt || Date.now(),
     enabled: metadata.enabled !== false,
+    kind: metadata.kind === 'image' ? 'image' : 'sticker',
   });
 }
 
@@ -66,7 +67,7 @@ export async function listStickerRecords() {
   const db = await openDatabase();
   const tx = db.transaction(STICKER_STORE, 'readonly');
   const records = await requestPromise(tx.objectStore(STICKER_STORE).getAll());
-  return records.map((record) => ({
+  return records.filter((record) => record.kind !== 'image').map((record) => ({
     id: record.id,
     storage: 'indexeddb',
     mimeType: record.mimeType,
@@ -77,6 +78,60 @@ export async function listStickerRecords() {
 }
 export async function deleteStickerBlob(id) {
   return deleteRecord(STICKER_STORE, id);
+}
+
+// 「图片」字卡与表情包共用同一 IndexedDB 存储，用 kind='image' 区分。
+export async function putImageBlob(id, blob, metadata = {}) {
+  return putRecord(STICKER_STORE, {
+    id,
+    blob,
+    mimeType: blob.type || metadata.mimeType || 'image/*',
+    size: blob.size,
+    createdAt: metadata.createdAt || Date.now(),
+    enabled: metadata.enabled !== false,
+    kind: 'image',
+  });
+}
+
+export async function getImageBlob(id) {
+  return getStickerBlob(id);
+}
+
+export async function deleteImageBlob(id) {
+  return deleteRecord(STICKER_STORE, id);
+}
+
+export async function listImageRecords() {
+  const db = await openDatabase();
+  const tx = db.transaction(STICKER_STORE, 'readonly');
+  const records = await requestPromise(tx.objectStore(STICKER_STORE).getAll());
+  return records.filter((record) => record.kind === 'image').map((record) => ({
+    id: record.id,
+    storage: 'indexeddb',
+    mimeType: record.mimeType,
+    size: record.size,
+    createdAt: record.createdAt,
+    enabled: record.enabled !== false,
+  }));
+}
+
+// 把图片压缩到最长边 720px、JPEG q0.85，再交给 IndexedDB，避免占用过大。
+export async function compressImageFile(file, { maxEdge = 720, quality = 0.85 } = {}) {
+  if (!file || !String(file.type || '').startsWith('image/')) return null;
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) return file;
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  return blob || file;
 }
 
 export async function putAvatarBlob(id, blob, metadata = {}) {
@@ -196,7 +251,7 @@ export async function collectMediaAssets({ avatars = [] } = {}) {
 
   for (const record of stickers) {
     assets.push({
-      kind: 'sticker',
+      kind: record.kind === 'image' ? 'image' : 'sticker',
       id: record.id,
       mimeType: record.mimeType,
       size: record.size,
@@ -224,7 +279,9 @@ export async function restoreMediaAssets(assets = []) {
   for (const asset of assets) {
     if (!asset?.dataUrl?.startsWith('data:image/')) continue;
     const blob = dataUrlToBlob(asset.dataUrl);
-    if (asset.kind === 'sticker') {
+    if (asset.kind === 'image') {
+      await putImageBlob(asset.id, blob, asset);
+    } else if (asset.kind === 'sticker') {
       await putStickerBlob(asset.id, blob, asset);
     } else if (asset.kind === 'avatar') {
       await putAvatarBlob(asset.id, blob, asset);

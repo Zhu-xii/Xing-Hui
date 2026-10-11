@@ -10,27 +10,40 @@ import {
   markBackupExported,
   normalizeBackupPayload,
   normalizeChatMessage,
+  normalizeFeedPost,
   normalizeSettings,
   readCards,
   readJson,
   readCharacter,
   readChatMessages,
+  readFeedPosts,
+  readFeedAutoPostState,
+  readFeedNotices,
   readGroups,
   readPatCards,
   readPeriodRecords,
   readPromptQuestionnaires,
   readQuestionnaireAnswers,
+  readImages,
+  readMoods,
+  readRoasts,
   readSettings,
   readStatuses,
   readStickers,
   writeCards,
   writeCharacter,
   writeChatMessages,
+  writeFeedPosts,
+  writeFeedAutoPostState,
+  writeFeedNotices,
   writeGroups,
   writePatCards,
   writePeriodRecords,
   writePromptQuestionnaires,
   writeQuestionnaireAnswers,
+  writeImages,
+  writeMoods,
+  writeRoasts,
   writeSettings,
   writeJson,
   writeStatuses,
@@ -114,6 +127,42 @@ function mergeMessages(existingMessages, incomingMessages) {
   return merged;
 }
 
+function mergeFeedPosts(existingPosts, incomingPosts) {
+  const merged = [];
+  const index = new Map();
+
+  [...existingPosts, ...incomingPosts].forEach((post) => {
+    const normalized = normalizeFeedPost(post);
+    if (!normalized) return;
+
+    const found = index.get(normalized.id);
+    if (!found) {
+      index.set(normalized.id, normalized);
+      merged.push(normalized);
+      return;
+    }
+
+    found.likes = Array.from(new Set([...found.likes, ...normalized.likes]));
+    if (!found.content) found.content = normalized.content;
+
+    const images = new Set(found.images);
+    normalized.images.forEach((image) => {
+      if (images.has(image)) return;
+      images.add(image);
+      found.images.push(image);
+    });
+
+    const commentIds = new Set(found.comments.map((comment) => comment.id));
+    normalized.comments.forEach((comment) => {
+      if (commentIds.has(comment.id)) return;
+      commentIds.add(comment.id);
+      found.comments.push(comment);
+    });
+  });
+
+  return merged.sort((first, second) => second.createdAt - first.createdAt);
+}
+
 function mergeByKey(existingItems, incomingItems, getKey) {
   const merged = [];
   const keys = new Set();
@@ -132,13 +181,19 @@ export function mergeBackupData(payload) {
   const normalized = normalizeBackupPayload(payload);
   const currentCards = readCards();
   const currentStickers = readStickers();
+  const currentImages = readImages();
   const currentMessages = readChatMessages();
+  const currentFeedPosts = readFeedPosts();
+  const currentFeedNotices = readFeedNotices();
+  const currentFeedAutoPost = readFeedAutoPostState();
   const currentGroups = readGroups();
   const currentPatCards = readPatCards();
   const currentPromptQuestionnaires = readPromptQuestionnaires();
   const currentPeriodRecords = readPeriodRecords();
   const currentQuestionnaireAnswers = readQuestionnaireAnswers();
   const currentStatuses = readStatuses();
+  const currentMoods = readMoods();
+  const currentRoasts = readRoasts();
   const currentQuestionnaireDraft = readJson(QUESTIONNAIRE_DRAFT_KEY, null);
   const currentMoodCache = readJson(MOOD_CACHE_KEY, null);
   const favoriteMessages = [
@@ -149,8 +204,11 @@ export function mergeBackupData(payload) {
     currentMessages,
     [...normalized.chatMessages, ...favoriteMessages],
   );
+  const mergedFeedPosts = mergeFeedPosts(currentFeedPosts, normalized.feedPosts || []);
+  const mergedFeedNotices = mergeByKey(currentFeedNotices, normalized.feedNotices || [], (notice) => notice.id);
   const mergedCards = mergeByKey(currentCards, normalized.cards, (card) => card.content);
   const mergedStickers = mergeByKey(currentStickers, normalized.stickers, (sticker) => sticker.image);
+  const mergedImages = mergeByKey(currentImages, normalized.images || [], (image) => image.id || image.image);
   const mergedGroups = mergeByKey(
     currentGroups,
     normalized.groups,
@@ -169,16 +227,26 @@ export function mergeBackupData(payload) {
     (entry) => entry.content,
   );
   const mergedStatuses = mergeByKey(currentStatuses, normalized.statuses, (entry) => entry.content);
+  const mergedMoods = mergeByKey(currentMoods, normalized.moods, (entry) => entry.content);
+  const mergedRoasts = mergeByKey(currentRoasts, normalized.roasts, (entry) => entry.content);
 
   writeCards(mergedCards);
   writeStickers(mergedStickers);
+  writeImages(mergedImages);
   writeChatMessages(mergedMessages);
+  writeFeedPosts(mergedFeedPosts);
+  writeFeedNotices(mergedFeedNotices);
+  if (normalized.feedAutoPost && !currentFeedAutoPost.lastPostAt && !currentFeedAutoPost.nextAt) {
+    writeFeedAutoPostState(normalized.feedAutoPost);
+  }
   writeGroups(mergedGroups);
   writePatCards(mergedPatCards);
   writePromptQuestionnaires(mergedPromptQuestionnaires);
   writePeriodRecords(mergedPeriodRecords);
   writeQuestionnaireAnswers(mergedQuestionnaireAnswers);
   writeStatuses(mergedStatuses);
+  writeMoods(mergedMoods);
+  writeRoasts(mergedRoasts);
   if (!currentQuestionnaireDraft && normalized.questionnaireDraft) {
     writeJson(QUESTIONNAIRE_DRAFT_KEY, normalized.questionnaireDraft);
   }
@@ -207,13 +275,18 @@ export function mergeBackupData(payload) {
   const result = {
     cardsAdded: mergedCards.length - currentCards.length,
     stickersAdded: mergedStickers.length - currentStickers.length,
+    imagesAdded: mergedImages.length - currentImages.length,
     messagesAdded: mergedMessages.length - currentMessages.length,
+    feedPostsAdded: mergedFeedPosts.length - currentFeedPosts.length,
+    feedNoticesAdded: mergedFeedNotices.length - currentFeedNotices.length,
     groupsAdded: mergedGroups.length - currentGroups.length,
     patCardsAdded: mergedPatCards.length - currentPatCards.length,
     promptQuestionnairesAdded: mergedPromptQuestionnaires.length - currentPromptQuestionnaires.length,
     periodRecordsAdded: mergedPeriodRecords.length - currentPeriodRecords.length,
     questionnaireAnswersAdded: mergedQuestionnaireAnswers.length - currentQuestionnaireAnswers.length,
     statusesAdded: mergedStatuses.length - currentStatuses.length,
+    moodsAdded: mergedMoods.length - currentMoods.length,
+    roastsAdded: mergedRoasts.length - currentRoasts.length,
     duplicateCardsRemoved: normalized.cards.length - Math.max(0, mergedCards.length - currentCards.length),
   };
 
@@ -258,6 +331,7 @@ function renderStats() {
   elements.favoriteCount.textContent = String(snapshot.favorites.mine.length + snapshot.favorites.star.length);
   elements.promptCount.textContent = String(snapshot.promptQuestionnaires.length);
   elements.periodCount.textContent = String(snapshot.periodRecords.length);
+  if (elements.feedCount) elements.feedCount.textContent = String(snapshot.feedPosts.length);
 }
 function renderReminder() {
   if (!elements) return;
@@ -340,7 +414,7 @@ function handleImportFile(file) {
       if (migrated.avatar) writeCharacter({ ...readCharacter(), avatar: migrated.avatar });
       if (migrated.userAvatar) writeSettings({ ...readSettings(), userAvatar: migrated.userAvatar });
       renderBackupPage();
-      const added = result.cardsAdded + result.stickersAdded + result.messagesAdded + result.groupsAdded + result.patCardsAdded + result.promptQuestionnairesAdded + result.periodRecordsAdded + result.questionnaireAnswersAdded + result.statusesAdded;
+      const added = result.cardsAdded + result.stickersAdded + (result.imagesAdded || 0) + result.messagesAdded + result.feedPostsAdded + result.feedNoticesAdded + result.groupsAdded + result.patCardsAdded + result.promptQuestionnairesAdded + result.periodRecordsAdded + result.questionnaireAnswersAdded + result.statusesAdded + result.moodsAdded + result.roastsAdded;
       setImportStatus(
         `导入完成：新增 ${added} 项；字卡已按内容完全一致合并，现有数据未被覆盖。`,
         'success',
@@ -403,6 +477,7 @@ export function initBackupView(root = document.getElementById('view-backup')) {
           <span><strong id="backupFavoriteCount">0</strong><small>收藏</small></span>
           <span><strong id="backupPromptCount">0</strong><small>预设问卷</small></span>
           <span><strong id="backupPeriodCount">0</strong><small>经期记录</small></span>
+          <span><strong id="backupFeedCount">0</strong><small>朋友圈</small></span>
         </div>
         <button class="backup-button backup-button--primary" type="button" data-backup-action="export">导出全部 JSON</button>
         <p class="backup-hint">成功导出后，“超过 7 天”提醒会从本次导出时间重新计算。</p>
@@ -446,6 +521,7 @@ export function initBackupView(root = document.getElementById('view-backup')) {
     favoriteCount: viewRoot.querySelector('#backupFavoriteCount'),
     promptCount: viewRoot.querySelector('#backupPromptCount'),
     periodCount: viewRoot.querySelector('#backupPeriodCount'),
+    feedCount: viewRoot.querySelector('#backupFeedCount'),
     fileInput: viewRoot.querySelector('#backupFileInput'),
     importStatus: viewRoot.querySelector('#backupImportStatus'),
     reminder: viewRoot.querySelector('#backupReminder'),

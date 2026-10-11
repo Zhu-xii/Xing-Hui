@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#F7FBFE" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231E3A5F'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23FFFFFF'/%3E%3C/svg%3E" />
+    <meta name="theme-color" content="#E9E9E9" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111111'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23FFFFFF'/%3E%3C/svg%3E" />
     <title>星回 · Xing Hui-note</title>
 
   </head>
@@ -62,7 +62,11 @@
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5v3M17 3.5v3"/><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10h16"/><path d="M12 13v5M9.5 15.5h5"/></svg></span>
               <span class="entry-label">经期记录</span>
             </a>
-            <a class="entry-card" href="#/favorites" data-route="favorites">
+            <a class="entry-card" href="#/feed" data-route="feed">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="9" r="2.5"/><circle cx="16" cy="8" r="2"/><path d="M4.5 18a4 4 0 0 1 7 0"/><path d="M12.5 17a3.2 3.2 0 0 1 6.2 0"/><path d="M4 5.5h4.5M15 12.5h5"/></svg></span>
+              <span class="entry-label">朋友圈</span>
+              <span class="entry-badge" id="feedEntryBadge" hidden></span>
+            </a>            <a class="entry-card" href="#/favorites" data-route="favorites">
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.5l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z"/></svg></span>
               <span class="entry-label">收藏</span>
             </a>
@@ -100,6 +104,9 @@
         <!-- 经期记录 -->
         <section class="view view--back" id="view-period" data-view="period"></section>
 
+        <!-- 朋友圈 -->
+        <section class="view view--back" id="view-feed" data-view="feed"></section>
+
         <!-- 管理 -->
         <section class="view" id="view-manage" data-view="manage">
           <h2 class="view-title">管理</h2>
@@ -133,6 +140,7 @@
 
       <footer class="footer">
         <p class="footer-disclaimer">字卡回复均为随机代码生成，不具备任何真实效力。使用本站产生的一切后果由使用者自行承担。</p>
+        <p class="footer-credit">本网站部分功能参考mochi网站代码。</p>
         <p class="footer-hint">建议使用 Chrome 或 Edge 浏览器</p>
       </footer>
 
@@ -155,5 +163,3 @@
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
-
-

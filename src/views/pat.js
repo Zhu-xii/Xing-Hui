@@ -3,6 +3,7 @@ import { pickRandom, randomChance } from '../lib/random.js';
 import { getAvatarBlob, setBlobImage } from '../lib/media-db.js';
 import {
   CHARACTER_CHANGED_EVENT,
+  applyNicknamePlaceholders,
   readCharacter,
   readPatCards,
   readSettings,
@@ -29,6 +30,11 @@ function createMessageId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function starInitial() {
+  const name = String(readCharacter().name || '星回').trim();
+  return name.slice(0, 1) || '星';
+}
+
 async function fillAvatar(container) {
   if (!container) return;
   const { avatar } = readCharacter();
@@ -36,7 +42,7 @@ async function fillAvatar(container) {
 
   if (!avatar) {
     const fallback = document.createElement('span');
-    fallback.textContent = '星';
+    fallback.textContent = starInitial();
     container.append(fallback);
     return;
   }
@@ -53,7 +59,7 @@ async function fillAvatar(container) {
     } catch {
       image.remove();
       const fallback = document.createElement('span');
-      fallback.textContent = '星';
+      fallback.textContent = starInitial();
       container.append(fallback);
     }
     return;
@@ -71,14 +77,14 @@ function createActivityElement(activity) {
 
   if (activity.kind === 'pat') {
     const line = document.createElement('p');
-    line.textContent = activity.message?.content || '你拍了拍星回';
+    line.textContent = activity.message?.content || ('你拍了拍' + (readCharacter().name || '星回'));
     article.append(line);
     return article;
   }
 
   const avatar = document.createElement('span');
   avatar.className = 'pat-activity__avatar';
-  avatar.textContent = '星';
+  avatar.textContent = starInitial();
   avatar.setAttribute('aria-hidden', 'true');
 
   const bubble = document.createElement('p');
@@ -133,7 +139,7 @@ async function triggerPat(target) {
       id: createMessageId('pat'),
       role: 'system',
       type: 'pat',
-      content: '你拍了拍星回',
+      content: '你拍了拍' + (readCharacter().name || '星回'),
       timestamp: Date.now(),
       read: true,
       favorited: false,
@@ -170,7 +176,7 @@ async function triggerPat(target) {
         id: createMessageId('msg'),
         role: 'star',
         type: 'text',
-        content: card.content,
+        content: applyNicknamePlaceholders(card.content),
         timestamp: Date.now(),
         read: false,
         favorited: false,

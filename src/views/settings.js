@@ -1,11 +1,13 @@
 import '../styles/settings.css';
 import {
   DEFAULT_SETTINGS,
+  normalizeSettings,
   readCharacter,
   readSettings,
   updateSettings,
   writeCharacter,
 } from '../lib/storage.js';
+import { joinSpellCards } from '../lib/spell-cards.js';
 import { deleteAvatarBlob, getAvatarBlob, putAvatarBlob, setBlobImage } from '../lib/media-db.js';
 
 const MAX_CHAT_BACKGROUND_BYTES = 2 * 1024 * 1024;
@@ -76,21 +78,23 @@ function renderAvatar() {
 }
 
 function renderUserAvatar() {
-  const { userAvatar } = readSettings();
-  return renderAvatarPreview(elements?.userAvatarPreview, userAvatar, '我', '我的头像预览');
+  const { userAvatar, userName } = readSettings();
+  return renderAvatarPreview(elements?.userAvatarPreview, userAvatar, (userName || '我').slice(0, 1), '我的头像预览');
 }
 function syncAppearanceControls(settings = readSettings()) {
   if (!elements) return;
 
   elements.chatBackgroundType.value = settings.chatBackgroundType;
   elements.chatBackgroundColor.value = settings.chatBackgroundColor;
-  elements.bubbleColor.value = settings.bubbleColor;
+  if (elements.bubbleColor) elements.bubbleColor.value = settings.bubbleColor;
+  if (elements.bubbleColorStar) elements.bubbleColorStar.value = settings.bubbleColorStar;
   elements.chatBackgroundFileName.textContent = settings.chatBackgroundType === 'image' && settings.chatBackgroundImage
     ? '已保存本地背景图片'
     : '未选择文件';
 
   viewRoot.querySelectorAll('[data-color-value]').forEach((button) => {
-    button.classList.toggle('is-selected', button.dataset.colorValue.toUpperCase() === settings.bubbleColor.toUpperCase());
+    const target = button.dataset.bubbleTarget === 'star' ? settings.bubbleColorStar : settings.bubbleColor;
+    button.classList.toggle('is-selected', String(button.dataset.colorValue || '').toUpperCase() === String(target || '').toUpperCase());
   });
 }
 
@@ -110,6 +114,18 @@ function syncSettings() {
   elements.delayMin.value = String(settings.replyDelayMin);
   elements.delayMax.value = String(settings.replyDelayMax);
   elements.typingIndicator.checked = settings.typingIndicator;
+  if (elements.multiReplyEnabled) elements.multiReplyEnabled.checked = settings.multiReplyEnabled;
+  if (elements.multiReplyMin) elements.multiReplyMin.value = String(settings.multiReplyMin);
+  if (elements.multiReplyMax) elements.multiReplyMax.value = String(settings.multiReplyMax);
+  if (elements.multiReplyGapMin) elements.multiReplyGapMin.value = String(settings.multiReplyGapMin);
+  if (elements.multiReplyGapMax) elements.multiReplyGapMax.value = String(settings.multiReplyGapMax);
+  if (elements.spellCardEnabled) elements.spellCardEnabled.checked = settings.spellCardEnabled;
+  if (elements.spellCardChance) elements.spellCardChance.value = String(settings.spellCardChance);
+  if (elements.spellCardMin) elements.spellCardMin.value = String(settings.spellCardMin);
+  if (elements.spellCardMax) elements.spellCardMax.value = String(settings.spellCardMax);
+  if (elements.spellCardMode) elements.spellCardMode.value = settings.spellCardMode;
+  if (elements.spellCardNewline) elements.spellCardNewline.checked = settings.spellCardNewline;
+  if (elements.spellCardCustom) elements.spellCardCustom.value = settings.spellCardCustomSeparators.join('\n');
   elements.readNoReplyEnabled.checked = settings.readNoReplyEnabled;
   elements.readNoReplyNumber.disabled = !settings.readNoReplyEnabled;
   elements.readNoReplyRange.disabled = !settings.readNoReplyEnabled;
@@ -117,12 +133,32 @@ function syncSettings() {
   syncProbability('readNoReply', settings.readNoReply);
   syncProbability('stickerReply', settings.stickerReply);
   syncProbability('patReply', settings.patReply);
+  syncProbability('starFavorite', settings.starFavorite);
+  syncProbability('starFavoriteCard', settings.starFavoriteCard);
+  syncProbability('starFavoriteFeed', settings.starFavoriteFeed);
+  syncProbability('feedPostChance', settings.feedPostChance);
+  syncProbability('feedLikeProbability', settings.feedLikeProbability);
+  syncProbability('feedCommentProbability', settings.feedCommentProbability);
+  syncProbability('feedReplyProbability', settings.feedReplyProbability);
+  syncProbability('feedReplyToCommentProbability', settings.feedReplyToCommentProbability);
+  syncProbability('roastProbability', settings.roastProbability);
+
+  if (elements.feedEnabled) elements.feedEnabled.checked = settings.feedEnabled;
+  if (elements.feedAutoPost) elements.feedAutoPost.checked = settings.feedAutoPostEnabled;
+  if (elements.feedIntervalMin) elements.feedIntervalMin.value = String(settings.feedPostIntervalMin);
+  if (elements.feedIntervalMax) elements.feedIntervalMax.value = String(settings.feedPostIntervalMax);
+  if (elements.feedDailyMax) elements.feedDailyMax.value = String(settings.feedDailyMax);
+  if (elements.roastEnabled) elements.roastEnabled.checked = settings.roastEnabled;
+  if (elements.roastInterval) elements.roastInterval.value = String(settings.roastIntervalMinutes);
 
   elements.promptQuestionnaireChance.value = String(settings.promptQuestionnaireChance);
   elements.promptQuestionnaireIntervalHours.value = String(settings.promptQuestionnaireIntervalHours);
   elements.showTimestamp.checked = settings.showTimestamp;
   elements.fontSize.value = settings.fontSize;
+  if (elements.characterName) elements.characterName.value = readCharacter().name;
+  if (elements.userName) elements.userName.value = settings.userName;
   syncAppearanceControls(settings);
+  renderSpellCardPreview();
 
   renderAvatar();
   renderUserAvatar();
@@ -146,16 +182,128 @@ function saveDelayRange(preferMin = false) {
   elements.delayMax.value = String(max);
 }
 
-function saveProbability(key, value, minimum = 1) {
+function saveProbability(key, value, minimum = null) {
   const settings = readSettings();
-  const next = enabledValue(value, settings[key] ?? DEFAULT_SETTINGS[key], minimum);
+  const floor = minimum === null
+    ? (key === "starFavorite" || key === "starFavoriteCard" || key === "starFavoriteFeed" || key === "roastProbability" || key.startsWith("feed") ? 0 : 1)
+    : minimum;
+  const next = enabledValue(value, settings[key] ?? DEFAULT_SETTINGS[key], floor);
   updateSettings({ [key]: next });
   syncProbability(key, next);
+}
+
+// 底部「保存」：把当前表单里的全部设置一次性写回，保证数值调节后可以统一确认。
+function saveAllSettings() {
+  const current = readSettings();
+  const patch = {
+    replyDelayMin: elements.delayMin.value,
+    replyDelayMax: elements.delayMax.value,
+    typingIndicator: elements.typingIndicator.checked,
+    multiReplyEnabled: elements.multiReplyEnabled.checked,
+    multiReplyMin: elements.multiReplyMin.value,
+    multiReplyMax: elements.multiReplyMax.value,
+    multiReplyGapMin: elements.multiReplyGapMin.value,
+    multiReplyGapMax: elements.multiReplyGapMax.value,
+    spellCardEnabled: elements.spellCardEnabled.checked,
+    spellCardChance: elements.spellCardChance.value,
+    spellCardMin: elements.spellCardMin.value,
+    spellCardMax: elements.spellCardMax.value,
+    spellCardMode: elements.spellCardMode.value,
+    spellCardNewline: elements.spellCardNewline.checked,
+    spellCardCustomSeparators: elements.spellCardCustom.value,
+    readNoReplyEnabled: elements.readNoReplyEnabled.checked,
+    readNoReply: elements.readNoReplyNumber.value,
+    stickerReply: elements.stickerReplyNumber.value,
+    patReply: elements.patReplyNumber.value,
+    starFavorite: elements.starFavoriteNumber?.value ?? current.starFavorite,
+    starFavoriteCard: elements.starFavoriteCardNumber?.value ?? current.starFavoriteCard,
+    starFavoriteFeed: elements.starFavoriteFeedNumber?.value ?? current.starFavoriteFeed,
+    bubbleColorStar: elements.bubbleColorStar?.value ?? current.bubbleColorStar,
+    promptQuestionnaireChance: elements.promptQuestionnaireChance.value,
+    promptQuestionnaireIntervalHours: elements.promptQuestionnaireIntervalHours.value,
+    showTimestamp: elements.showTimestamp.checked,
+    fontSize: elements.fontSize.value,
+    userName: String(elements.userName?.value ?? current.userName),
+    feedEnabled: elements.feedEnabled.checked,
+    feedAutoPostEnabled: elements.feedAutoPost.checked,
+    feedPostIntervalMin: elements.feedIntervalMin.value,
+    feedPostIntervalMax: elements.feedIntervalMax.value,
+    feedDailyMax: elements.feedDailyMax.value,
+    feedPostChance: elements.feedPostChanceNumber.value,
+    feedLikeProbability: elements.feedLikeProbabilityNumber.value,
+    feedCommentProbability: elements.feedCommentProbabilityNumber.value,
+    feedReplyProbability: elements.feedReplyProbabilityNumber.value,
+    feedReplyToCommentProbability: elements.feedReplyToCommentProbabilityNumber.value,
+    roastEnabled: elements.roastEnabled.checked,
+    roastProbability: elements.roastProbabilityNumber.value,
+    roastIntervalMinutes: elements.roastInterval.value,
+    chatBackgroundType: elements.chatBackgroundType.value,
+    chatBackgroundColor: elements.chatBackgroundColor.value,
+    bubbleColor: elements.bubbleColor.value,
+  };
+
+  const saved = updateSettings(patch);
+  if (!saved) {
+    showToast('保存失败，浏览器存储空间可能不足。', 'warning');
+    return;
+  }
+
+  const starName = String(elements.characterName?.value || '').trim().slice(0, 20);
+  if (starName && starName !== readCharacter().name) {
+    writeCharacter({ ...readCharacter(), name: starName });
+  }
+
+  syncSettings();
+  showToast('设置已保存');
+}
+
+const SPELL_PREVIEW_SAMPLES = ['今天天气很好', '想和你一起散步', '记得早点休息', '晚点再聊', '晚安'];
+
+// 直接读表单当前值（而不是已保存值），做到输入时即时预览
+function currentSpellFormSettings() {
+  const settings = readSettings();
+  const numberOr = (value, fallback) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  };
+  return normalizeSettings({
+    ...settings,
+    spellCardChance: elements?.spellCardChance ? numberOr(elements.spellCardChance.value, settings.spellCardChance) : settings.spellCardChance,
+    spellCardMin: elements?.spellCardMin ? numberOr(elements.spellCardMin.value, settings.spellCardMin) : settings.spellCardMin,
+    spellCardMax: elements?.spellCardMax ? numberOr(elements.spellCardMax.value, settings.spellCardMax) : settings.spellCardMax,
+    spellCardMode: elements?.spellCardMode?.value || settings.spellCardMode,
+    spellCardNewline: elements?.spellCardNewline ? elements.spellCardNewline.checked : settings.spellCardNewline,
+    spellCardCustomSeparators: elements?.spellCardCustom ? elements.spellCardCustom.value : settings.spellCardCustomSeparators,
+  });
+}
+
+function renderSpellCardPreview() {
+  if (!elements?.spellCardPreview) return;
+  const options = currentSpellFormSettings();
+
+  if (elements.spellCardSummary) {
+    const modeLabel = options.spellCardMode === 'split' ? '逐张多条' : (options.spellCardMode === 'each' ? '连发时每条都拼接' : '拼成一条');
+    const extras = [];
+    if (options.spellCardNewline) extras.push('含换行');
+    if (options.spellCardCustomSeparators.length) extras.push('自定义 ' + options.spellCardCustomSeparators.length + ' 个');
+    const prefix = options.spellCardEnabled ? '' : '未启用 · ';
+    elements.spellCardSummary.textContent = prefix + options.spellCardChance + '% 概率 · 每次 ' + options.spellCardMin + '-' + options.spellCardMax + ' 张 · ' + modeLabel + (extras.length ? ' · ' + extras.join(' · ') : '');
+  }
+
+  const count = Math.max(1, Math.min(options.spellCardMin, SPELL_PREVIEW_SAMPLES.length));
+  const segments = SPELL_PREVIEW_SAMPLES.slice(0, count);
+  elements.spellCardPreview.textContent = options.spellCardMode === 'split'
+    ? segments.map((segment, index) => (index + 1) + '. ' + segment).join('\n')
+    : joinSpellCards(segments, options);
 }
 
 function handleRangeInput(event) {
   const target = event.target;
   const delaySetting = target.dataset.setting;
+  if (delaySetting && delaySetting.indexOf('spell-card-') === 0) {
+    renderSpellCardPreview();
+    return;
+  }
   if (delaySetting === 'prompt-questionnaire-chance' || delaySetting === 'prompt-questionnaire-interval') {
     handleSettingsChange(event);
     return;
@@ -198,6 +346,70 @@ function handleSettingsChange(event) {
     return;
   }
 
+  if (setting === 'multi-reply-enabled') {
+    updateSettings({ multiReplyEnabled: target.checked });
+    return;
+  }
+
+  if (setting === 'multi-reply-min' || setting === 'multi-reply-max') {
+    updateSettings({
+      multiReplyMin: setting === 'multi-reply-min' ? target.value : elements.multiReplyMin.value,
+      multiReplyMax: setting === 'multi-reply-max' ? target.value : elements.multiReplyMax.value,
+    });
+    syncSettings();
+    return;
+  }
+
+  if (setting === 'multi-reply-gap-min' || setting === 'multi-reply-gap-max') {
+    updateSettings({
+      multiReplyGapMin: setting === 'multi-reply-gap-min' ? target.value : elements.multiReplyGapMin.value,
+      multiReplyGapMax: setting === 'multi-reply-gap-max' ? target.value : elements.multiReplyGapMax.value,
+    });
+    syncSettings();
+    return;
+  }
+
+  if (setting === 'spell-card-enabled') {
+    updateSettings({ spellCardEnabled: target.checked });
+    renderSpellCardPreview();
+    return;
+  }
+
+  if (setting === 'spell-card-newline') {
+    updateSettings({ spellCardNewline: target.checked });
+    renderSpellCardPreview();
+    return;
+  }
+
+  if (setting === 'spell-card-custom') {
+    updateSettings({ spellCardCustomSeparators: target.value });
+    target.value = readSettings().spellCardCustomSeparators.join('\n');
+    renderSpellCardPreview();
+    return;
+  }
+
+  if (setting === 'spell-card-chance') {
+    updateSettings({ spellCardChance: target.value });
+    target.value = String(readSettings().spellCardChance);
+    renderSpellCardPreview();
+    return;
+  }
+
+  if (setting === 'spell-card-min' || setting === 'spell-card-max') {
+    updateSettings({
+      spellCardMin: setting === 'spell-card-min' ? target.value : elements.spellCardMin.value,
+      spellCardMax: setting === 'spell-card-max' ? target.value : elements.spellCardMax.value,
+    });
+    syncSettings();
+    return;
+  }
+
+  if (setting === 'spell-card-mode') {
+    updateSettings({ spellCardMode: target.value });
+    renderSpellCardPreview();
+    return;
+  }
+
   if (setting === 'read-no-reply-enabled') {
     updateSettings({ readNoReplyEnabled: target.checked });
     target.disabled = false;
@@ -207,7 +419,7 @@ function handleSettingsChange(event) {
   }
 
   if (setting === 'prompt-questionnaire-chance') {
-    updateSettings({ promptQuestionnaireChance: Math.min(1, Math.max(0, Number(target.value) || 0)) });
+    updateSettings({ promptQuestionnaireChance: Math.min(100, Math.max(0, Number(target.value) || 0)) });
     return;
   }
 
@@ -226,6 +438,20 @@ function handleSettingsChange(event) {
     return;
   }
 
+  if (setting === 'character-name') {
+    const name = target.value.trim().slice(0, 20) || readCharacter().name;
+    writeCharacter({ ...readCharacter(), name });
+    target.value = name;
+    return;
+  }
+
+  if (setting === 'user-name') {
+    const name = target.value.trim().slice(0, 20) || DEFAULT_SETTINGS.userName;
+    updateSettings({ userName: name });
+    target.value = name;
+    return;
+  }
+
   if (setting === 'chat-background-type') {
     updateSettings({ chatBackgroundType: target.value });
     syncAppearanceControls();
@@ -241,7 +467,27 @@ function handleSettingsChange(event) {
   if (setting === 'bubble-color') {
     updateSettings({ bubbleColor: target.value });
     syncAppearanceControls();
+    return;
   }
+
+  if (setting === "feed-enabled") { updateSettings({ feedEnabled: target.checked }); return; }
+  if (setting === "feed-auto-post") { updateSettings({ feedAutoPostEnabled: target.checked }); return; }
+  if (setting === "feed-interval-min" || setting === "feed-interval-max") {
+    updateSettings({
+      feedPostIntervalMin: setting === "feed-interval-min" ? target.value : elements.feedIntervalMin.value,
+      feedPostIntervalMax: setting === "feed-interval-max" ? target.value : elements.feedIntervalMax.value,
+    });
+    syncSettings();
+    return;
+  }
+  if (setting === "feed-daily-max") { updateSettings({ feedDailyMax: target.value }); syncSettings(); return; }
+  if (setting === "bubble-color-star") {
+    updateSettings({ bubbleColorStar: target.value });
+    syncAppearanceControls();
+    return;
+  }
+  if (setting === "roast-enabled") { updateSettings({ roastEnabled: target.checked }); return; }
+  if (setting === "roast-interval") { updateSettings({ roastIntervalMinutes: target.value }); syncSettings(); return; }
 }
 
 function handleChatBackgroundUpload(event) {
@@ -356,10 +602,25 @@ function handleClick(event) {
     void renderUserAvatar();
     showToast('已恢复默认我的头像。');
   }
+  if (action === 'save-all') {
+    saveAllSettings();
+    return;
+  }
   if (action === 'set-bubble-color') {
-    updateSettings({ bubbleColor: actionButton.dataset.colorValue });
+    const isStar = actionButton.dataset.bubbleTarget === 'star';
+    updateSettings(isStar ? { bubbleColorStar: actionButton.dataset.colorValue } : { bubbleColor: actionButton.dataset.colorValue });
     syncAppearanceControls();
-    showToast('气泡颜色已更新。');
+    showToast(isStar ? '对方气泡颜色已更新。' : '我的气泡颜色已更新。');
+    return;
+  }
+  if (action === 'set-bubble-scheme') {
+    updateSettings({
+      bubbleColor: actionButton.dataset.bubbleUser,
+      bubbleColorStar: actionButton.dataset.bubbleStar,
+    });
+    syncAppearanceControls();
+    showToast('已应用配色方案。');
+    return;
   }
   if (action === 'clear-chat-background') {
     updateSettings({ chatBackgroundType: 'color', chatBackgroundImage: '' });
@@ -457,12 +718,60 @@ export function initSettingsView(root = document.getElementById('view-settings')
           </span>
         </label>
 
+        <label class="settings-switch-row">
+          <span>
+            <strong>字卡连发</strong>
+            <small>开启后星回一次会连发多条字卡消息</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingMultiReplyEnabled" data-setting="multi-reply-enabled" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>连发条数</span>
+            <small>最少 1 条，最多 10 条</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最少</span>
+              <input id="settingMultiReplyMin" data-setting="multi-reply-min" type="number" min="1" max="10" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最多</span>
+              <input id="settingMultiReplyMax" data-setting="multi-reply-max" type="number" min="1" max="10" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-unit">条</span>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>连发间隔</span>
+            <small>每条消息之间的等待时间</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最少</span>
+              <input id="settingMultiReplyGapMin" data-setting="multi-reply-gap-min" type="number" min="0.2" max="10" step="0.1" inputmode="decimal" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最多</span>
+              <input id="settingMultiReplyGapMax" data-setting="multi-reply-gap-max" type="number" min="0.2" max="10" step="0.1" inputmode="decimal" />
+            </label>
+            <span class="settings-unit">秒</span>
+          </div>
+        </div>
         <div class="settings-field settings-field--inline">
           <label for="settingPromptQuestionnaireChance">
             <strong>星回随机发题概率</strong>
-            <small>0–1，默认 0.3</small>
+            <small>0%–100%，默认 30%</small>
           </label>
-          <input class="settings-number-input" id="settingPromptQuestionnaireChance" data-setting="prompt-questionnaire-chance" type="number" min="0" max="1" step="0.1" inputmode="decimal" />
+          <input class="settings-number-input" id="settingPromptQuestionnaireChance" data-setting="prompt-questionnaire-chance" type="number" min="0" max="100" step="1" inputmode="numeric" />
         </div>
 
         <div class="settings-field settings-field--inline">
@@ -492,6 +801,88 @@ export function initSettingsView(root = document.getElementById('view-settings')
             </label>
             <output id="settingReadNoReplyOutput">15%</output>
           </div>
+        </div>
+      </section>
+      <section class="settings-card" aria-labelledby="settingsSpellCardTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">拼接</p>
+            <h3 id="settingsSpellCardTitle">拼接字卡</h3>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>启用拼接字卡</strong>
+            <small>从字卡库抽多张字卡拼成一句话或逐条发送</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingSpellCardEnabled" data-setting="spell-card-enabled" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingSpellCardChance">
+            <strong>拼接触发概率</strong>
+            <small>1%–100%，默认 15%</small>
+          </label>
+          <input class="settings-number-input" id="settingSpellCardChance" data-setting="spell-card-chance" type="number" min="1" max="100" step="1" inputmode="numeric" />
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>拼接字卡数</span>
+            <small>每次抽取 1–10 张字卡</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最少</span>
+              <input id="settingSpellCardMin" data-setting="spell-card-min" type="number" min="1" max="10" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最多</span>
+              <input id="settingSpellCardMax" data-setting="spell-card-max" type="number" min="1" max="10" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-unit">张</span>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingSpellCardMode">
+            <strong>发送形态</strong>
+            <small>单气泡拼成一句，或逐张分条发送</small>
+          </label>
+          <select id="settingSpellCardMode" data-setting="spell-card-mode">
+            <option value="single">拼成一条</option>
+            <option value="split">逐张多条</option>
+            <option value="each">连发时每条都拼接</option>
+          </select>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>换行连接符</strong>
+            <small>拼接时随机用换行分隔两张字卡</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingSpellCardNewline" data-setting="spell-card-newline" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>自定义连接符</span>
+            <small>每行一个，例如：～、…、🌙</small>
+          </div>
+          <textarea class="settings-textarea" id="settingSpellCardCustom" data-setting="spell-card-custom" rows="3" placeholder="每行一个连接符"></textarea>
+        </div>
+
+        <div class="settings-preview" id="spellCardPreviewBox">
+          <p class="settings-preview__summary" id="spellCardSummary">—</p>
+          <p class="settings-preview__text" id="spellCardPreview">—</p>
         </div>
       </section>
       <section class="settings-card" aria-labelledby="settingsProbabilityTitle">
@@ -533,12 +924,241 @@ export function initSettingsView(root = document.getElementById('view-settings')
         </div>
       </section>
 
+      <section class="settings-card" aria-labelledby="settingsFavoriteTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">收藏</p>
+            <h3 id="settingsFavoriteTitle">收藏概率</h3>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回自动收藏·聊天</span>
+            <small>0%–100%，默认 30%；命中后我发出的聊天消息会被标记为「梦角收藏」</small>
+          </div>
+          <div class="settings-probability" data-probability-control="starFavorite">
+            <input id="settingStarFavoriteRange" data-probability-range="starFavorite" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingStarFavoriteNumber" data-setting="probability-number" data-probability="starFavorite" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingStarFavoriteOutput">30%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回自动收藏·卡片</span>
+            <small>0%–100%，默认 30%；命中后我发的问卷卡片会被收藏</small>
+          </div>
+          <div class="settings-probability" data-probability-control="starFavoriteCard">
+            <input id="settingStarFavoriteCardRange" data-probability-range="starFavoriteCard" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingStarFavoriteCardNumber" data-setting="probability-number" data-probability="starFavoriteCard" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingStarFavoriteCardOutput">30%</output>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回自动收藏·朋友圈</span>
+            <small>0%–100%，默认 30%；命中后我发的朋友圈会被收藏</small>
+          </div>
+          <div class="settings-probability" data-probability-control="starFavoriteFeed">
+            <input id="settingStarFavoriteFeedRange" data-probability-range="starFavoriteFeed" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingStarFavoriteFeedNumber" data-setting="probability-number" data-probability="starFavoriteFeed" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingStarFavoriteFeedOutput">30%</output>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsFeedTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">朋友圈</p>
+            <h3 id="settingsFeedTitle">朋友圈互动</h3>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>开启朋友圈</strong>
+            <small>关闭后星回不再自动发动态</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingFeedEnabled" data-setting="feed-enabled" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>星回自动发动态</strong>
+            <small>按下面的间隔随机发布</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingFeedAutoPost" data-setting="feed-auto-post" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>发动态间隔</span>
+            <small>1–1440 分钟，默认 30–180 分钟</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最短</span>
+              <input id="settingFeedIntervalMin" data-setting="feed-interval-min" type="number" min="1" max="1440" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最长</span>
+              <input id="settingFeedIntervalMax" data-setting="feed-interval-max" type="number" min="1" max="1440" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-unit">分钟</span>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingFeedDailyMax">
+            <strong>每天最多发动态</strong>
+            <small>1–24 条，默认 4 条</small>
+          </label>
+          <input class="settings-number-input" id="settingFeedDailyMax" data-setting="feed-daily-max" type="number" min="1" max="24" step="1" inputmode="numeric" />
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>到点发动态概率</span>
+            <small>0%–100%，默认 50%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="feedPostChance">
+            <input id="settingFeedPostChanceRange" data-probability-range="feedPostChance" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingFeedPostChanceNumber" data-setting="probability-number" data-probability="feedPostChance" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingFeedPostChanceOutput">0%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回点赞我的动态</span>
+            <small>0%–100%，默认 60%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="feedLikeProbability">
+            <input id="settingFeedLikeProbabilityRange" data-probability-range="feedLikeProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingFeedLikeProbabilityNumber" data-setting="probability-number" data-probability="feedLikeProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingFeedLikeProbabilityOutput">0%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回评论我的动态</span>
+            <small>0%–100%，默认 75%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="feedCommentProbability">
+            <input id="settingFeedCommentProbabilityRange" data-probability-range="feedCommentProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingFeedCommentProbabilityNumber" data-setting="probability-number" data-probability="feedCommentProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingFeedCommentProbabilityOutput">0%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>星回回应我的评论</span>
+            <small>0%–100%，默认 50%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="feedReplyProbability">
+            <input id="settingFeedReplyProbabilityRange" data-probability-range="feedReplyProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingFeedReplyProbabilityNumber" data-setting="probability-number" data-probability="feedReplyProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingFeedReplyProbabilityOutput">0%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>回应时回复我（而非新评论）</span>
+            <small>0%–100%，默认 50%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="feedReplyToCommentProbability">
+            <input id="settingFeedReplyToCommentProbabilityRange" data-probability-range="feedReplyToCommentProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingFeedReplyToCommentProbabilityNumber" data-setting="probability-number" data-probability="feedReplyToCommentProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingFeedReplyToCommentProbabilityOutput">0%</output>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-card" aria-labelledby="settingsRoastTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">互动</p>
+            <h3 id="settingsRoastTitle">他的吐槽</h3>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>开启他的吐槽</strong>
+            <small>星回偶尔主动吐槽你一句，内容取自字卡页的「他的吐槽」</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingRoastEnabled" data-setting="roast-enabled" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>吐槽概率</span>
+            <small>0%–100%，默认 8%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="roastProbability">
+            <input id="settingRoastProbabilityRange" data-probability-range="roastProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingRoastProbabilityNumber" data-setting="probability-number" data-probability="roastProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingRoastProbabilityOutput">0%</output>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingRoastInterval">
+            <strong>吐槽冷却</strong>
+            <small>两次吐槽至少间隔 0–1440 分钟，默认 20 分钟</small>
+          </label>
+          <input class="settings-number-input" id="settingRoastInterval" data-setting="roast-interval" type="number" min="0" max="1440" step="1" inputmode="numeric" />
+        </div>
+      </section>
+
       <section class="settings-card" aria-labelledby="settingsAvatarTitle">
         <div class="settings-card__heading">
           <div>
             <p class="settings-kicker">头像</p>
-            <h3 id="settingsAvatarTitle">星回头像</h3>
+            <h3 id="settingsAvatarTitle">星回头像与昵称</h3>
           </div>
+        </div>
+        <div class="settings-field settings-field--inline">
+          <label for="settingCharacterName">
+            <strong>星回昵称</strong>
+            <small>用于聊天顶栏和消息称呼</small>
+          </label>
+          <input class="settings-text-input" id="settingCharacterName" data-setting="character-name" type="text" maxlength="20" autocomplete="off" />
         </div>
         <div class="settings-avatar">
           <span class="settings-avatar__preview" id="settingsAvatarPreview" aria-hidden="true"><span>星</span></span>
@@ -559,8 +1179,15 @@ export function initSettingsView(root = document.getElementById('view-settings')
         <div class="settings-card__heading">
           <div>
             <p class="settings-kicker">头像</p>
-            <h3 id="settingsUserAvatarTitle">我的头像</h3>
+            <h3 id="settingsUserAvatarTitle">我的头像与昵称</h3>
           </div>
+        </div>
+        <div class="settings-field settings-field--inline">
+          <label for="settingUserName">
+            <strong>我的昵称</strong>
+            <small>用于我的头像占位和消息称呼</small>
+          </label>
+          <input class="settings-text-input" id="settingUserName" data-setting="user-name" type="text" maxlength="20" autocomplete="off" />
         </div>
         <div class="settings-avatar">
           <span class="settings-avatar__preview" id="settingsUserAvatarPreview" aria-hidden="true"><span>我</span></span>
@@ -619,18 +1246,72 @@ export function initSettingsView(root = document.getElementById('view-settings')
         </fieldset>
 
         <fieldset class="settings-fieldset settings-bubble-palette">
-          <legend>气泡颜色</legend>
-          <p class="settings-fieldset__hint">默认淡蓝，所有气泡文字保持黑色。</p>
-          <div class="settings-swatches" aria-label="气泡调色盘">
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#DDEEFF" style="--swatch-color: #DDEEFF" aria-label="淡蓝"></button>
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#DDF3F5" style="--swatch-color: #DDF3F5" aria-label="薄荷"></button>
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#F7E8F1" style="--swatch-color: #F7E8F1" aria-label="浅粉"></button>
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#FFF0D9" style="--swatch-color: #FFF0D9" aria-label="杏色"></button>
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#E5EBFF" style="--swatch-color: #E5EBFF" aria-label="薰衣草"></button>
-            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-color-value="#EFF2F5" style="--swatch-color: #EFF2F5" aria-label="雾灰"></button>
-            <label class="settings-swatch settings-swatch--custom" aria-label="自定义气泡颜色">
-              <input id="settingBubbleColor" data-setting="bubble-color" type="color" />
-            </label>
+          <legend>气泡配色</legend>
+          <p class="settings-fieldset__hint">我的气泡与对方气泡可以分别设置；文字颜色会按底色自动取高对比色。</p>
+
+          <div class="settings-schemes" aria-label="配色方案">
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#111111" data-bubble-star="#FFFFFF" aria-label="墨白">
+              <span class="settings-scheme__chip" style="--chip-a: #111111; --chip-b: #FFFFFF"></span>
+              <span>墨白</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#FFFFFF" data-bubble-star="#111111" aria-label="反白">
+              <span class="settings-scheme__chip" style="--chip-a: #FFFFFF; --chip-b: #111111"></span>
+              <span>反白</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#3A3A3A" data-bubble-star="#F2F2F2" aria-label="炭灰">
+              <span class="settings-scheme__chip" style="--chip-a: #3A3A3A; --chip-b: #F2F2F2"></span>
+              <span>炭灰</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#D6E4FF" data-bubble-star="#FFFFFF" aria-label="雾霭蓝">
+              <span class="settings-scheme__chip" style="--chip-a: #D6E4FF; --chip-b: #FFFFFF"></span>
+              <span>雾霭蓝</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#FFD6E0" data-bubble-star="#FFFFFF" aria-label="樱花粉">
+              <span class="settings-scheme__chip" style="--chip-a: #FFD6E0; --chip-b: #FFFFFF"></span>
+              <span>樱花粉</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#D8F5E0" data-bubble-star="#FFFFFF" aria-label="薄荷绿">
+              <span class="settings-scheme__chip" style="--chip-a: #D8F5E0; --chip-b: #FFFFFF"></span>
+              <span>薄荷绿</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#FFF3D6" data-bubble-star="#FFFFFF" aria-label="奶油黄">
+              <span class="settings-scheme__chip" style="--chip-a: #FFF3D6; --chip-b: #FFFFFF"></span>
+              <span>奶油黄</span>
+            </button>
+            <button class="settings-scheme" type="button" data-settings-action="set-bubble-scheme" data-bubble-user="#E8DCFF" data-bubble-star="#FFFFFF" aria-label="淡紫">
+              <span class="settings-scheme__chip" style="--chip-a: #E8DCFF; --chip-b: #FFFFFF"></span>
+              <span>淡紫</span>
+            </button>
+          </div>
+
+          <div class="settings-bubble-row">
+            <strong>我的气泡</strong>
+            <div class="settings-swatches" aria-label="我的气泡颜色">
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#111111" style="--swatch-color: #111111" aria-label="墨黑"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#3A3A3A" style="--swatch-color: #3A3A3A" aria-label="炭灰"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#D6E4FF" style="--swatch-color: #D6E4FF" aria-label="雾霭蓝"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#FFD6E0" style="--swatch-color: #FFD6E0" aria-label="樱花粉"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#D8F5E0" style="--swatch-color: #D8F5E0" aria-label="薄荷绿"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="user" data-color-value="#FFF3D6" style="--swatch-color: #FFF3D6" aria-label="奶油黄"></button>
+              <label class="settings-swatch settings-swatch--custom" aria-label="自定义我的气泡颜色">
+                <input id="settingBubbleColor" data-setting="bubble-color" type="color" />
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-bubble-row">
+            <strong>对方气泡</strong>
+            <div class="settings-swatches" aria-label="对方气泡颜色">
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#FFFFFF" style="--swatch-color: #FFFFFF" aria-label="纯白"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#F2F2F2" style="--swatch-color: #F2F2F2" aria-label="浅灰"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#FAF7F0" style="--swatch-color: #FAF7F0" aria-label="米白"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#EDEDED" style="--swatch-color: #EDEDED" aria-label="雾灰"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#F3E8FF" style="--swatch-color: #F3E8FF" aria-label="淡紫"></button>
+            <button class="settings-swatch" type="button" data-settings-action="set-bubble-color" data-bubble-target="star" data-color-value="#FFF0E0" style="--swatch-color: #FFF0E0" aria-label="暖橘"></button>
+              <label class="settings-swatch settings-swatch--custom" aria-label="自定义对方气泡颜色">
+                <input id="settingBubbleColorStar" data-setting="bubble-color-star" type="color" />
+              </label>
+            </div>
           </div>
         </fieldset>
 
@@ -658,6 +1339,10 @@ export function initSettingsView(root = document.getElementById('view-settings')
         </div>
 
       </section>
+
+      <div class="settings-footer">
+        <button class="settings-button settings-button--primary settings-save" type="button" data-settings-action="save-all">保存</button>
+      </div>
     </div>
     <div class="settings-toast" id="settingsToast" role="status" aria-live="polite" hidden></div>
   `;
@@ -667,6 +1352,20 @@ export function initSettingsView(root = document.getElementById('view-settings')
     delayMin: viewRoot.querySelector('#settingDelayMin'),
     delayMax: viewRoot.querySelector('#settingDelayMax'),
     typingIndicator: viewRoot.querySelector('#settingTypingIndicator'),
+    multiReplyEnabled: viewRoot.querySelector('#settingMultiReplyEnabled'),
+    multiReplyMin: viewRoot.querySelector('#settingMultiReplyMin'),
+    multiReplyMax: viewRoot.querySelector('#settingMultiReplyMax'),
+    multiReplyGapMin: viewRoot.querySelector('#settingMultiReplyGapMin'),
+    multiReplyGapMax: viewRoot.querySelector('#settingMultiReplyGapMax'),
+    spellCardEnabled: viewRoot.querySelector('#settingSpellCardEnabled'),
+    spellCardChance: viewRoot.querySelector('#settingSpellCardChance'),
+    spellCardMin: viewRoot.querySelector('#settingSpellCardMin'),
+    spellCardMax: viewRoot.querySelector('#settingSpellCardMax'),
+    spellCardMode: viewRoot.querySelector('#settingSpellCardMode'),
+    spellCardNewline: viewRoot.querySelector('#settingSpellCardNewline'),
+    spellCardCustom: viewRoot.querySelector('#settingSpellCardCustom'),
+    spellCardSummary: viewRoot.querySelector('#spellCardSummary'),
+    spellCardPreview: viewRoot.querySelector('#spellCardPreview'),
     readNoReplyEnabled: viewRoot.querySelector('#settingReadNoReplyEnabled'),
     readNoReplyRange: viewRoot.querySelector('#settingReadNoReplyRange'),
     readNoReplyNumber: viewRoot.querySelector('#settingReadNoReplyNumber'),
@@ -683,6 +1382,8 @@ export function initSettingsView(root = document.getElementById('view-settings')
     userAvatarPreview: viewRoot.querySelector('#settingsUserAvatarPreview'),
     userAvatarInput: viewRoot.querySelector('#settingsUserAvatarInput'),
     userAvatarFileName: viewRoot.querySelector('#settingsUserAvatarFileName'),
+    characterName: viewRoot.querySelector('#settingCharacterName'),
+    userName: viewRoot.querySelector('#settingUserName'),
     promptQuestionnaireChance: viewRoot.querySelector('#settingPromptQuestionnaireChance'),
     promptQuestionnaireIntervalHours: viewRoot.querySelector('#settingPromptQuestionnaireIntervalHours'),
     showTimestamp: viewRoot.querySelector('#settingShowTimestamp'),
@@ -692,7 +1393,24 @@ export function initSettingsView(root = document.getElementById('view-settings')
     chatBackgroundInput: viewRoot.querySelector('#settingsChatBackgroundInput'),
     chatBackgroundFileName: viewRoot.querySelector('#settingsChatBackgroundFileName'),
     bubbleColor: viewRoot.querySelector('#settingBubbleColor'),
+    bubbleColorStar: viewRoot.querySelector('#settingBubbleColorStar'),
+    saveAll: viewRoot.querySelector('[data-settings-action="save-all"]'),
+    feedEnabled: viewRoot.querySelector('#settingFeedEnabled'),
+    feedAutoPost: viewRoot.querySelector('#settingFeedAutoPost'),
+    feedIntervalMin: viewRoot.querySelector('#settingFeedIntervalMin'),
+    feedIntervalMax: viewRoot.querySelector('#settingFeedIntervalMax'),
+    feedDailyMax: viewRoot.querySelector('#settingFeedDailyMax'),
+    roastEnabled: viewRoot.querySelector('#settingRoastEnabled'),
+    roastInterval: viewRoot.querySelector('#settingRoastInterval'),
   };
+
+  // 概率类控件（滑块 + 数字 + 输出）统一登记，便于同步与保存。
+  ["starFavorite", "starFavoriteCard", "starFavoriteFeed", "feedPostChance", "feedLikeProbability", "feedCommentProbability", "feedReplyProbability", "feedReplyToCommentProbability", "roastProbability"].forEach((key) => {
+    const cap = key[0].toUpperCase() + key.slice(1);
+    elements[key + "Range"] = viewRoot.querySelector("#setting" + cap + "Range");
+    elements[key + "Number"] = viewRoot.querySelector("#setting" + cap + "Number");
+    elements[key + "Output"] = viewRoot.querySelector("#setting" + cap + "Output");
+  });
 
   bindEvents();
   syncSettings();

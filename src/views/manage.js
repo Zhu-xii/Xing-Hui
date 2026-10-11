@@ -1,5 +1,5 @@
 import '../styles/manage.css';
-import { deleteStickerBlob, getStickerBlob, putStickerBlob, setBlobImage } from '../lib/media-db.js';
+import { deleteImageBlob, deleteStickerBlob, getStickerBlob, putImageBlob, putStickerBlob, setBlobImage } from '../lib/media-db.js';
 import {
   CARD_STORAGE_KEY as STORAGE_CARD_KEY,
   DEFAULT_GROUP_ID as STORAGE_DEFAULT_GROUP_ID,
@@ -10,7 +10,10 @@ import {
   QUESTIONNAIRE_ANSWER_STORAGE_KEY as STORAGE_QUESTIONNAIRE_KEY,
   SETTINGS_KEY as STORAGE_SETTINGS_KEY,
   STATUS_STORAGE_KEY as STORAGE_STATUS_KEY,
+  MOOD_CARD_STORAGE_KEY as STORAGE_MOOD_KEY,
+  ROAST_STORAGE_KEY as STORAGE_ROAST_KEY,
   STICKER_STORAGE_KEY as STORAGE_STICKER_KEY,
+  IMAGE_STORAGE_KEY as STORAGE_IMAGE_KEY,
   getManageCategory,
   readJson,
   writeJson,
@@ -21,12 +24,35 @@ export const CARD_STORAGE_KEY = STORAGE_CARD_KEY;
 export const SETTINGS_KEY = STORAGE_SETTINGS_KEY;
 export const PAT_CARD_STORAGE_KEY = STORAGE_PAT_CARD_KEY;
 export const STICKER_STORAGE_KEY = STORAGE_STICKER_KEY;
+export const IMAGE_STORAGE_KEY = STORAGE_IMAGE_KEY;
 export const QUESTIONNAIRE_ANSWER_STORAGE_KEY = STORAGE_QUESTIONNAIRE_KEY;
 export const STATUS_STORAGE_KEY = STORAGE_STATUS_KEY;
+export const MOOD_CARD_STORAGE_KEY = STORAGE_MOOD_KEY;
+export const ROAST_STORAGE_KEY = STORAGE_ROAST_KEY;
 export const DEFAULT_GROUP_ID = STORAGE_DEFAULT_GROUP_ID;
 export const GREETING_GROUP_ID = STORAGE_GREETING_GROUP_ID;
 
 const CARD_PAGE_SIZE = 120;
+
+const TEXT_CATEGORY_META = Object.freeze({
+  questionnaire: { label: '问卷回答', icon: '？', hint: '问卷回答会保存在本地，供问卷入口调用。' },
+  status: { label: '状态', icon: '◷', hint: '最新一条状态会显示在首页顶部。' },
+  mood: { label: '心情', icon: '☾', hint: '聊天顶栏的「心情」会从心情字卡里随机抽取一条。' },
+  roast: { label: '他的吐槽', icon: '✎', hint: '聊天时星回偶尔抽一条吐槽字卡主动吐槽你。' },
+});
+
+function textCategoryMeta(type) {
+  return TEXT_CATEGORY_META[type] || { label: '内容', icon: '·', hint: '' };
+}
+
+function isTextCategoryType(type) {
+  return Boolean(TEXT_CATEGORY_META[type]);
+}
+
+// 「表情包」与「图片」共用同一套媒体管线（IndexedDB + 网格列表）。
+function isMediaCategoryType(type) {
+  return type === 'stickers' || type === 'images';
+}
 
 const BUILT_IN_GROUPS = [
   { id: DEFAULT_GROUP_ID, name: '默认分组' },
@@ -43,8 +69,11 @@ const state = {
   groups: [],
   cards: [],
   stickers: [],
+  images: [],
   questionnaireAnswers: [],
   statuses: [],
+  moods: [],
+  roasts: [],
   patCards: [],
   currentGroupId: DEFAULT_GROUP_ID,
   cardPage: 1,
@@ -161,11 +190,23 @@ function readManageData() {
     .map(normalizeSticker)
     .filter(Boolean);
 
+  const images = readStoredArray(IMAGE_STORAGE_KEY)
+    .map(normalizeSticker)
+    .filter(Boolean);
+
   const questionnaireAnswers = readStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY)
     .map(normalizeTextEntry)
     .filter(Boolean);
 
   const statuses = readStoredArray(STATUS_STORAGE_KEY)
+    .map(normalizeTextEntry)
+    .filter(Boolean);
+
+  const moods = readStoredArray(MOOD_CARD_STORAGE_KEY)
+    .map(normalizeTextEntry)
+    .filter(Boolean);
+
+  const roasts = readStoredArray(ROAST_STORAGE_KEY)
     .map(normalizeTextEntry)
     .filter(Boolean);
 
@@ -179,7 +220,7 @@ function readManageData() {
   const requestedGroupId = String(settings.currentGroupId || '').trim();
   const currentGroupId = groupIds.has(requestedGroupId) ? requestedGroupId : DEFAULT_GROUP_ID;
 
-  return { groups, cards, stickers, questionnaireAnswers, statuses, patCards, currentGroupId };
+  return { groups, cards, stickers, images, questionnaireAnswers, statuses, moods, roasts, patCards, currentGroupId };
 }
 
 function writeStoredArray(key, value) {
@@ -199,8 +240,11 @@ function saveData() {
     writeStoredArray(GROUP_STORAGE_KEY, state.groups),
     writeStoredArray(CARD_STORAGE_KEY, state.cards),
     writeStoredArray(STICKER_STORAGE_KEY, state.stickers),
+    writeStoredArray(IMAGE_STORAGE_KEY, state.images),
     writeStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY, state.questionnaireAnswers),
     writeStoredArray(STATUS_STORAGE_KEY, state.statuses),
+    writeStoredArray(STORAGE_MOOD_KEY, state.moods),
+    writeStoredArray(STORAGE_ROAST_KEY, state.roasts),
     writeStoredArray(PAT_CARD_STORAGE_KEY, state.patCards),
     writeCurrentGroupId(),
   ].every(Boolean);
@@ -211,8 +255,11 @@ function saveData() {
         groups: state.groups,
         cards: state.cards,
         stickers: state.stickers,
+        images: state.images,
         questionnaireAnswers: state.questionnaireAnswers,
         statuses: state.statuses,
+        moods: state.moods,
+        roasts: state.roasts,
         patCards: state.patCards,
         currentGroupId: state.currentGroupId,
       },
@@ -226,8 +273,11 @@ function syncState() {
   state.groups = data.groups;
   state.cards = data.cards;
   state.stickers = data.stickers;
+  state.images = data.images;
   state.questionnaireAnswers = data.questionnaireAnswers;
   state.statuses = data.statuses;
+  state.moods = data.moods;
+  state.roasts = data.roasts;
   state.patCards = data.patCards;
   state.currentGroupId = data.currentGroupId;
 
@@ -239,8 +289,11 @@ function syncState() {
   writeStoredArray(GROUP_STORAGE_KEY, state.groups);
   writeStoredArray(CARD_STORAGE_KEY, state.cards);
   writeStoredArray(STICKER_STORAGE_KEY, state.stickers);
+  writeStoredArray(IMAGE_STORAGE_KEY, state.images);
   writeStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY, state.questionnaireAnswers);
   writeStoredArray(STATUS_STORAGE_KEY, state.statuses);
+  writeStoredArray(STORAGE_MOOD_KEY, state.moods);
+  writeStoredArray(STORAGE_ROAST_KEY, state.roasts);
   writeStoredArray(PAT_CARD_STORAGE_KEY, state.patCards);
   writeCurrentGroupId();
 }
@@ -268,9 +321,12 @@ function categoryForGroup(groupOrId) {
 }
 
 function categoryItems(categoryType) {
+  if (categoryType === 'images') return state.images;
   if (categoryType === 'stickers') return state.stickers;
   if (categoryType === 'questionnaire') return state.questionnaireAnswers;
   if (categoryType === 'status') return state.statuses;
+  if (categoryType === 'mood') return state.moods;
+  if (categoryType === 'roast') return state.roasts;
   return state.cards;
 }
 
@@ -463,12 +519,12 @@ function renderCardRows(visibleCards, currentGroup) {
   }).join('');
 }
 
-function renderStickerRows(visibleStickers) {
+function renderStickerRows(visibleStickers, categoryName = '表情包') {
   if (!visibleStickers.length) {
     return `
       <div class="manage-empty">
         <span aria-hidden="true">☺</span>
-        <strong>还没有表情包</strong>
+        <strong>还没有${categoryName}</strong>
         <p>导入本地图片后，可以在这里预览、启用、停用或删除。</p>
       </div>
     `;
@@ -502,8 +558,8 @@ function renderTextEntryRows(entries, category) {
   if (!entries.length) {
     return `
       <div class="manage-empty">
-        <span aria-hidden="true">${category === 'status' ? '◷' : '？'}</span>
-        <strong>还没有${category === 'status' ? '状态' : '问卷回答'}</strong>
+        <span aria-hidden="true">${textCategoryMeta(category).icon}</span>
+        <strong>还没有${textCategoryMeta(category).label}</strong>
         <p>新增内容或从文本、JSON 文件导入。</p>
       </div>
     `;
@@ -519,7 +575,7 @@ function renderTextEntryRows(entries, category) {
         </label>
         <div class="manage-card-row__copy">
           <p class="manage-card-row__content">${escapeHtml(entry.content)}</p>
-          <div class="manage-card-row__meta"><span>${category === 'status' ? '状态' : '问卷回答'}</span></div>
+          <div class="manage-card-row__meta"><span>${textCategoryMeta(category).label}</span></div>
         </div>
         <div class="manage-card-row__actions">
           <button type="button" data-manage-action="edit-card" data-card-id="${escapeHtml(entry.id)}">编辑</button>
@@ -556,11 +612,12 @@ function renderCards() {
   const currentGroup = groupById(state.currentGroupId);
   const selectedVisibleCount = allItems.filter((item) => state.selectedCardIds.has(item.id)).length;
   const disabledTotal = state.cards.filter((card) => card.disabled).length;
+  const isMediaCategory = isMediaCategoryType(category?.type);
   const isStickerCategory = category?.type === 'stickers';
-  const isTextCategory = category?.type === 'questionnaire' || category?.type === 'status';
+  const isTextCategory = isTextCategoryType(category?.type);
   const unit = isTextCategory ? '条' : '张';
 
-  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
+  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.images.length} 张图片 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.moods.length} 条心情 · ${state.roasts.length} 条吐槽 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
   elements.currentGroupName.textContent = currentGroup?.name || '默认分组';
   elements.visibleCardCount.textContent = `${allItems.length} ${unit}`;
 
@@ -575,8 +632,8 @@ function renderCards() {
 
   const createButton = viewRoot.querySelector('[data-manage-action="create-card"]');
   if (createButton) {
-    createButton.textContent = isStickerCategory
-      ? '＋ 导入表情包'
+    createButton.textContent = isMediaCategory
+      ? `＋ 导入${category.name}`
       : isTextCategory
         ? `＋ 新增${category.name}`
         : '＋ 新增字卡';
@@ -585,8 +642,8 @@ function renderCards() {
   const importJsonButton = viewRoot.querySelector('[data-manage-action="import-json"]');
   const importTextButton = viewRoot.querySelector('[data-manage-action="import-text"]');
   const deduplicateButton = viewRoot.querySelector('[data-manage-action="deduplicate"]');
-  if (importJsonButton) importJsonButton.textContent = isStickerCategory ? '导入图片' : '导入 JSON';
-  if (importTextButton) importTextButton.hidden = isStickerCategory;
+  if (importJsonButton) importJsonButton.textContent = isMediaCategory ? '导入图片' : '导入 JSON';
+  if (importTextButton) importTextButton.hidden = isMediaCategory;
   if (deduplicateButton) deduplicateButton.hidden = Boolean(category);
 
   const batchEnable = viewRoot.querySelector('[data-manage-action="batch-enable"]');
@@ -596,8 +653,8 @@ function renderCards() {
   if (batchDisable) batchDisable.hidden = isTextCategory;
   if (batchMove) batchMove.hidden = Boolean(category);
 
-  if (isStickerCategory) {
-    elements.cardList.innerHTML = renderStickerRows(pageItems);
+  if (isMediaCategory) {
+    elements.cardList.innerHTML = renderStickerRows(pageItems, category?.name || '表情包');
     void hydrateStickerPreviewImages();
   } else if (isTextCategory) {
     elements.cardList.innerHTML = renderTextEntryRows(pageItems, category.type);
@@ -768,9 +825,15 @@ function deleteGroup(groupId) {
   });
 }
 
-function stickerImportEditor() {
+function mediaImportEditor(category) {
+  const isImage = category?.type === 'images';
+  const label = isImage ? '图片' : '表情包';
+  const idPrefix = isImage ? 'image' : 'sticker';
+  const saveBlob = isImage ? putImageBlob : putStickerBlob;
+  const removeBlob = isImage ? deleteImageBlob : deleteStickerBlob;
+  const target = isImage ? state.images : state.stickers;
   openModal({
-    title: '导入表情包',
+    title: `导入${label}`,
     description: '选择本地图片，图片二进制会保存到 IndexedDB，不会上传网络。',
     confirmLabel: '导入',
     body: `
@@ -810,9 +873,9 @@ function stickerImportEditor() {
       let failed = 0;
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
-        const id = createId('sticker');
+        const id = createId(idPrefix);
         try {
-          await putStickerBlob(id, file, { enabled: true, createdAt: Date.now() });
+          await saveBlob(id, file, { enabled: true, createdAt: Date.now() });
           imported.push({
             id,
             storage: 'indexeddb',
@@ -833,36 +896,34 @@ function stickerImportEditor() {
         return false;
       }
 
-      const beforeLength = state.stickers.length;
-      state.stickers.push(...imported);
+      const beforeLength = target.length;
+      target.push(...imported);
       state.selectedCardIds.clear();
       if (!saveData()) {
-        state.stickers.splice(beforeLength, imported.length);
-        await Promise.all(imported.map((item) => deleteStickerBlob(item.id).catch(() => {})));
+        target.splice(beforeLength, imported.length);
+        await Promise.all(imported.map((item) => removeBlob(item.id).catch(() => {})));
         setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
         return false;
       }
 
       render();
-      setToast(`已导入 ${imported.length} 张表情包，失败 ${failed} 张`);
+      setToast(`已导入 ${imported.length} 张${label}，失败 ${failed} 张`);
       return true;
     },
   });
 }
 function textEntryEditor(entryId = '') {
   const category = currentCategory();
-  if (!category || category.type === 'stickers') return;
+  if (!category || isMediaCategoryType(category.type)) return;
 
   const entries = categoryItems(category.type);
   const entry = entryId ? entries.find((item) => item.id === entryId) : null;
   if (entryId && !entry) return;
 
-  const label = category.type === 'status' ? '状态内容' : '问卷回答';
+  const label = textCategoryMeta(category.type).label;
   openModal({
     title: entry ? `编辑${label}` : `新增${label}`,
-    description: category.type === 'status'
-      ? '最新一条状态会显示在首页顶部。'
-      : '问卷回答会保存在本地，供问卷入口调用。',
+    description: textCategoryMeta(category.type).hint,
     confirmLabel: entry ? '保存' : '新增',
     body: `
       <label class="manage-field">
@@ -898,8 +959,8 @@ function editCurrentItem(itemId) {
     return;
   }
 
-  if (category.type === 'stickers') {
-    setToast('表情包无需编辑内容', 'warning');
+  if (isMediaCategoryType(category.type)) {
+    setToast(`${category.name}无需编辑内容`, 'warning');
     return;
   }
 
@@ -908,11 +969,11 @@ function editCurrentItem(itemId) {
 
 function createCurrentItem() {
   const category = currentCategory();
-  if (category?.type === 'stickers') {
-    stickerImportEditor();
+  if (isMediaCategoryType(category?.type)) {
+    mediaImportEditor(category);
     return;
   }
-  if (category?.type === 'questionnaire' || category?.type === 'status') {
+  if (isTextCategoryType(category?.type)) {
     textEntryEditor();
     return;
   }
@@ -1029,15 +1090,14 @@ function deletePatCard(cardId) {
 function toggleCards(cardIds, disabled) {
   const idSet = new Set(cardIds);
   const category = currentCategory();
-  const targetItems = category?.type === 'stickers' ? state.stickers : state.cards;
+  if (category && !isMediaCategoryType(category.type)) return;
+  const targetItems = isMediaCategoryType(category?.type) ? categoryItems(category.type) : state.cards;
   let changed = 0;
 
-  if (category && category.type !== 'stickers') return;
-
   targetItems.forEach((item) => {
-    const isDisabled = category?.type === 'stickers' ? item.enabled === false : item.disabled;
+    const isDisabled = isMediaCategoryType(category?.type) ? item.enabled === false : item.disabled;
     if (!idSet.has(item.id) || isDisabled === disabled) return;
-    if (category?.type === 'stickers') item.enabled = !disabled;
+    if (isMediaCategoryType(category?.type)) item.enabled = !disabled;
     else item.disabled = disabled;
     changed += 1;
   });
@@ -1045,8 +1105,8 @@ function toggleCards(cardIds, disabled) {
   if (!changed) return;
   saveData();
   render();
-  setToast(category?.type === 'stickers'
-    ? `${changed} 张表情包已${disabled ? '停用' : '启用'}`
+  setToast(isMediaCategoryType(category?.type)
+    ? `${changed} 张${category?.name || '表情包'}已${disabled ? '停用' : '启用'}`
     : `${changed} 张字卡已${disabled ? '禁用' : '启用'}`);
 }
 
@@ -1057,14 +1117,14 @@ function deleteCards(cardIds) {
   const count = items.filter((item) => idSet.has(item.id)).length;
   if (!count) return;
 
-  const unit = category?.type === 'questionnaire' || category?.type === 'status' ? '条' : '张';
-  const label = category?.type === 'stickers'
+  const unit = isTextCategoryType(category?.type) ? '条' : '张';
+  const label = category?.type === 'images'
+    ? '张图片'
+    : category?.type === 'stickers'
     ? '张表情包'
-    : category?.type === 'questionnaire'
-      ? '条问卷回答'
-      : category?.type === 'status'
-        ? '条状态'
-        : '张字卡';
+    : isTextCategoryType(category?.type)
+      ? `条${textCategoryMeta(category.type).label}`
+      : '张字卡';
 
   openModal({
     title: `删除 ${count} ${label}？`,
@@ -1073,18 +1133,28 @@ function deleteCards(cardIds) {
     danger: true,
     onConfirm: async () => {
       const previousStickers = state.stickers;
+      const previousImages = state.images;
       const previousQuestionnaireAnswers = state.questionnaireAnswers;
       const previousStatuses = state.statuses;
+      const previousMoods = state.moods;
+      const previousRoasts = state.roasts;
       const previousCards = state.cards;
       let removedStickers = [];
 
       if (category?.type === 'stickers') {
         removedStickers = state.stickers.filter((item) => idSet.has(item.id));
         state.stickers = state.stickers.filter((item) => !idSet.has(item.id));
+      } else if (category?.type === 'images') {
+        removedStickers = state.images.filter((item) => idSet.has(item.id));
+        state.images = state.images.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'questionnaire') {
         state.questionnaireAnswers = state.questionnaireAnswers.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'status') {
         state.statuses = state.statuses.filter((item) => !idSet.has(item.id));
+      } else if (category?.type === 'mood') {
+        state.moods = state.moods.filter((item) => !idSet.has(item.id));
+      } else if (category?.type === 'roast') {
+        state.roasts = state.roasts.filter((item) => !idSet.has(item.id));
       } else {
         state.cards = state.cards.filter((item) => !idSet.has(item.id));
       }
@@ -1092,15 +1162,19 @@ function deleteCards(cardIds) {
 
       if (!saveData()) {
         state.stickers = previousStickers;
+        state.images = previousImages;
         state.questionnaireAnswers = previousQuestionnaireAnswers;
         state.statuses = previousStatuses;
+        state.moods = previousMoods;
+        state.roasts = previousRoasts;
         state.cards = previousCards;
         setModalError('浏览器存储空间不足，请先导出备份或清理字卡');
         return false;
       }
 
       if (removedStickers.length) {
-        await Promise.all(removedStickers.map((item) => deleteStickerBlob(item.id).catch(() => {})));
+        const removeBlob = category?.type === 'images' ? deleteImageBlob : deleteStickerBlob;
+        await Promise.all(removedStickers.map((item) => removeBlob(item.id).catch(() => {})));
       }
       render();
       setToast(`已删除 ${count} ${unit}`);
@@ -1193,7 +1267,7 @@ function importTextCategoryJson(category) {
         <span>JSON 文件</span>
         <input id="manageCategoryImportFile" type="file" accept=".json,application/json" />
       </label>
-      <p class="manage-field__hint">会读取 items、cards、questionnaireAnswers 或 statuses 数组。</p>
+      <p class="manage-field__hint">会读取 items、cards、questionnaireAnswers、statuses、moods 或 roasts 数组。</p>
     `,
     onConfirm: async () => {
       const file = elements.modal.querySelector('#manageCategoryImportFile').files?.[0];
@@ -1212,7 +1286,7 @@ function importTextCategoryJson(category) {
 
       const candidates = Array.isArray(parsed)
         ? parsed
-        : parsed?.items || parsed?.cards || parsed?.questionnaireAnswers || parsed?.statuses || null;
+        : parsed?.items || parsed?.cards || parsed?.questionnaireAnswers || parsed?.statuses || parsed?.moods || parsed?.roasts || null;
       if (!Array.isArray(candidates)) {
         setModalError('JSON 中没有找到可导入的内容数组。');
         return false;
@@ -1244,11 +1318,11 @@ function importTextCategoryJson(category) {
 }
 function importJsonCards() {
   const category = currentCategory();
-  if (category?.type === 'stickers') {
-    stickerImportEditor();
+  if (isMediaCategoryType(category?.type)) {
+    mediaImportEditor(category);
     return;
   }
-  if (category?.type === 'questionnaire' || category?.type === 'status') {
+  if (isTextCategoryType(category?.type)) {
     importTextCategoryJson(category);
     return;
   }
@@ -1427,7 +1501,7 @@ function importTextCards() {
   const category = currentCategory();
   if (category?.type === 'stickers') return;
 
-  const isTextCategory = category?.type === 'questionnaire' || category?.type === 'status';
+  const isTextCategory = isTextCategoryType(category?.type);
   const collection = isTextCategory ? categoryItems(category.type) : state.cards;
   const unit = isTextCategory ? '条' : '张';
 
@@ -1545,17 +1619,24 @@ function exportSelectedCards() {
   let payload;
   let filename;
 
-  if (category?.type === 'stickers') {
+  if (isMediaCategoryType(category?.type)) {
+    const mediaKey = category.type === 'images' ? 'images' : 'stickers';
     payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
       category: { name: category.name, type: category.type },
       items,
-      stickers: items,
+      [mediaKey]: items,
     };
-    filename = `xinghui-stickers-${date}.json`;
-  } else if (category?.type === 'questionnaire' || category?.type === 'status') {
-    const key = category.type === 'questionnaire' ? 'questionnaireAnswers' : 'statuses';
+    filename = `xinghui-${category.type}-${date}.json`;
+  } else if (isTextCategoryType(category?.type)) {
+    const key = category.type === 'questionnaire'
+      ? 'questionnaireAnswers'
+      : category.type === 'status'
+        ? 'statuses'
+        : category.type === 'mood'
+          ? 'moods'
+          : 'roasts';
     payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -1875,8 +1956,11 @@ export function getManageSnapshot() {
     groups: state.groups.map((group) => ({ ...group })),
     cards: state.cards.map((card) => ({ ...card })),
     stickers: state.stickers.map((item) => ({ ...item })),
+    images: state.images.map((item) => ({ ...item })),
     questionnaireAnswers: state.questionnaireAnswers.map((item) => ({ ...item })),
     statuses: state.statuses.map((item) => ({ ...item })),
+    moods: state.moods.map((item) => ({ ...item })),
+    roasts: state.roasts.map((item) => ({ ...item })),
     patCards: state.patCards.map((card) => ({ ...card })),
     currentGroupId: state.currentGroupId,
   };

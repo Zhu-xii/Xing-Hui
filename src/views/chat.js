@@ -23,7 +23,9 @@ import {
   startQuestionnaireEngine,
 } from '../lib/questionnaire.js';
 import { getCurrentChatMood, maybeChangeChatMood } from '../lib/mood.js';
-import { getAvatarBlob, getStickerBlob, setBlobImage } from '../lib/media-db.js';
+import { compressImageFile, getAvatarBlob, getStickerBlob, putImageBlob, setBlobImage } from '../lib/media-db.js';
+import { randomChance } from '../lib/random.js';
+import { navigateTo } from '../lib/router.js';
 
 const MESSAGE_ACTION_EVENT = 'xinghui:message-action';
 const STAR_REPLY_TRIGGER_EVENT = 'xinghui:trigger-star-reply';
@@ -35,6 +37,66 @@ let activeMessageId = null;
 let typingRequestCount = 0;
 let eventsBound = false;
 let visualViewportFrame = null;
+let stickerPanelToken = 0;
+let chatToastTimer = null;
+
+function showChatToast(message) {
+  const toast = elements?.toast;
+  if (!toast || !message) return;
+  window.clearTimeout(chatToastTimer);
+  toast.textContent = message;
+  toast.hidden = false;
+  chatToastTimer = window.setTimeout(() => { toast.hidden = true; }, 2600);
+}
+
+// 「梦角收藏」：星回按概率收藏我发出的聊天消息 / 卡片。
+function maybeStarFavorite(messageId, chance) {
+  if (!messageId || !randomChance(chance)) return false;
+  const messages = readStoredMessages();
+  const target = messages.find((message) => message.id === messageId);
+  if (!target || target.starFavorited) return false;
+  target.starFavorited = true;
+  if (!writeStoredMessages(messages)) return false;
+  renderChatMessages();
+  showChatToast(`${readCharacter().name || '星回'}收藏了一条信息`);
+  return true;
+}
+
+// 发送本地图片：压缩后存 IndexedDB，再作为一条图片消息发出。
+async function sendChatImages(files) {
+  const list = (Array.isArray(files) ? files : Array.from(files || [])).filter((file) => String(file.type || '').startsWith('image/'));
+  if (!list.length) return;
+  const settings = readSettings();
+  for (const file of list) {
+    let blob = file;
+    try {
+      blob = (await compressImageFile(file)) || file;
+    } catch {
+      blob = file;
+    }
+    const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      await putImageBlob(id, blob, { enabled: true, createdAt: Date.now() });
+    } catch {
+      showChatToast('图片保存失败，请检查浏览器存储空间');
+      continue;
+    }
+    const saved = addChatMessage(
+      {
+        id: createMessageId(),
+        role: 'user',
+        type: 'image',
+        content: `idb:${id}`,
+        timestamp: Date.now(),
+        read: false,
+        favorited: false,
+        starFavorited: false,
+      },
+      { persist: true, scroll: true },
+    );
+    if (saved) maybeStarFavorite(saved.id, settings.starFavorite);
+  }
+}
 
 function createMessageId() {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -100,19 +162,29 @@ async function fillAvatar(container, source, fallback) {
   image.src = source;
 }
 
+function nicknameInitial(name, fallback) {
+  const text = String(name || '').trim();
+  return text ? text.slice(0, 1) : fallback;
+}
+
 function fillStarAvatar(container) {
-  const { avatar } = readCharacter();
-  return fillAvatar(container, avatar, '星');
+  const { name, avatar } = readCharacter();
+  return fillAvatar(container, avatar, nicknameInitial(name, '星'));
 }
 
 function fillUserAvatar(container) {
-  const { userAvatar } = readSettings();
-  return fillAvatar(container, userAvatar, '我');
+  const { userAvatar, userName } = readSettings();
+  return fillAvatar(container, userAvatar, nicknameInitial(userName, '我'));
 }
 function updateChatProfileAvatar() {
-  const character = readCharacter();
-  if (elements?.profileAvatar) fillStarAvatar(elements.profileAvatar);
-  if (elements?.title) elements.title.textContent = character.name || '星回';
+  const starName = String(readCharacter().name || '星回').trim().slice(0, 20) || '星回';
+  if (elements?.profileAvatar) {
+    fillStarAvatar(elements.profileAvatar);
+    elements.profileAvatar.setAttribute('aria-label', starName + '的头像，长按拍一拍');
+    elements.profileAvatar.setAttribute('title', starName + '的头像');
+  }
+  if (elements?.title) elements.title.textContent = starName;
+  if (elements?.messageList) elements.messageList.setAttribute('aria-label', '与' + starName + '的聊天记录');
 }
 
 function updateChatMood({ force = false } = {}) {
@@ -217,12 +289,33 @@ function createMessageBubble(message) {
 
   if (message.withdrawn) {
     bubble.classList.add('message-bubble--withdrawn');
-    bubble.textContent = '你撤回了一条消息';
+    const starName = readCharacter().name || '星回';
+    bubble.textContent = message.role === 'user' ? '你撤回了一条消息' : starName + '撤回了一条消息';
     return bubble;
   }
 
   if (message.type === 'questionnaire') {
     return createQuestionnaireBubble(message);
+  }
+
+  if (message.type === 'image') {
+    bubble.classList.add('message-bubble--image');
+    const ref = String(message.content || '');
+    const image = document.createElement('img');
+    image.className = 'message-image__image';
+    image.alt = '图片';
+    bubble.append(image);
+    if (/^idb:/i.test(ref)) {
+      void getStickerBlob(ref.slice(4))
+        .then((blob) => { if (blob) setBlobImage(image, blob); else image.alt = '图片不可用'; })
+        .catch(() => { image.alt = '图片读取失败'; });
+    } else if (/^data:image\//i.test(ref)) {
+      image.src = ref;
+    } else {
+      image.remove();
+      bubble.textContent = '图片';
+    }
+    return bubble;
   }
 
   if (message.type === 'sticker') {
@@ -261,10 +354,29 @@ function createMessageBubble(message) {
       bubble.append(icon, label, note);
     }
   } else {
-    bubble.textContent = message.content || ' ';
+    bubble.classList.add('message-bubble--text');
+    if (message.tag) {
+      bubble.classList.add('message-bubble--tagged');
+      const tag = document.createElement('span');
+      tag.className = 'message-bubble__tag';
+      tag.textContent = message.tag;
+      bubble.append(tag);
+      const text = document.createElement('span');
+      text.className = 'message-bubble__text';
+      text.textContent = message.content || ' ';
+      bubble.append(text);
+    } else {
+      bubble.textContent = message.content || ' ';
+    }
   }
 
   return bubble;
+}
+
+// 自己发的消息可撤回；带来源标签的字卡消息（梦角拼字 / 多字卡回复）同样允许撤回。
+function canWithdrawMessage(message) {
+  if (!message || message.withdrawn) return false;
+  return message.role === 'user' || Boolean(message.tag);
 }
 
 function createMessageElement(message) {
@@ -275,11 +387,13 @@ function createMessageElement(message) {
   article.tabIndex = isSystem ? -1 : 0;
   article.setAttribute('role', isSystem ? 'status' : 'button');
   article.setAttribute('aria-expanded', 'false');
+  const starName = readCharacter().name || '星回';
+  const settingsName = readSettings().userName || '我';
   article.setAttribute(
     'aria-label',
     isSystem
       ? message.content || '拍一拍消息'
-      : `${message.role === 'user' ? '我' : '星回'}的消息，点击查看操作`,
+      : `${message.role === 'user' ? settingsName : starName}的消息，点击查看操作`,
   );
 
   const actions = document.createElement('div');
@@ -291,7 +405,7 @@ function createMessageElement(message) {
     : [
         ['delete', '删除'],
         ['withdraw', '撤回'],
-        ['favorite', message.favorited ? '已收藏' : '收藏'],
+        ['favorite', message.favorited ? '取消收藏' : '收藏'],
       ];
 
   availableActions.forEach(([action, label]) => {
@@ -301,16 +415,15 @@ function createMessageElement(message) {
     button.dataset.messageAction = action;
     button.textContent = label;
 
-    if (action === 'withdraw' && message.role !== 'user') {
+    if (action === 'withdraw' && !canWithdrawMessage(message)) {
       button.disabled = true;
-      button.title = '星回的消息不可撤回';
+      button.title = starName + '的消息不可撤回';
       button.setAttribute('aria-disabled', 'true');
     }
 
     if (action === 'favorite' && message.favorited) {
-      button.disabled = true;
-      button.title = '这条消息已经收藏';
-      button.setAttribute('aria-disabled', 'true');
+      button.textContent = '取消收藏';
+      button.title = '取消这条收藏';
     }
 
     actions.append(button);
@@ -435,7 +548,7 @@ function questionnaireDraftFromForm() {
     type: elements.questionnaireType.value,
     thinkMin: Number(elements.questionnaireThinkMin.value) || 10,
     thinkMax: Number(elements.questionnaireThinkMax.value) || 15,
-    answerNow: Number(elements.questionnaireAnswerNow.value) ?? 0.6,
+    answerNow: Number(elements.questionnaireAnswerNow.value) || 60,
     multiMin: Number(elements.questionnaireMultiMin.value) || 1,
     multiMax: Number(elements.questionnaireMultiMax.value) || 3,
   };
@@ -449,7 +562,7 @@ function hydrateQuestionnairePanel(draft) {
   elements.questionnaireType.value = ['qa', 'single', 'multiple'].includes(data.type) ? data.type : 'qa';
   elements.questionnaireThinkMin.value = String(data.thinkMin ?? 10);
   elements.questionnaireThinkMax.value = String(data.thinkMax ?? 15);
-  elements.questionnaireAnswerNow.value = String(data.answerNow ?? 0.6);
+  elements.questionnaireAnswerNow.value = String(data.answerNow ?? 60);
   elements.questionnaireMultiMin.value = String(data.multiMin ?? 1);
   elements.questionnaireMultiMax.value = String(data.multiMax ?? 3);
   updateQuestionnairePanelControls();
@@ -517,6 +630,8 @@ function handleQuestionnaireSubmit(event) {
     return;
   }
 
+  maybeStarFavorite(saved.id, readSettings().starFavoriteCard);
+
   closeQuestionnairePanel();
   scheduleLatestScroll();
   notifyQuestionnaireQueued();
@@ -538,6 +653,143 @@ function closeToolPanel() {
   });
 }
 
+function stickerMessageContent(sticker) {
+  if (!sticker) return '';
+  if (sticker.storage === 'indexeddb') return sticker.id ? `idb:${sticker.id}` : '';
+  return typeof sticker.image === 'string' ? sticker.image.trim() : '';
+}
+
+function createStickerPanelImage(sticker, token) {
+  const image = document.createElement('img');
+  image.alt = '表情包';
+  image.loading = 'lazy';
+  image.decoding = 'async';
+
+  if (sticker.storage === 'indexeddb') {
+    void getStickerBlob(sticker.id)
+      .then((blob) => {
+        if (token !== stickerPanelToken || !image.isConnected) return;
+        if (!blob) throw new Error('sticker-missing');
+        setBlobImage(image, blob);
+      })
+      .catch(() => {
+        if (token !== stickerPanelToken || !image.isConnected) return;
+        const parent = image.parentElement;
+        const button = image.closest('.chat-sticker-item');
+        if (button) {
+          button.disabled = true;
+          button.title = '表情包不可用';
+          button.dataset.missing = 'true';
+        }
+        image.remove();
+        const fallback = document.createElement('span');
+        fallback.className = 'chat-sticker-item__missing';
+        fallback.textContent = '不可用';
+        parent?.append(fallback);
+      });
+  } else if (sticker.image) {
+    image.src = sticker.image;
+  }
+
+  image.addEventListener('error', () => {
+    if (image.dataset.failed === 'true') return;
+    image.dataset.failed = 'true';
+    const button = image.closest('.chat-sticker-item');
+    if (!button || button.dataset.missing === 'true') return;
+    button.dataset.missing = 'true';
+    button.disabled = true;
+    button.title = '表情包不可用';
+    image.remove();
+    const fallback = document.createElement('span');
+    fallback.className = 'chat-sticker-item__missing';
+    fallback.textContent = '不可用';
+    button.append(fallback);
+  });
+
+  return image;
+}
+
+function sendStickerMessage(sticker) {
+  const content = stickerMessageContent(sticker);
+  if (!content) return false;
+
+  const message = {
+    id: createMessageId(),
+    role: 'user',
+    type: 'sticker',
+    content,
+    timestamp: Date.now(),
+    read: false,
+    favorited: false,
+    starFavorited: false,
+  };
+
+  const savedMessage = addChatMessage(message, { persist: true, scroll: true });
+  if (!savedMessage) return false;
+
+  closeToolPanel();
+  maybeChangeChatMood(0.35);
+  updateChatMood();
+  scheduleLatestScroll();
+  window.dispatchEvent(
+    new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
+      detail: { message: savedMessage, storageKey: CHAT_STORAGE_KEY },
+    }),
+  );
+  return true;
+}
+
+async function renderStickerPanel() {
+  const panel = elements?.toolPanel;
+  if (!panel) return;
+
+  const stickers = readStickers().filter((sticker) => sticker.enabled !== false);
+  const token = ++stickerPanelToken;
+  panel.replaceChildren();
+
+  if (!stickers.length) {
+    const empty = document.createElement('p');
+    empty.className = 'chat-sticker-empty';
+    empty.textContent = hasManageCategory(STICKER_CATEGORY_NAME)
+      ? '还没有可用的表情包，请先到管理里导入。'
+      : '请先重建“表情包”类别，再导入表情包。';
+    panel.append(empty);
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'chat-sticker-panel__head';
+
+  const title = document.createElement('strong');
+  title.textContent = '表情包';
+
+  const count = document.createElement('small');
+  count.textContent = `${stickers.length} 张`;
+
+  header.append(title, count);
+
+  const grid = document.createElement('div');
+  grid.className = 'chat-sticker-grid';
+  grid.setAttribute('role', 'list');
+  grid.setAttribute('aria-label', '选择表情包发送');
+
+  stickers.forEach((sticker) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chat-sticker-item';
+    button.setAttribute('role', 'listitem');
+    button.setAttribute('aria-label', '发送这张表情包');
+    button.append(createStickerPanelImage(sticker, token));
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      sendStickerMessage(sticker);
+    });
+    grid.append(button);
+  });
+
+  panel.append(header, grid);
+}
+
 function toggleToolPanel(kind) {
   const panel = elements?.toolPanel;
   if (!panel) return;
@@ -549,9 +801,7 @@ function toggleToolPanel(kind) {
     openQuestionnairePanel();
     return;
   } else if (kind === 'sticker') {
-    panel.textContent = hasManageCategory(STICKER_CATEGORY_NAME)
-      ? `表情包已保存 ${readStickers().filter((sticker) => sticker.enabled !== false).length} 张。`
-      : '请先重建该类别';
+    void renderStickerPanel();
   } else {
     panel.textContent = '';
   }
@@ -586,6 +836,9 @@ export function addChatMessage(message, { persist = true, scroll = true } = {}) 
   if (normalized.role === 'star') {
     maybeChangeChatMood(0.25);
     updateChatMood();
+    if (normalized.starFavorited) {
+      showChatToast(`${readCharacter().name || '星回'}收藏了一条信息`);
+    }
   }
   return normalized;
 }
@@ -663,7 +916,7 @@ export function performChatMessageAction(action, messageOrId) {
   }
 
   if (action === 'withdraw') {
-    if (current.role !== 'user' || current.withdrawn) return false;
+    if (!canWithdrawMessage(current)) return false;
     current.withdrawn = true;
     if (current.type === 'questionnaire') {
       current.questionnaire = { ...(current.questionnaire || {}), status: 'cancelled' };
@@ -676,10 +929,12 @@ export function performChatMessageAction(action, messageOrId) {
   }
 
   if (action === 'favorite') {
-    if (current.favorited) return true;
-    current.favorited = true;
+    const nextFavorited = !current.favorited;
+    current.favorited = nextFavorited;
     if (!writeStoredMessages(messages)) return false;
     renderChatMessages();
+    const myName = readSettings().userName || '我';
+    showChatToast(nextFavorited ? `${myName}收藏了一条信息` : `${myName}取消了一条收藏`);
     return true;
   }
 
@@ -713,6 +968,7 @@ function submitStarQuestionnaireAnswer(messageElement, answerValue = '') {
   if (!writeStoredMessages(messages)) return;
   renderChatMessages();
   scheduleLatestScroll();
+  maybeStarFavorite(message.id, readSettings().starFavoriteCard);
 }
 
 function handleQuestionnaireAnswerSubmit(event) {
@@ -809,6 +1065,8 @@ function handleSendMessage(event) {
   const savedMessage = addChatMessage(message, { persist: true, scroll: true });
   if (!savedMessage) return;
 
+  maybeStarFavorite(savedMessage.id, readSettings().starFavorite);
+
   input.value = '';
   closeToolPanel();
   maybeChangeChatMood(0.35);
@@ -828,6 +1086,13 @@ function bindEvents() {
   if (!elements || eventsBound) return;
 
   elements.form.addEventListener('submit', handleSendMessage);
+  elements.imageButton?.addEventListener('click', () => elements.imageInput?.click());
+  elements.imageInput?.addEventListener('change', (event) => {
+    // 先取出快照再清空 input，否则 FileList 会被一并清掉。
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    void sendChatImages(files);
+  });
   elements.messageList.addEventListener('click', handleMessageListClick);
   elements.messageList.addEventListener('submit', handleQuestionnaireAnswerSubmit);
   elements.messageList.addEventListener('keydown', handleMessageListKeydown);
@@ -840,14 +1105,17 @@ function bindEvents() {
   });
 
   window.addEventListener(SETTINGS_CHANGED_EVENT, () => renderChatMessages());
-  window.addEventListener('xinghui:manage-data-changed', () => updateChatMood());
+  window.addEventListener('xinghui:manage-data-changed', () => {
+    updateChatMood();
+    if (elements?.toolPanel?.dataset.kind === 'sticker') void renderStickerPanel();
+  });
   window.addEventListener(CHARACTER_CHANGED_EVENT, () => {
     updateChatProfileAvatar();
     renderChatMessages();
   });
 
   elements.backButton?.addEventListener('click', () => {
-    window.location.hash = '#/home';
+    navigateTo('home');
   });
 
   elements.toolButtons?.forEach((button) => {
@@ -898,6 +1166,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
   viewRoot = root;
   viewRoot.innerHTML = `
     <div class="chat-shell">
+      <div class="chat-toast" id="chatToast" role="status" aria-live="polite" hidden></div>
       <header class="chat-topbar">
         <button class="chat-topbar__back" id="chatBackButton" type="button" aria-label="返回首页">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
@@ -954,8 +1223,8 @@ export function initChatView(root = document.getElementById('view-chat')) {
                   </select>
                 </label>
                 <label class="questionnaire-field">
-                  <span>现在回答概率</span>
-                  <input id="chatQuestionnaireAnswerNow" type="number" min="0" max="1" step="0.1" inputmode="decimal" />
+                  <span>现在回答概率（%）</span>
+                  <input id="chatQuestionnaireAnswerNow" type="number" min="0" max="100" step="1" inputmode="numeric" />
                 </label>
               </div>
 
@@ -986,6 +1255,14 @@ export function initChatView(root = document.getElementById('view-chat')) {
             </form>
           </div>
           <form class="chat-composer" id="chatComposer">
+            <button class="chat-composer__tool" type="button" id="chatImageButton" aria-label="发送图片" title="图片">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
+                <circle cx="9" cy="10" r="1.3"></circle>
+                <path d="m5 16.5 4.5-4.5 3.2 3.2 2.6-2.6 4.2 4.2"></path>
+              </svg>
+            </button>
+            <input id="chatImageInput" type="file" accept="image/*" multiple hidden />
             <button class="chat-composer__tool" type="button" data-chat-placeholder="survey" aria-label="打开问卷面板" aria-expanded="false" title="问卷">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M5 5.5h14v10H9l-4 3.2z"></path>
@@ -1021,6 +1298,9 @@ export function initChatView(root = document.getElementById('view-chat')) {
   `;
 
   elements = {
+    toast: viewRoot.querySelector('#chatToast'),
+    imageButton: viewRoot.querySelector('#chatImageButton'),
+    imageInput: viewRoot.querySelector('#chatImageInput'),
     backButton: viewRoot.querySelector('#chatBackButton'),
     profileAvatar: viewRoot.querySelector('.chat-profile__avatar'),
     title: viewRoot.querySelector('#chatTitle'),

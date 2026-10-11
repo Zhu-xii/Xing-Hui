@@ -204,9 +204,9 @@
   margin: var(--space-block-md) 0 0;
   padding: 12px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-hairline);
   border-radius: 22px;
-  box-shadow: 0 8px 24px rgba(41, 67, 94, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 .home-grid {
@@ -231,7 +231,7 @@
   min-width: 64px;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid #dce8f1;
+  border: 1px solid var(--border-hairline);
   border-radius: 12px;
   background: #ffffff;
   color: var(--color-primary);
@@ -242,8 +242,8 @@
 }
 
 .home-pagination__button:hover:not(:disabled) {
-  border-color: #c9dff2;
-  background: #f7fbfe;
+  border-color: #111111;
+  background: #F3F3F3;
 }
 
 .home-pagination__button:disabled {
@@ -316,7 +316,7 @@
   gap: 8px;
   margin-top: 8px;
   padding: 7px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.82);
   color: var(--color-text);

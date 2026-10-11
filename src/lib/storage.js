@@ -3,15 +3,21 @@ export const STORAGE_KEYS = Object.freeze({
   cards: 'xinghui_cards',
   groups: 'xinghui_groups',
   stickers: 'xinghui_stickers',
+  images: 'xinghui_images',
   patCards: 'xinghui_pat_cards',
   questionnaireAnswers: 'xinghui_questionnaire_answers',
   statuses: 'xinghui_statuses',
+  moods: 'xinghui_moods',
+  roasts: 'xinghui_roasts',
   categoryMigration: 'xinghui_category_migration_v1',
   questionnaireDraft: 'xinghui_questionnaire_draft',
   promptQuestionnaires: 'xinghui_prompt_questionnaires',
   periodRecords: 'xinghui_period_records',
   moodCache: 'xinghui_chat_mood',
   chatMessages: 'xinghui_chat_messages',
+  feedPosts: 'xinghui_feed_posts',
+  feedNotices: 'xinghui_feed_notices',
+  feedAutoPost: 'xinghui_feed_autopost',
   character: 'xinghui_character',
   firstLaunchAt: 'xinghui_first_launch_at',
   lastBackupAt: 'xinghui_last_backup_at',
@@ -21,28 +27,43 @@ export const SETTINGS_KEY = STORAGE_KEYS.settings;
 export const CARD_STORAGE_KEY = STORAGE_KEYS.cards;
 export const GROUP_STORAGE_KEY = STORAGE_KEYS.groups;
 export const STICKER_STORAGE_KEY = STORAGE_KEYS.stickers;
+export const IMAGE_STORAGE_KEY = STORAGE_KEYS.images;
 export const PAT_CARD_STORAGE_KEY = STORAGE_KEYS.patCards;
 export const QUESTIONNAIRE_ANSWER_STORAGE_KEY = STORAGE_KEYS.questionnaireAnswers;
 export const STATUS_STORAGE_KEY = STORAGE_KEYS.statuses;
+export const MOOD_CARD_STORAGE_KEY = STORAGE_KEYS.moods;
+export const ROAST_STORAGE_KEY = STORAGE_KEYS.roasts;
 export const CATEGORY_MIGRATION_KEY = STORAGE_KEYS.categoryMigration;
 export const QUESTIONNAIRE_DRAFT_KEY = STORAGE_KEYS.questionnaireDraft;
 export const PROMPT_QUESTIONNAIRE_STORAGE_KEY = STORAGE_KEYS.promptQuestionnaires;
 export const PERIOD_RECORD_STORAGE_KEY = STORAGE_KEYS.periodRecords;
 export const MOOD_CACHE_KEY = STORAGE_KEYS.moodCache;
 export const CHAT_STORAGE_KEY = STORAGE_KEYS.chatMessages;
+export const FEED_POSTS_STORAGE_KEY = STORAGE_KEYS.feedPosts;
+export const FEED_NOTICES_STORAGE_KEY = STORAGE_KEYS.feedNotices;
+export const FEED_AUTO_POST_STORAGE_KEY = STORAGE_KEYS.feedAutoPost;
 export const CHARACTER_STORAGE_KEY = STORAGE_KEYS.character;
 export const DEFAULT_GROUP_ID = 'group_default';
 export const GREETING_GROUP_ID = 'group_greeting';
 export const STICKER_GROUP_ID = 'group_stickers';
+export const IMAGE_GROUP_ID = 'group_images';
 export const QUESTIONNAIRE_GROUP_ID = 'group_questionnaire';
 export const STATUS_GROUP_ID = 'group_status';
+export const MOOD_GROUP_ID = 'group_mood';
+export const ROAST_GROUP_ID = 'group_roast';
 export const STICKER_CATEGORY_NAME = '表情包';
+export const IMAGE_CATEGORY_NAME = '图片';
 export const QUESTIONNAIRE_CATEGORY_NAME = '问卷回答';
 export const STATUS_CATEGORY_NAME = '状态';
+export const MOOD_CATEGORY_NAME = '心情';
+export const ROAST_CATEGORY_NAME = '他的吐槽';
 export const MANAGE_CATEGORIES = Object.freeze([
   Object.freeze({ id: STICKER_GROUP_ID, name: STICKER_CATEGORY_NAME, type: 'stickers' }),
+  Object.freeze({ id: IMAGE_GROUP_ID, name: IMAGE_CATEGORY_NAME, type: 'images' }),
   Object.freeze({ id: QUESTIONNAIRE_GROUP_ID, name: QUESTIONNAIRE_CATEGORY_NAME, type: 'questionnaire' }),
   Object.freeze({ id: STATUS_GROUP_ID, name: STATUS_CATEGORY_NAME, type: 'status' }),
+  Object.freeze({ id: MOOD_GROUP_ID, name: MOOD_CATEGORY_NAME, type: 'mood' }),
+  Object.freeze({ id: ROAST_GROUP_ID, name: ROAST_CATEGORY_NAME, type: 'roast' }),
 ]);
 export const BACKUP_REMINDER_DAYS = 7;
 export const SETTINGS_CHANGED_EVENT = 'xinghui:settings-changed';
@@ -50,6 +71,8 @@ export const CHARACTER_CHANGED_EVENT = 'xinghui:character-changed';
 export const DATA_RESTORED_EVENT = 'xinghui:data-restored';
 export const BACKUP_STATUS_CHANGED_EVENT = 'xinghui:backup-status-changed';
 export const CHAT_CHANGED_EVENT = 'xinghui:chat-changed';
+export const FEED_CHANGED_EVENT = 'xinghui:feed-changed';
+export const FEED_NOTICES_CHANGED_EVENT = 'xinghui:feed-notices-changed';
 
 export const DEFAULT_SETTINGS = Object.freeze({
   replyDelayMin: 1,
@@ -58,16 +81,48 @@ export const DEFAULT_SETTINGS = Object.freeze({
   readNoReplyEnabled: true,
   readNoReply: 15,
   stickerReply: 10,
-  starFavorite: 5,
+  starFavorite: 30,
+  starFavoriteCard: 30,
+  starFavoriteFeed: 30,
   patReply: 70,
-  promptQuestionnaireChance: 0.3,
+  multiReplyEnabled: true,
+  multiReplyMin: 1,
+  multiReplyMax: 2,
+  multiReplyGapMin: 0.5,
+  multiReplyGapMax: 1.2,
+  spellCardEnabled: true,
+  spellCardChance: 15,
+  spellCardMin: 2,
+  spellCardMax: 4,
+  spellCardMode: 'single',
+  spellCardNewline: true,
+  spellCardCustomSeparators: [],
+  promptQuestionnaireChance: 30,
   promptQuestionnaireIntervalHours: 0.5,
   lastPromptQuestionnaireCheckAt: 0,
-  bubbleColor: '#DDEEFF',
+  bubbleColor: '#111111',
+  bubbleColorStar: '#FFFFFF',
   chatBackgroundType: 'color',
-  chatBackgroundColor: '#F7FBFE',
+  chatBackgroundColor: '#EFEFEF',
   chatBackgroundImage: '',
   userAvatar: '',
+  userName: '我',
+  // 朋友圈：星回自动发动态的间隔、频率与互动概率（分钟 / 百分比）
+  feedEnabled: true,
+  feedAutoPostEnabled: true,
+  feedPostIntervalMin: 30,
+  feedPostIntervalMax: 180,
+  feedDailyMax: 4,
+  feedPostChance: 50,
+  feedLikeProbability: 60,
+  feedCommentProbability: 75,
+  feedReplyProbability: 50,
+  feedReplyToCommentProbability: 50,
+  // 他的吐槽：星回偶尔主动吐槽一句
+  roastEnabled: true,
+  roastProbability: 8,
+  roastIntervalMinutes: 20,
+  lastRoastAt: 0,
   showTimestamp: true,
   fontSize: 'medium',
   currentGroupId: DEFAULT_GROUP_ID,
@@ -96,6 +151,26 @@ function finiteNumber(value, fallback) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function isLightColor(hex) {
+  const value = String(hex || '').replace('#', '');
+  if (value.length !== 6) return false;
+  const r = parseInt(value.slice(0, 2), 16) / 255;
+  const g = parseInt(value.slice(2, 4), 16) / 255;
+  const b = parseInt(value.slice(4, 6), 16) / 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62;
+}
+
+const LEGACY_COLOR_MAP = Object.freeze({
+  '#DDEEFF': '#FFFFFF',
+  '#F7FBFE': '#EFEFEF',
+  '#EAF4FC': '#ECECEC',
+});
+
+function migrateLegacyColor(value) {
+  const key = String(value || '').trim().toUpperCase();
+  return LEGACY_COLOR_MAP[key] || value;
 }
 
 function normalizeHexColor(value, fallback) {
@@ -190,10 +265,40 @@ export function normalizePercentage(value, fallback, minimum = 0) {
   return clamp(finiteNumber(value, fallback), minimum, 100);
 }
 
+const MAX_CUSTOM_SEPARATORS = 20;
+const MAX_SEPARATOR_LENGTH = 8;
+
+// 自定义连接符：接受数组或按行输入的字符串；跳过空行、去重、限长限量。
+export function normalizeSeparatorList(value) {
+  const source = Array.isArray(value) ? value : String(value ?? '').split(/\r?\n/);
+  const result = [];
+  const seen = new Set();
+  source.forEach((item) => {
+    const separator = String(item ?? '').replace(/\r/g, '').slice(0, MAX_SEPARATOR_LENGTH);
+    if (!separator.trim() || seen.has(separator)) return;
+    seen.add(separator);
+    result.push(separator);
+  });
+  return result.slice(0, MAX_CUSTOM_SEPARATORS);
+}
+
 export function normalizeSettings(settings = {}) {
   const source = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {};
   const firstDelay = clamp(finiteNumber(source.replyDelayMin, DEFAULT_SETTINGS.replyDelayMin), 0, 600);
   const secondDelay = clamp(finiteNumber(source.replyDelayMax, DEFAULT_SETTINGS.replyDelayMax), 0, 600);
+  const firstMultiReply = clamp(Math.round(finiteNumber(source.multiReplyMin, DEFAULT_SETTINGS.multiReplyMin)), 1, 10);
+  const secondMultiReply = clamp(Math.round(finiteNumber(source.multiReplyMax, DEFAULT_SETTINGS.multiReplyMax)), 1, 10);
+  const firstSpellCard = clamp(Math.round(finiteNumber(source.spellCardMin, DEFAULT_SETTINGS.spellCardMin)), 1, 10);
+  const secondSpellCard = clamp(Math.round(finiteNumber(source.spellCardMax, DEFAULT_SETTINGS.spellCardMax)), 1, 10);
+  const rawBubble = normalizeHexColor(migrateLegacyColor(source.bubbleColor), DEFAULT_SETTINGS.bubbleColor);
+  const rawBubbleStar = source.bubbleColorStar == null ? '' : normalizeHexColor(migrateLegacyColor(source.bubbleColorStar), DEFAULT_SETTINGS.bubbleColorStar);
+  // 旧数据只有一个气泡颜色：浅色归「对方气泡」，我方回默认墨黑。
+  const bubbleIsLegacy = !rawBubbleStar && isLightColor(rawBubble);
+  const feedIntervalA = clamp(finiteNumber(source.feedPostIntervalMin, DEFAULT_SETTINGS.feedPostIntervalMin), 1, 1440);
+  const feedIntervalB = clamp(finiteNumber(source.feedPostIntervalMax, DEFAULT_SETTINGS.feedPostIntervalMax), 1, 1440);
+  // 旧版本概率以 0–1 存储，这里迁移到 0–100 百分比。
+  const rawPromptChance = finiteNumber(source.promptQuestionnaireChance, DEFAULT_SETTINGS.promptQuestionnaireChance);
+  const promptChance = rawPromptChance > 0 && rawPromptChance <= 1 ? rawPromptChance * 100 : rawPromptChance;
 
   return {
     replyDelayMin: Math.min(firstDelay, secondDelay),
@@ -203,15 +308,30 @@ export function normalizeSettings(settings = {}) {
     readNoReply: normalizePercentage(source.readNoReply, DEFAULT_SETTINGS.readNoReply, 1),
     stickerReply: normalizePercentage(source.stickerReply, DEFAULT_SETTINGS.stickerReply, 1),
     starFavorite: normalizePercentage(source.starFavorite, DEFAULT_SETTINGS.starFavorite, 0),
+    starFavoriteCard: normalizePercentage(source.starFavoriteCard, DEFAULT_SETTINGS.starFavoriteCard, 0),
+    starFavoriteFeed: normalizePercentage(source.starFavoriteFeed, DEFAULT_SETTINGS.starFavoriteFeed, 0),
     patReply: normalizePercentage(source.patReply, DEFAULT_SETTINGS.patReply, 1),
-    promptQuestionnaireChance: clamp(finiteNumber(source.promptQuestionnaireChance, DEFAULT_SETTINGS.promptQuestionnaireChance), 0, 1),
+    multiReplyEnabled: source.multiReplyEnabled !== false,
+    multiReplyMin: Math.min(firstMultiReply, secondMultiReply),
+    multiReplyMax: Math.max(firstMultiReply, secondMultiReply),
+    multiReplyGapMin: clamp(finiteNumber(source.multiReplyGapMin, DEFAULT_SETTINGS.multiReplyGapMin), 0.2, 10),
+    multiReplyGapMax: clamp(finiteNumber(source.multiReplyGapMax, DEFAULT_SETTINGS.multiReplyGapMax), 0.2, 10),
+    spellCardEnabled: source.spellCardEnabled !== false,
+    spellCardChance: normalizePercentage(source.spellCardChance, DEFAULT_SETTINGS.spellCardChance, 1),
+    spellCardMin: Math.min(firstSpellCard, secondSpellCard),
+    spellCardMax: Math.max(firstSpellCard, secondSpellCard),
+    spellCardMode: ['split', 'each'].includes(source.spellCardMode) ? source.spellCardMode : 'single',
+    spellCardNewline: source.spellCardNewline !== false,
+    spellCardCustomSeparators: normalizeSeparatorList(source.spellCardCustomSeparators),
+    promptQuestionnaireChance: clamp(promptChance, 0, 100),
     promptQuestionnaireIntervalHours: clamp(finiteNumber(source.promptQuestionnaireIntervalHours, DEFAULT_SETTINGS.promptQuestionnaireIntervalHours), 0, 12),
     lastPromptQuestionnaireCheckAt: Math.max(0, finiteNumber(source.lastPromptQuestionnaireCheckAt, DEFAULT_SETTINGS.lastPromptQuestionnaireCheckAt)),
-    bubbleColor: normalizeHexColor(source.bubbleColor, DEFAULT_SETTINGS.bubbleColor),
+    bubbleColor: bubbleIsLegacy ? DEFAULT_SETTINGS.bubbleColor : rawBubble,
+    bubbleColorStar: bubbleIsLegacy ? rawBubble : (rawBubbleStar || DEFAULT_SETTINGS.bubbleColorStar),
     chatBackgroundType: source.chatBackgroundType === 'image' && typeof source.chatBackgroundImage === 'string' && /^data:image\//i.test(source.chatBackgroundImage)
       ? 'image'
       : 'color',
-    chatBackgroundColor: normalizeHexColor(source.chatBackgroundColor, DEFAULT_SETTINGS.chatBackgroundColor),
+    chatBackgroundColor: normalizeHexColor(migrateLegacyColor(source.chatBackgroundColor), DEFAULT_SETTINGS.chatBackgroundColor),
     chatBackgroundImage: typeof source.chatBackgroundImage === 'string' && /^data:image\//i.test(source.chatBackgroundImage)
       ? source.chatBackgroundImage
       : '',
@@ -219,6 +339,21 @@ export function normalizeSettings(settings = {}) {
       const avatar = String(source.userAvatar || '').trim();
       return avatar === 'idb:user' || /^data:image\//i.test(avatar) ? avatar : '';
     })(),
+    userName: String(source.userName || DEFAULT_SETTINGS.userName).trim().slice(0, 20) || DEFAULT_SETTINGS.userName,
+    feedEnabled: source.feedEnabled !== false,
+    feedAutoPostEnabled: source.feedAutoPostEnabled !== false,
+    feedPostIntervalMin: Math.min(feedIntervalA, feedIntervalB),
+    feedPostIntervalMax: Math.max(feedIntervalA, feedIntervalB),
+    feedDailyMax: clamp(Math.round(finiteNumber(source.feedDailyMax, DEFAULT_SETTINGS.feedDailyMax)), 1, 24),
+    feedPostChance: normalizePercentage(source.feedPostChance, DEFAULT_SETTINGS.feedPostChance, 0),
+    feedLikeProbability: normalizePercentage(source.feedLikeProbability, DEFAULT_SETTINGS.feedLikeProbability, 0),
+    feedCommentProbability: normalizePercentage(source.feedCommentProbability, DEFAULT_SETTINGS.feedCommentProbability, 0),
+    feedReplyProbability: normalizePercentage(source.feedReplyProbability, DEFAULT_SETTINGS.feedReplyProbability, 0),
+    feedReplyToCommentProbability: normalizePercentage(source.feedReplyToCommentProbability, DEFAULT_SETTINGS.feedReplyToCommentProbability, 0),
+    roastEnabled: source.roastEnabled !== false,
+    roastProbability: normalizePercentage(source.roastProbability, DEFAULT_SETTINGS.roastProbability, 0),
+    roastIntervalMinutes: clamp(finiteNumber(source.roastIntervalMinutes, DEFAULT_SETTINGS.roastIntervalMinutes), 0, 1440),
+    lastRoastAt: Math.max(0, finiteNumber(source.lastRoastAt, DEFAULT_SETTINGS.lastRoastAt)),
     showTimestamp: source.showTimestamp !== false,
     fontSize: FONT_SIZES.has(source.fontSize) ? source.fontSize : DEFAULT_SETTINGS.fontSize,
     currentGroupId: String(source.currentGroupId || '').trim() || DEFAULT_GROUP_ID,
@@ -250,7 +385,7 @@ export function normalizeCharacter(character = {}) {
   const avatar = avatarValue === 'idb:star' || /^data:image\//i.test(avatarValue) ? avatarValue : '';
 
   return {
-    name: String(source.name || DEFAULT_CHARACTER.name).trim() || DEFAULT_CHARACTER.name,
+    name: String(source.name || DEFAULT_CHARACTER.name).trim().slice(0, 20) || DEFAULT_CHARACTER.name,
     avatar,
   };
 }
@@ -266,6 +401,24 @@ export function writeCharacter(character) {
     window.dispatchEvent(new CustomEvent(CHARACTER_CHANGED_EVENT, { detail: normalized }));
   }
   return saved ? normalized : null;
+}
+
+export const NICKNAME_MAX_LENGTH = 20;
+
+export function readNicknames() {
+  const character = readCharacter();
+  const settings = readSettings();
+  const star = String(character.name || DEFAULT_CHARACTER.name).trim().slice(0, NICKNAME_MAX_LENGTH) || DEFAULT_CHARACTER.name;
+  const user = String(settings.userName || DEFAULT_SETTINGS.userName).trim().slice(0, NICKNAME_MAX_LENGTH) || DEFAULT_SETTINGS.userName;
+  return { star, user };
+}
+
+export function applyNicknamePlaceholders(text, names = readNicknames()) {
+  const star = String(names?.star || DEFAULT_CHARACTER.name).trim() || DEFAULT_CHARACTER.name;
+  const user = String(names?.user || DEFAULT_SETTINGS.userName).trim() || DEFAULT_SETTINGS.userName;
+  return String(text ?? '')
+    .replace(/\{\s*(?:ta|star|星回)\s*\}/gi, star)
+    .replace(/\{\s*(?:me|user|我)\s*\}/gi, user);
 }
 
 export function normalizeGroup(group) {
@@ -331,7 +484,9 @@ export function hasManageCategory(category) {
 
 export function migrateManageCategories() {
   const storage = getStorage();
-  if (!storage || storage.getItem(CATEGORY_MIGRATION_KEY) !== null) return false;
+  // 迁移标记按版本推进：新增类别后提升版本号，保证老用户也会补齐新类别。
+  const MIGRATION_VERSION = '3';
+  if (!storage || storage.getItem(CATEGORY_MIGRATION_KEY) === MIGRATION_VERSION) return false;
 
   const groups = readGroups();
   const existingIds = new Set(groups.map((group) => group.id));
@@ -350,7 +505,7 @@ export function migrateManageCategories() {
   });
 
   writeGroups(groups);
-  writeStorage(CATEGORY_MIGRATION_KEY, '1');
+  writeStorage(CATEGORY_MIGRATION_KEY, MIGRATION_VERSION);
   return true;
 }
 
@@ -417,7 +572,11 @@ export function normalizeQuestionnaire(questionnaire) {
     type,
     thinkMin: clamp(finiteNumber(questionnaire.thinkMin, 10), 1, 60),
     thinkMax: clamp(finiteNumber(questionnaire.thinkMax, 15), 1, 60),
-    answerNow: clamp(finiteNumber(questionnaire.answerNow, 0.6), 0, 1),
+    answerNow: (() => {
+      const raw = finiteNumber(questionnaire.answerNow, 60);
+      const percent = raw > 0 && raw <= 1 ? raw * 100 : raw;
+      return clamp(percent, 0, 100);
+    })(),
     multiMin: clamp(finiteNumber(questionnaire.multiMin, 1), 1, 10),
     multiMax: clamp(finiteNumber(questionnaire.multiMax, options.length || 3), 1, 10),
     status: ['pending', 'thinking', 'awaiting-answer', 'delayed', 'answered', 'cancelled', 'withdrawn'].includes(questionnaire.status)
@@ -438,7 +597,7 @@ export function normalizeQuestionnaire(questionnaire) {
 export function normalizeChatMessage(message) {
   if (!message || typeof message !== 'object' || Array.isArray(message)) return null;
   const role = message.role === 'star' ? 'star' : message.role === 'system' ? 'system' : 'user';
-  const type = message.type === 'sticker' ? 'sticker' : message.type === 'pat' ? 'pat' : message.type === 'questionnaire' ? 'questionnaire' : 'text';
+  const type = ['sticker', 'pat', 'questionnaire', 'image'].includes(message.type) ? message.type : 'text';
   return {
     id: String(message.id || createId('msg')),
     role,
@@ -449,6 +608,7 @@ export function normalizeChatMessage(message) {
     favorited: Boolean(message.favorited),
     starFavorited: Boolean(message.starFavorited),
     withdrawn: Boolean(message.withdrawn),
+    tag: typeof message.tag === 'string' ? message.tag.trim().slice(0, 20) : '',
     questionnaire: type === 'questionnaire'
       ? (() => {
           const questionnaire = normalizeQuestionnaire(message.questionnaire || message.questionnaireData);
@@ -461,6 +621,93 @@ export function normalizeChatMessage(message) {
   };
 }
 
+function isFeedImage(value) {
+  return typeof value === 'string' && /^data:image\//i.test(value.trim());
+}
+
+function isStickerRef(value) {
+  if (typeof value !== 'string') return false;
+  const ref = value.trim();
+  return /^idb:/i.test(ref) || /^data:image\//i.test(ref);
+}
+
+function normalizeFeedComment(comment) {
+  if (!comment || typeof comment !== 'object' || Array.isArray(comment)) return null;
+  const content = typeof comment.content === 'string' ? comment.content.trim().slice(0, 500) : '';
+  const sticker = isStickerRef(comment.sticker) ? comment.sticker.trim() : '';
+  if (!content && !sticker) return null;
+  const replyTo = replyTargetId(comment.replyTo);
+  return {
+    id: String(comment.id || createId('feed_comment')),
+    author: comment.author === 'star' ? 'star' : 'user',
+    content,
+    sticker,
+    replyTo,
+    replyToName: replyTo ? String(comment.replyToName || '').trim().slice(0, 40) : '',
+    createdAt: parseTimestamp(comment.createdAt),
+  };
+}
+
+function replyTargetId(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, 80);
+}
+
+export function normalizeFeedPost(post) {
+  if (!post || typeof post !== 'object' || Array.isArray(post)) return null;
+  const content = typeof post.content === 'string' ? post.content.trim().slice(0, 2000) : '';
+  const rawImages = Array.isArray(post.images) ? post.images : (post.image ? [post.image] : []);
+  const images = rawImages
+    .filter(isFeedImage)
+    .map((item) => item.trim())
+    .slice(0, 9);
+  if (!content && !images.length) return null;
+  const comments = Array.isArray(post.comments)
+    ? post.comments.map(normalizeFeedComment).filter(Boolean)
+    : [];
+  const likes = Array.isArray(post.likes)
+    ? post.likes.map((item) => (item === 'star' ? 'star' : 'user')).filter((item, index, list) => list.indexOf(item) === index)
+    : [];
+  return {
+    id: String(post.id || createId('feed')),
+    author: post.author === 'star' ? 'star' : 'user',
+    content,
+    images,
+    createdAt: parseTimestamp(post.createdAt),
+    likes,
+    comments,
+    favorited: Boolean(post.favorited),
+    starFavorited: Boolean(post.starFavorited),
+  };
+}
+
+function normalizeFeedNotice(notice) {
+  if (!notice || typeof notice !== 'object' || Array.isArray(notice)) return null;
+  const postId = String(notice.postId || '').trim().slice(0, 80);
+  const text = typeof notice.text === 'string' ? notice.text.trim().slice(0, 300) : '';
+  if (!postId && !text) return null;
+  const type = ['post', 'like', 'comment'].includes(notice.type) ? notice.type : 'post';
+  return {
+    id: String(notice.id || createId('feed_notice')),
+    type,
+    postId,
+    text,
+    author: notice.author === 'user' ? 'user' : 'star',
+    createdAt: parseTimestamp(notice.createdAt),
+    read: notice.read === true,
+  };
+}
+
+function normalizeFeedAutoPostState(state) {
+  const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  return {
+    enabled: source.enabled !== false,
+    lastPostAt: Math.max(0, finiteNumber(source.lastPostAt, 0)),
+    nextAt: Math.max(0, finiteNumber(source.nextAt, 0)),
+    day: typeof source.day === 'string' ? source.day.slice(0, 20) : '',
+    dayCount: Math.max(0, Math.floor(finiteNumber(source.dayCount, 0))),
+  };
+}
 function readCollection(key, normalizer) {
   return readArray(key).map(normalizer).filter(Boolean);
 }
@@ -475,6 +722,10 @@ export function readGroups() {
 
 export function readStickers() {
   return readCollection(STORAGE_KEYS.stickers, normalizeSticker);
+}
+
+export function readImages() {
+  return readCollection(STORAGE_KEYS.images, normalizeSticker);
 }
 
 export function readPatCards() {
@@ -502,6 +753,11 @@ export function readChatMessages() {
   return readCollection(STORAGE_KEYS.chatMessages, normalizeChatMessage);
 }
 
+export function readFeedPosts() {
+  return readCollection(STORAGE_KEYS.feedPosts, normalizeFeedPost)
+    .sort((first, second) => second.createdAt - first.createdAt);
+}
+
 export function writeCards(cards) {
   const normalized = Array.isArray(cards) ? cards.map(normalizeCard).filter(Boolean) : [];
   return writeJson(STORAGE_KEYS.cards, normalized) ? normalized : null;
@@ -517,6 +773,11 @@ export function writeStickers(stickers) {
   return writeJson(STORAGE_KEYS.stickers, normalized) ? normalized : null;
 }
 
+export function writeImages(images) {
+  const normalized = Array.isArray(images) ? images.map(normalizeSticker).filter(Boolean) : [];
+  return writeJson(STORAGE_KEYS.images, normalized) ? normalized : null;
+}
+
 export function writePatCards(cards) {
   const normalized = Array.isArray(cards) ? cards.map(normalizePatCard).filter(Boolean) : [];
   return writeJson(STORAGE_KEYS.patCards, normalized) ? normalized : null;
@@ -530,6 +791,24 @@ export function writeQuestionnaireAnswers(entries) {
 export function writeStatuses(entries) {
   const normalized = Array.isArray(entries) ? entries.map(normalizeTextEntry).filter(Boolean) : [];
   return writeJson(STORAGE_KEYS.statuses, normalized) ? normalized : null;
+}
+
+export function readMoods() {
+  return readCollection(STORAGE_KEYS.moods, normalizeTextEntry);
+}
+
+export function readRoasts() {
+  return readCollection(STORAGE_KEYS.roasts, normalizeTextEntry);
+}
+
+export function writeMoods(entries) {
+  const normalized = Array.isArray(entries) ? entries.map(normalizeTextEntry).filter(Boolean) : [];
+  return writeJson(STORAGE_KEYS.moods, normalized) ? normalized : null;
+}
+
+export function writeRoasts(entries) {
+  const normalized = Array.isArray(entries) ? entries.map(normalizeTextEntry).filter(Boolean) : [];
+  return writeJson(STORAGE_KEYS.roasts, normalized) ? normalized : null;
 }
 
 export function writePromptQuestionnaires(items) {
@@ -549,6 +828,44 @@ export function writeChatMessages(messages) {
     window.dispatchEvent(new CustomEvent(CHAT_CHANGED_EVENT, { detail: { messages: normalized } }));
   }
   return saved ? normalized : null;
+}
+
+export function writeFeedPosts(posts) {
+  const normalized = Array.isArray(posts)
+    ? posts.map(normalizeFeedPost).filter(Boolean).sort((first, second) => second.createdAt - first.createdAt)
+    : [];
+  const saved = writeJson(STORAGE_KEYS.feedPosts, normalized);
+  if (saved && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(FEED_CHANGED_EVENT, { detail: { posts: normalized } }));
+  }
+  return saved ? normalized : null;
+}
+
+export function readFeedNotices() {
+  return readArray(STORAGE_KEYS.feedNotices)
+    .map(normalizeFeedNotice)
+    .filter(Boolean)
+    .sort((first, second) => second.createdAt - first.createdAt);
+}
+
+export function writeFeedNotices(notices) {
+  const normalized = Array.isArray(notices)
+    ? notices.map(normalizeFeedNotice).filter(Boolean).sort((first, second) => second.createdAt - first.createdAt).slice(0, 100)
+    : [];
+  const saved = writeJson(STORAGE_KEYS.feedNotices, normalized);
+  if (saved && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(FEED_NOTICES_CHANGED_EVENT, { detail: { notices: normalized } }));
+  }
+  return saved ? normalized : null;
+}
+
+export function readFeedAutoPostState() {
+  return normalizeFeedAutoPostState(readJson(STORAGE_KEYS.feedAutoPost, null));
+}
+
+export function writeFeedAutoPostState(state) {
+  const normalized = normalizeFeedAutoPostState(state);
+  return writeJson(STORAGE_KEYS.feedAutoPost, normalized) ? normalized : null;
 }
 
 function normalizeDateValue(value, fallback) {
@@ -623,7 +940,11 @@ export function getStorageSnapshot() {
   return {
     cards: readCards(),
     stickers: readStickers(),
+    images: readImages(),
     chatMessages,
+    feedPosts: readFeedPosts(),
+    feedNotices: readFeedNotices(),
+    feedAutoPost: readFeedAutoPostState(),
     favorites: { mine, star },
     settings: readSettings(),
     groups: readGroups(),
@@ -634,6 +955,8 @@ export function getStorageSnapshot() {
     patCards: readPatCards(),
     questionnaireAnswers: readQuestionnaireAnswers(),
     statuses: readStatuses(),
+    moods: readMoods(),
+    roasts: readRoasts(),
     character: readCharacter(),
   };
 }
@@ -672,7 +995,7 @@ export function normalizeBackupPayload(input) {
     ? source.favorites
     : {};
 
-  const knownKeys = ['cards', 'stickers', 'chatMessages', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'periodRecords', 'questionnaireDraft', 'moodCache', 'mediaAssets', 'patCards', 'questionnaireAnswers', 'statuses', 'character'];
+  const knownKeys = ['cards', 'stickers', 'chatMessages', 'feedPosts', 'feedNotices', 'feedAutoPost', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'periodRecords', 'questionnaireDraft', 'moodCache', 'mediaAssets', 'patCards', 'questionnaireAnswers', 'statuses', 'moods', 'roasts', 'images', 'character'];
   if (!knownKeys.some((key) => Object.prototype.hasOwnProperty.call(source, key))) {
     throw new Error('没有找到可导入的星回数据。');
   }
@@ -682,9 +1005,19 @@ export function normalizeBackupPayload(input) {
     exportedAt: String(parsed.exportedAt || ''),
     cards: Array.isArray(source.cards) ? source.cards.map(normalizeCard).filter(Boolean) : [],
     stickers: Array.isArray(source.stickers) ? source.stickers.map(normalizeSticker).filter(Boolean) : [],
+    images: Array.isArray(source.images) ? source.images.map(normalizeSticker).filter(Boolean) : [],
     chatMessages: Array.isArray(source.chatMessages)
       ? source.chatMessages.map(normalizeChatMessage).filter(Boolean)
       : [],
+    feedPosts: Array.isArray(source.feedPosts)
+      ? source.feedPosts.map(normalizeFeedPost).filter(Boolean)
+      : [],
+    feedNotices: Array.isArray(source.feedNotices)
+      ? source.feedNotices.map(normalizeFeedNotice).filter(Boolean)
+      : [],
+    feedAutoPost: source.feedAutoPost && typeof source.feedAutoPost === 'object' && !Array.isArray(source.feedAutoPost)
+      ? normalizeFeedAutoPostState(source.feedAutoPost)
+      : null,
     favorites: {
       mine: Array.isArray(sourceValue(favoriteSource, 'mine', []))
         ? favoriteSource.mine.map(normalizeChatMessage).filter(Boolean)
@@ -715,6 +1048,8 @@ export function normalizeBackupPayload(input) {
       ? source.questionnaireAnswers.map(normalizeTextEntry).filter(Boolean)
       : [],
     statuses: Array.isArray(source.statuses) ? source.statuses.map(normalizeTextEntry).filter(Boolean) : [],
+    moods: Array.isArray(source.moods) ? source.moods.map(normalizeTextEntry).filter(Boolean) : [],
+    roasts: Array.isArray(source.roasts) ? source.roasts.map(normalizeTextEntry).filter(Boolean) : [],
     character: source.character && typeof source.character === 'object' && !Array.isArray(source.character)
       ? normalizeCharacter(source.character)
       : null,

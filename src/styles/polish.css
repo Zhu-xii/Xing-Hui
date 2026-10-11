@@ -1,44 +1,44 @@
-/* 星回极简奶油蓝主题覆盖 */
+/* 星回极简墨白主题覆盖（无彩度，对齐参考站 mochi） */
 :root {
   --color-primary: #111111;
-  --color-primary-deep: #111111;
-  --color-primary-soft: #111111;
-  --color-accent: #CFE7F2;
-  --color-accent-strong: #9DC9DA;
-  --color-silver: #DDE9EE;
-  --color-canvas: #EDF6FA;
-  --color-bg: #EFF7FA;
-  --color-bg-soft: #F7FBFC;
+  --color-primary-deep: #000000;
+  --color-primary-soft: #4A4A4A;
+  --color-accent: #111111;
+  --color-accent-strong: #000000;
+  --color-silver: #D6D6D6;
+  --color-canvas: #E9E9E9;
+  --color-bg: #E9E9E9;
+  --color-bg-soft: #F3F3F3;
   --color-surface: #FFFFFF;
-  --color-surface-2: #FBFDFE;
-  --color-border: #E3ECF0;
-  --color-border-soft: #EEF4F6;
+  --color-surface-2: #FAFAFA;
+  --color-border: #E2E2E2;
+  --color-border-soft: #EFEFEF;
   --color-text: #111111;
-  --color-text-muted: #5B666C;
-  --color-text-faint: #8D989D;
-  --color-button-text: #111111;
-  --color-app-top: #F8FBFC;
-  --color-app-mid: #F1F8FA;
-  --color-app-bottom: #EDF6FA;
+  --color-text-muted: #7A7A7A;
+  --color-text-faint: #A3A3A3;
+  --color-button-text: #FFFFFF;
+  --color-app-top: #FDFDFD;
+  --color-app-mid: #F4F4F4;
+  --color-app-bottom: #E9E9E9;
   --nav-bg: rgba(255, 255, 255, 0.96);
   --bubble-color: #FFFFFF;
   --bubble-text: #111111;
-  --bubble-border: #E3ECF0;
+  --bubble-border: #E6E6E6;
 }
 
 html,
 body {
-  background: #EDF6FA;
+  background: #E9E9E9;
 }
 
 body {
-  background-color: #EDF6FA;
+  background-color: #E9E9E9;
   background-image: none;
   color: #111111;
 }
 
 .app {
-  background: linear-gradient(180deg, #F8FBFC 0%, #F1F8FA 48%, #EDF6FA 100%);
+  background: linear-gradient(180deg, #FDFDFD 0%, #F4F4F4 48%, #E9E9E9 100%);
 }
 
 .clock-time,
@@ -89,7 +89,7 @@ button,
   border-color: var(--color-border);
   background: #FFFFFF;
   color: #111111;
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .greeting,
@@ -114,11 +114,11 @@ button,
 
 .home-board {
   margin-top: 14px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 12px;
+  border: 1px solid var(--border-hairline);
+  border-radius: 22px;
+  background: #FFFFFF;
+  box-shadow: var(--shadow-card);
 }
 
 .home-grid {
@@ -133,14 +133,14 @@ button,
   border: 1px solid var(--color-border);
   border-radius: 18px;
   background: #FFFFFF;
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .home-page .entry-card:hover {
   transform: none;
-  border-color: #CBE4EE;
-  background: #F8FCFD;
-  box-shadow: none;
+  border-color: #111111;
+  background: #FFFFFF;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
 }
 
 .home-page .entry-icon {
@@ -154,7 +154,7 @@ button,
 
 .home-page .entry-card:hover .entry-icon {
   transform: none;
-  background: #F1F9FC;
+  background: #F3F3F3;
 }
 
 .home-page .entry-icon svg {
@@ -180,13 +180,13 @@ button,
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
   font-size: 1rem;
 }
 
 .home-pagination__button:hover:not(:disabled) {
-  border-color: #CBE4EE;
-  background: #F8FCFD;
+  border-color: #111111;
+  background: #F3F3F3;
 }
 
 .home-pagination__status {
@@ -198,16 +198,16 @@ button,
 .bottom-nav {
   border-color: var(--color-border);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 6px 18px rgba(39, 65, 74, 0.06);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.06);
 }
 
 .nav-item {
-  color: #6B767B;
+  color: #7A7A7A;
 }
 
 .nav-item.is-active {
-  color: #111111;
-  background: #E8F4F9;
+  color: #FFFFFF;
+  background: #111111;
 }
 
 .footer {
@@ -215,10 +215,10 @@ button,
   color: var(--color-text-muted);
 }
 
-/* 聊天页：奶油蓝背景、白色气泡、白色按钮、黑色图标 */
+/* 聊天页：墨白背景、白色对方气泡、墨黑我方气泡 */
 body[data-view='chat'] .app,
 body[data-view='chat'] .chat-shell {
-  background-color: #EFF7FA;
+  background-color: #E9E9E9;
 }
 
 .chat-topbar,
@@ -243,23 +243,23 @@ body[data-view='chat'] .chat-shell {
   border: 1px solid var(--color-border);
   background: #FFFFFF;
   color: #111111;
-  box-shadow: none;
+  box-shadow: 0 3px 10px rgba(17, 17, 17, 0.06);
 }
 
 .chat-topbar__back:hover,
 .chat-composer__tool:hover,
 .chat-composer__send:hover {
-  background: #F3FAFC;
+  background: #F3F3F3;
 }
 
 .chat-composer__tool[aria-expanded='true'] {
-  background: #E8F4F9;
+  background: #EDEDED;
 }
 
 .chat-composer {
   border: 1px solid var(--color-border);
   background: #FFFFFF;
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .chat-composer__input {
@@ -267,30 +267,24 @@ body[data-view='chat'] .chat-shell {
 }
 
 .chat-composer__input::placeholder {
-  color: #8D989D;
-}
-
-.chat-message .message-bubble {
-  border: 1px solid var(--color-border);
-  background: #FFFFFF !important;
-  color: #111111 !important;
-  box-shadow: none;
+  color: #A3A3A3;
 }
 
 .chat-profile__status {
-  color: #667278;
+  color: #7A7A7A;
 }
 
 .chat-profile__status::before,
 .chat-profile__status.is-typing::before {
-  background: #9DC9DA;
-  box-shadow: 0 0 0 3px rgba(157, 201, 218, 0.18);
+  background: #111111;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.14);
 }
 
 .chat-tool-panel {
   border-color: var(--color-border);
   background: #FFFFFF;
-  color: #5B666C;
+  box-shadow: var(--shadow-soft);
+  color: #7A7A7A;
 }
 
 /* 设置页：白底细边框，减少厚重阴影 */
@@ -298,7 +292,7 @@ body[data-view='chat'] .chat-shell {
 :where(.manage-panel, .history-card, .favorites-panel, .pat-stage, .pat-feed-panel, .backup-summary, .backup-card, .period-card, .questionnaire-card) {
   border: 1px solid var(--color-border);
   background: #FFFFFF;
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .settings-card {
@@ -313,7 +307,7 @@ body[data-view='chat'] .chat-shell {
 
 .settings-eyebrow,
 .settings-kicker {
-  color: #7EAEC2;
+  color: #7A7A7A;
 }
 
 .settings-button,
@@ -325,17 +319,17 @@ body[data-view='chat'] .chat-shell {
 }
 
 .settings-button:hover {
-  border-color: #CBE4EE;
-  background: #F8FCFD;
+  border-color: #111111;
+  background: #F3F3F3;
 }
 
 .settings-switch input:checked + span {
-  background: #A9D3E5;
+  background: #111111;
 }
 
 .settings-swatch.is-selected {
   border-color: #111111;
-  box-shadow: 0 0 0 3px rgba(169, 211, 229, 0.32);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18);
 }
 
 @media (max-width: 360px) {

@@ -6,6 +6,7 @@ import './styles/components.css';
 import './styles/chat.css';
 
 import { initChatView, onChatViewEnter } from './views/chat.js';
+import { initRouter, navigateTo } from './lib/router.js';
 import { pickRandom } from './lib/random.js';
 import { initReplyEngine } from './lib/reply.js';
 import { initFavoritesView, onFavoritesViewEnter } from './views/favorites.js';
@@ -66,11 +67,25 @@ const TITLES = {
 
 let homePageIndex = 0;
 
+// 按底色亮度自动取高对比文字色，避免浅底配白字看不清。
+function bubbleInk(hex) {
+  const value = String(hex || '').replace('#', '');
+  if (value.length !== 6) return '#111111';
+  const r = parseInt(value.slice(0, 2), 16) / 255;
+  const g = parseInt(value.slice(2, 4), 16) / 255;
+  const b = parseInt(value.slice(4, 6), 16) / 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.62 ? '#111111' : '#FFFFFF';
+}
+
 function applyAppearance(settings = readSettings()) {
   const root = document.documentElement;
   root.dataset.fontSize = settings.fontSize;
   root.style.setProperty('--chat-background-color', settings.chatBackgroundColor);
   root.style.setProperty('--bubble-color', settings.bubbleColor);
+  root.style.setProperty('--bubble-color-user', settings.bubbleColor);
+  root.style.setProperty('--bubble-ink-user', bubbleInk(settings.bubbleColor));
+  root.style.setProperty('--bubble-color-star', settings.bubbleColorStar);
+  root.style.setProperty('--bubble-ink-star', bubbleInk(settings.bubbleColorStar));
 
   if (settings.chatBackgroundType === 'image' && settings.chatBackgroundImage) {
     root.style.setProperty('--chat-background-image', `url("${settings.chatBackgroundImage}")`);
@@ -78,7 +93,7 @@ function applyAppearance(settings = readSettings()) {
     root.style.removeProperty('--chat-background-image');
   }
 
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F7FBFE');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#E9E9E9');
 }
 
 async function renderHomeStarAvatar() {
@@ -316,7 +331,7 @@ function updateClock() {
 }
 
 document.getElementById('backButton')?.addEventListener('click', () => {
-  window.location.hash = '#/home';
+  navigateTo('home');
 });
 
 document.getElementById('homePrevPage')?.addEventListener('click', () => {
@@ -333,7 +348,7 @@ document.getElementById('homeNextPage')?.addEventListener('click', () => {
   renderHomePage();
 });
 
-window.addEventListener('hashchange', render);
+initRouter(render);
 window.addEventListener('xinghui:manage-data-changed', () => {
   renderDailyGreeting();
   renderHomeStatus();
@@ -376,7 +391,7 @@ await initializeMediaStorage();
 applyAppearance();
 
 if (!window.location.hash) {
-  window.location.replace('#/home');
+  window.history.replaceState(null, '', '#/home');
 }
 renderHomePage();
 initChatView();
