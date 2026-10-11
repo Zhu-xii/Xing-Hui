@@ -608,7 +608,8 @@ body[data-view='chat'] .views {
 
 .chat-composer {
   display: grid;
-  grid-template-columns: 44px 44px minmax(0, 1fr) 44px;
+  /* 5 列：图片 / 问卷 / 表情包 / 输入框 / 发送 */
+  grid-template-columns: repeat(3, 44px) minmax(0, 1fr) 44px;
   align-items: center;
   gap: 6px;
   width: 100%;
@@ -647,6 +648,11 @@ body[data-view='chat'] .views {
 .chat-composer__send svg {
   width: 20px;
   height: 20px;
+}
+
+/* 隐藏的文件选择框不参与栅格布局 */
+.chat-composer > input[type="file"] {
+  display: none !important;
 }
 
 .chat-composer__input {
@@ -708,7 +714,7 @@ body[data-view='chat'] .views {
   }
 
   .chat-composer {
-    grid-template-columns: 40px 40px minmax(0, 1fr) 40px;
+    grid-template-columns: repeat(3, 40px) minmax(0, 1fr) 40px;
     gap: 4px;
     padding-inline: 4px;
   }
