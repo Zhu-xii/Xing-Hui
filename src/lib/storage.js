@@ -12,6 +12,9 @@ export const STORAGE_KEYS = Object.freeze({
   periodRecords: 'xinghui_period_records',
   moodCache: 'xinghui_chat_mood',
   chatMessages: 'xinghui_chat_messages',
+  feedPosts: 'xinghui_feed_posts',
+  feedNotices: 'xinghui_feed_notices',
+  feedAutoPost: 'xinghui_feed_autopost',
   character: 'xinghui_character',
   firstLaunchAt: 'xinghui_first_launch_at',
   lastBackupAt: 'xinghui_last_backup_at',
@@ -30,6 +33,9 @@ export const PROMPT_QUESTIONNAIRE_STORAGE_KEY = STORAGE_KEYS.promptQuestionnaire
 export const PERIOD_RECORD_STORAGE_KEY = STORAGE_KEYS.periodRecords;
 export const MOOD_CACHE_KEY = STORAGE_KEYS.moodCache;
 export const CHAT_STORAGE_KEY = STORAGE_KEYS.chatMessages;
+export const FEED_POSTS_STORAGE_KEY = STORAGE_KEYS.feedPosts;
+export const FEED_NOTICES_STORAGE_KEY = STORAGE_KEYS.feedNotices;
+export const FEED_AUTO_POST_STORAGE_KEY = STORAGE_KEYS.feedAutoPost;
 export const CHARACTER_STORAGE_KEY = STORAGE_KEYS.character;
 export const DEFAULT_GROUP_ID = 'group_default';
 export const GREETING_GROUP_ID = 'group_greeting';
@@ -50,6 +56,8 @@ export const CHARACTER_CHANGED_EVENT = 'xinghui:character-changed';
 export const DATA_RESTORED_EVENT = 'xinghui:data-restored';
 export const BACKUP_STATUS_CHANGED_EVENT = 'xinghui:backup-status-changed';
 export const CHAT_CHANGED_EVENT = 'xinghui:chat-changed';
+export const FEED_CHANGED_EVENT = 'xinghui:feed-changed';
+export const FEED_NOTICES_CHANGED_EVENT = 'xinghui:feed-notices-changed';
 
 export const DEFAULT_SETTINGS = Object.freeze({
   replyDelayMin: 1,
@@ -268,6 +276,25 @@ export function writeCharacter(character) {
   return saved ? normalized : null;
 }
 
+export const NICKNAME_MAX_LENGTH = 20;
+
+export function readNicknames() {
+  const character = readCharacter();
+  const settings = readSettings();
+  const star = String(character.name || DEFAULT_CHARACTER.name).trim().slice(0, NICKNAME_MAX_LENGTH) || DEFAULT_CHARACTER.name;
+  const user = String(settings.userName || DEFAULT_SETTINGS.userName).trim().slice(0, NICKNAME_MAX_LENGTH) || DEFAULT_SETTINGS.userName;
+  return { star, user };
+}
+
+export function applyNicknamePlaceholders(text, names = readNicknames()) {
+  const star = String(names?.star || DEFAULT_CHARACTER.name).trim() || DEFAULT_CHARACTER.name;
+  const user = String(names?.user || DEFAULT_SETTINGS.userName).trim() || DEFAULT_SETTINGS.userName;
+  return String(text ?? '')
+    .replace(/\{\s*(?:ta|star|星回)\s*\}/gi, star)
+    .replace(/\{\s*(?:me|user|我)\s*\}/gi, user);
+}
+
+
 export function normalizeGroup(group) {
   if (!group || typeof group !== 'object' || Array.isArray(group)) return null;
   const id = String(group.id || '').trim();
@@ -465,6 +492,92 @@ export function normalizeChatMessage(message) {
   };
 }
 
+function isFeedImage(value) {
+  return typeof value === 'string' && /^data:image\//i.test(value.trim());
+}
+
+function isStickerRef(value) {
+  if (typeof value !== 'string') return false;
+  const ref = value.trim();
+  return /^idb:/i.test(ref) || /^data:image\//i.test(ref);
+}
+
+function normalizeFeedComment(comment) {
+  if (!comment || typeof comment !== 'object' || Array.isArray(comment)) return null;
+  const content = typeof comment.content === 'string' ? comment.content.trim().slice(0, 500) : '';
+  const sticker = isStickerRef(comment.sticker) ? comment.sticker.trim() : '';
+  if (!content && !sticker) return null;
+  const replyTo = replyTargetId(comment.replyTo);
+  return {
+    id: String(comment.id || createId('feed_comment')),
+    author: comment.author === 'star' ? 'star' : 'user',
+    content,
+    sticker,
+    replyTo,
+    replyToName: replyTo ? String(comment.replyToName || '').trim().slice(0, 40) : '',
+    createdAt: parseTimestamp(comment.createdAt),
+  };
+}
+
+function replyTargetId(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, 80);
+}
+
+export function normalizeFeedPost(post) {
+  if (!post || typeof post !== 'object' || Array.isArray(post)) return null;
+  const content = typeof post.content === 'string' ? post.content.trim().slice(0, 2000) : '';
+  const rawImages = Array.isArray(post.images) ? post.images : (post.image ? [post.image] : []);
+  const images = rawImages
+    .filter(isFeedImage)
+    .map((item) => item.trim())
+    .slice(0, 9);
+  if (!content && !images.length) return null;
+  const comments = Array.isArray(post.comments)
+    ? post.comments.map(normalizeFeedComment).filter(Boolean)
+    : [];
+  const likes = Array.isArray(post.likes)
+    ? post.likes.map((item) => (item === 'star' ? 'star' : 'user')).filter((item, index, list) => list.indexOf(item) === index)
+    : [];
+  return {
+    id: String(post.id || createId('feed')),
+    author: post.author === 'star' ? 'star' : 'user',
+    content,
+    images,
+    createdAt: parseTimestamp(post.createdAt),
+    likes,
+    comments,
+  };
+}
+
+function normalizeFeedNotice(notice) {
+  if (!notice || typeof notice !== 'object' || Array.isArray(notice)) return null;
+  const postId = String(notice.postId || '').trim().slice(0, 80);
+  const text = typeof notice.text === 'string' ? notice.text.trim().slice(0, 300) : '';
+  if (!postId && !text) return null;
+  const type = ['post', 'like', 'comment'].includes(notice.type) ? notice.type : 'post';
+  return {
+    id: String(notice.id || createId('feed_notice')),
+    type,
+    postId,
+    text,
+    author: notice.author === 'user' ? 'user' : 'star',
+    createdAt: parseTimestamp(notice.createdAt),
+    read: notice.read === true,
+  };
+}
+
+function normalizeFeedAutoPostState(state) {
+  const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  return {
+    enabled: source.enabled !== false,
+    lastPostAt: Math.max(0, finiteNumber(source.lastPostAt, 0)),
+    nextAt: Math.max(0, finiteNumber(source.nextAt, 0)),
+    day: typeof source.day === 'string' ? source.day.slice(0, 20) : '',
+    dayCount: Math.max(0, Math.floor(finiteNumber(source.dayCount, 0))),
+  };
+}
+
 function readCollection(key, normalizer) {
   return readArray(key).map(normalizer).filter(Boolean);
 }
@@ -554,6 +667,50 @@ export function writeChatMessages(messages) {
   }
   return saved ? normalized : null;
 }
+
+export function readFeedPosts() {
+  return readCollection(STORAGE_KEYS.feedPosts, normalizeFeedPost)
+    .sort((first, second) => second.createdAt - first.createdAt);
+}
+
+export function writeFeedPosts(posts) {
+  const normalized = Array.isArray(posts)
+    ? posts.map(normalizeFeedPost).filter(Boolean).sort((first, second) => second.createdAt - first.createdAt)
+    : [];
+  const saved = writeJson(STORAGE_KEYS.feedPosts, normalized);
+  if (saved && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(FEED_CHANGED_EVENT, { detail: { posts: normalized } }));
+  }
+  return saved ? normalized : null;
+}
+
+export function readFeedNotices() {
+  return readArray(STORAGE_KEYS.feedNotices)
+    .map(normalizeFeedNotice)
+    .filter(Boolean)
+    .sort((first, second) => second.createdAt - first.createdAt);
+}
+
+export function writeFeedNotices(notices) {
+  const normalized = Array.isArray(notices)
+    ? notices.map(normalizeFeedNotice).filter(Boolean).sort((first, second) => second.createdAt - first.createdAt).slice(0, 100)
+    : [];
+  const saved = writeJson(STORAGE_KEYS.feedNotices, normalized);
+  if (saved && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(FEED_NOTICES_CHANGED_EVENT, { detail: { notices: normalized } }));
+  }
+  return saved ? normalized : null;
+}
+
+export function readFeedAutoPostState() {
+  return normalizeFeedAutoPostState(readJson(STORAGE_KEYS.feedAutoPost, null));
+}
+
+export function writeFeedAutoPostState(state) {
+  const normalized = normalizeFeedAutoPostState(state);
+  return writeJson(STORAGE_KEYS.feedAutoPost, normalized) ? normalized : null;
+}
+
 
 function normalizeDateValue(value, fallback) {
   const number = finiteNumber(value, NaN);
@@ -724,3 +881,4 @@ export function normalizeBackupPayload(input) {
       : null,
   };
 }
+
