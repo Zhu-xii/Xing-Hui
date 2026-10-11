@@ -293,6 +293,9 @@ export async function scheduleStarReply(
       if (payload) {
         payload.timestamp = Math.max(Date.now(), lastSentAt + 1);
         lastSentAt = payload.timestamp;
+        // 对齐远端新增的 turnId / sequence 字段
+        payload.turnId = userMessage?.turnId || '';
+        payload.sequence = index;
       }
       added.push(addMessage(payload, { persist: true, scroll: true }));
     }

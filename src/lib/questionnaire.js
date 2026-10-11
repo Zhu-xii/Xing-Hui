@@ -158,7 +158,7 @@ async function processQueue() {
         current.questionnaire.delayNotice = true;
         updateMessage(current);
         const { name } = readCharacter();
-        engineCallbacks.addSystemMessage(`${name}选择延迟作答`);
+        engineCallbacks.addSystemMessage(`${name}选择延迟作答`, current.turnId);
       } else {
         current.questionnaire = answerQuestionnaire(current.questionnaire);
         updateMessage(current);

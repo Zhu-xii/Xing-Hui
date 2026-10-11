@@ -23,7 +23,7 @@ import {
   startQuestionnaireEngine,
 } from '../lib/questionnaire.js';
 import { getCurrentChatMood, maybeChangeChatMood } from '../lib/mood.js';
-import { compressImageFile, getAvatarBlob, getStickerBlob, putImageBlob, setBlobImage } from '../lib/media-db.js';
+import { compressImageFile, getAvatarBlob, getStickerBlob, putImageBlob, setBlobImage, detectOrphanStickers, putStickerBlob } from '../lib/media-db.js';
 import { randomChance } from '../lib/random.js';
 import { navigateTo } from '../lib/router.js';
 
@@ -97,9 +97,33 @@ async function sendChatImages(files) {
     if (saved) maybeStarFavorite(saved.id, settings.starFavorite);
   }
 }
+let messageSequenceCounter = 0;
 
 function createMessageId() {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createTurnId() {
+  return `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextSequence() {
+  messageSequenceCounter += 1;
+  return messageSequenceCounter;
+}
+
+function sortMessages(messages) {
+  return messages.slice().sort((a, b) => {
+    const aHas = Boolean(a.turnId);
+    const bHas = Boolean(b.turnId);
+    if (aHas && bHas && a.turnId !== b.turnId) {
+      return a.timestamp - b.timestamp;
+    }
+    if (aHas && !bHas) return 1;
+    if (!aHas && bHas) return -1;
+    if (a.sequence !== b.sequence) return a.sequence - b.sequence;
+    return a.timestamp - b.timestamp;
+  });
 }
 
 function formatMessageTime(timestamp) {
@@ -329,8 +353,12 @@ function createMessageBubble(message) {
       bubble.append(image);
       void getStickerBlob(stickerId)
         .then((blob) => {
-          if (blob) setBlobImage(image, blob);
-          else image.alt = '表情包不可用';
+          if (blob) {
+            setBlobImage(image, blob);
+            image.addEventListener('load', () => scrollToLatestIfAtBottom(), { once: true });
+          } else {
+            image.alt = '表情包不可用';
+          }
         })
         .catch(() => { image.alt = '表情包读取失败'; });
     } else if (/^data:image\//i.test(message.content)) {
@@ -338,6 +366,7 @@ function createMessageBubble(message) {
       image.className = 'message-sticker__image';
       image.src = message.content;
       image.alt = '表情包';
+      image.addEventListener('load', () => scrollToLatestIfAtBottom(), { once: true });
       bubble.append(image);
     } else {
       const icon = document.createElement('span');
@@ -476,6 +505,12 @@ function createEmptyState() {
   return empty;
 }
 
+function isAtBottom() {
+  const list = elements?.messageList;
+  if (!list) return true;
+  return list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+}
+
 function scrollToLatest({ behavior = 'auto' } = {}) {
   const list = elements?.messageList;
   if (!list) return;
@@ -488,6 +523,10 @@ function scrollToLatest({ behavior = 'auto' } = {}) {
 
     list.scrollTop = list.scrollHeight;
   });
+}
+
+function scrollToLatestIfAtBottom() {
+  if (isAtBottom()) scrollToLatest();
 }
 
 function syncVisualViewport() {
@@ -611,6 +650,7 @@ function handleQuestionnaireSubmit(event) {
   }
 
   writeQuestionnaireDraft(draft);
+  const turnId = createTurnId();
   const questionnaire = buildQuestionnaireMessage(draft);
   const message = {
     id: createMessageId(),
@@ -618,6 +658,8 @@ function handleQuestionnaireSubmit(event) {
     type: 'questionnaire',
     content: questionnaire.question,
     timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
     read: false,
     favorited: false,
     starFavorited: false,
@@ -801,7 +843,7 @@ function toggleToolPanel(kind) {
     openQuestionnairePanel();
     return;
   } else if (kind === 'sticker') {
-    void renderStickerPanel();
+    void renderStickerGrid();
   } else {
     panel.textContent = '';
   }
@@ -818,6 +860,198 @@ function appendMessage(message) {
   list.append(createMessageElement(message));
 }
 
+function renderStickerGrid() {
+  const panel = elements?.toolPanel;
+  if (!panel) return;
+  panel.replaceChildren();
+
+  if (!hasManageCategory(STICKER_CATEGORY_NAME)) {
+    const hint = document.createElement('p');
+    hint.className = 'sticker-grid__empty';
+    hint.textContent = '请先在管理页面创建表情包类别';
+    panel.append(hint);
+    return;
+  }
+
+  const stickers = readStickers().filter((sticker) => sticker.enabled !== false);
+  if (!stickers.length) {
+    const hint = document.createElement('p');
+    hint.className = 'sticker-grid__empty';
+    hint.textContent = '还没有表情包，去管理页面添加吧';
+    panel.append(hint);
+    return;
+  }
+
+  const idbStickers = stickers.filter((s) => s.storage === 'indexeddb');
+  void detectOrphanStickers(idbStickers).then((orphanIds) => {
+    if (orphanIds.length > 0 && panel.dataset.kind === 'sticker') {
+      const existing = panel.querySelector('.sticker-grid__repair');
+      if (existing) existing.remove();
+      const repair = document.createElement('div');
+      repair.className = 'sticker-grid__repair';
+      repair.innerHTML = `<p>${orphanIds.length} 张表情包图片丢失，需要重新导入。</p>`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sticker-grid__repair-btn';
+      button.dataset.stickerRepair = '';
+      button.textContent = '重新导入表情包';
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.className = 'sticker-grid__repair-dismiss';
+      dismiss.dataset.stickerRepairDismiss = '';
+      dismiss.textContent = '忽略';
+      repair.append(button, dismiss);
+      panel.prepend(repair);
+    }
+  });
+
+  const grid = document.createElement('div');
+  grid.className = 'sticker-grid';
+
+  stickers.forEach((sticker) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'sticker-grid__item';
+    item.dataset.stickerId = sticker.id;
+    item.dataset.stickerStorage = sticker.storage;
+    item.setAttribute('aria-label', '发送表情包');
+
+    const img = document.createElement('img');
+    img.className = 'sticker-grid__image';
+    img.alt = '表情包';
+    item.append(img);
+
+    if (sticker.storage === 'indexeddb') {
+      void getStickerBlob(sticker.id)
+        .then((blob) => {
+          if (blob) {
+            setBlobImage(img, blob);
+          } else {
+            item.classList.add('is-unavailable');
+            item.disabled = true;
+            img.alt = '不可用';
+          }
+        })
+        .catch(() => {
+          item.classList.add('is-unavailable');
+          item.disabled = true;
+          img.alt = '不可用';
+        });
+    } else if (sticker.image) {
+      img.src = sticker.image;
+    } else {
+      item.classList.add('is-unavailable');
+      item.disabled = true;
+      img.alt = '不可用';
+    }
+
+    grid.append(item);
+  });
+
+  panel.append(grid);
+}
+
+async function handleStickerRepair() {
+  const panel = elements?.toolPanel;
+  if (!panel) return;
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.style.display = 'none';
+  document.body.append(input);
+
+  input.click();
+
+  const files = await new Promise((resolve) => {
+    input.addEventListener('change', () => {
+      const result = Array.from(input.files || []);
+      input.remove();
+      resolve(result);
+    });
+  });
+
+  if (!files.length) return;
+
+  const stickers = readStickers();
+  const idbStickers = stickers.filter((s) => s.storage === 'indexeddb');
+  const orphanIds = await detectOrphanStickers(idbStickers);
+  if (!orphanIds.length) return;
+
+  let repaired = 0;
+  const maxRepairs = Math.min(files.length, orphanIds.length);
+  for (let i = 0; i < maxRepairs; i += 1) {
+    const stickerId = orphanIds[i];
+    const file = files[i];
+    try {
+      const sticker = stickers.find((s) => s.id === stickerId);
+      await putStickerBlob(stickerId, file, {
+        enabled: true,
+        createdAt: sticker?.createdAt || Date.now(),
+      });
+      repaired += 1;
+    } catch {
+      // skip failed repair
+    }
+  }
+
+  if (repaired > 0) renderStickerGrid();
+}
+
+function sendSticker(sticker) {
+  const content = sticker.storage === 'indexeddb' ? `idb:${sticker.id}` : sticker.image;
+  if (!content) return null;
+
+  const turnId = createTurnId();
+  const message = {
+    id: createMessageId(),
+    role: 'user',
+    type: 'sticker',
+    content,
+    timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
+    read: false,
+    favorited: false,
+    starFavorited: false,
+  };
+
+  const saved = addChatMessage(message, { persist: true, scroll: true });
+  if (!saved) return null;
+
+  closeToolPanel();
+  maybeChangeChatMood(0.35);
+  updateChatMood();
+  scheduleLatestScroll();
+
+  window.dispatchEvent(
+    new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
+      detail: { message: saved, storageKey: CHAT_STORAGE_KEY },
+    }),
+  );
+  return saved;
+}
+
+function handleStickerGridClick(event) {
+  const item = event.target.closest('[data-sticker-id]');
+  if (!item || item.disabled) return;
+
+  const stickerId = item.dataset.stickerId;
+  const storage = item.dataset.stickerStorage;
+  const stickers = readStickers();
+  const sticker = stickers.find((s) => s.id === stickerId && s.enabled !== false);
+  if (!sticker) return;
+
+  if (storage === 'indexeddb') {
+    sticker.storage = 'indexeddb';
+  } else {
+    sticker.storage = 'legacy';
+  }
+
+  sendSticker(sticker);
+}
+
 export function getChatMessages() {
   return readStoredMessages();
 }
@@ -826,10 +1060,17 @@ export function addChatMessage(message, { persist = true, scroll = true } = {}) 
   const normalized = normalizeChatMessage(message);
   if (!normalized) return null;
 
+  if (!normalized.sequence) {
+    normalized.sequence = nextSequence();
+  } else {
+    messageSequenceCounter = Math.max(messageSequenceCounter, normalized.sequence);
+  }
+
   const messages = readStoredMessages();
   messages.push(normalized);
+  const sorted = sortMessages(messages);
 
-  if (persist && !writeStoredMessages(messages)) return null;
+  if (persist && !writeStoredMessages(sorted)) return null;
 
   appendMessage(normalized);
   if (scroll) scrollToLatest({ behavior: 'smooth' });
@@ -870,7 +1111,7 @@ export function renderChatMessages() {
   const list = elements?.messageList;
   if (!list) return;
 
-  const messages = readStoredMessages();
+  const messages = sortMessages(readStoredMessages());
   list.replaceChildren();
   activeMessageId = null;
 
@@ -1051,12 +1292,15 @@ function handleSendMessage(event) {
     return;
   }
 
+  const turnId = createTurnId();
   const message = {
     id: createMessageId(),
     role: 'user',
     type: 'text',
     content,
     timestamp: Date.now(),
+    turnId,
+    sequence: nextSequence(),
     read: false,
     favorited: false,
     starFavorited: false,
@@ -1074,7 +1318,6 @@ function handleSendMessage(event) {
   input.focus({ preventScroll: true });
   scheduleLatestScroll();
 
-  // 阶段 4 通过该事件接入随机回复引擎，当前阶段不产生任何回复。
   window.dispatchEvent(
     new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
       detail: { message: savedMessage, storageKey: CHAT_STORAGE_KEY },
@@ -1107,7 +1350,7 @@ function bindEvents() {
   window.addEventListener(SETTINGS_CHANGED_EVENT, () => renderChatMessages());
   window.addEventListener('xinghui:manage-data-changed', () => {
     updateChatMood();
-    if (elements?.toolPanel?.dataset.kind === 'sticker') void renderStickerPanel();
+    if (elements?.toolPanel?.dataset.kind === 'sticker') void renderStickerGrid();
   });
   window.addEventListener(CHARACTER_CHANGED_EVENT, () => {
     updateChatProfileAvatar();
@@ -1130,6 +1373,22 @@ function bindEvents() {
     });
   });
 
+  elements.toolPanel?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-sticker-id]')) {
+      handleStickerGridClick(event);
+    }
+    if (event.target.closest('[data-sticker-repair]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleStickerRepair();
+    }
+    if (event.target.closest('[data-sticker-repair-dismiss]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      elements.toolPanel.querySelector('.sticker-grid__repair')?.remove();
+    }
+  });
+
   elements.questionnaireForm?.addEventListener('submit', handleQuestionnaireSubmit);
   elements.questionnaireType?.addEventListener('change', updateQuestionnairePanelControls);
   elements.questionnaireClear?.addEventListener('click', () => {
@@ -1142,7 +1401,7 @@ function bindEvents() {
     if (!viewRoot?.contains(event.target) || !event.target.closest('.chat-message')) {
       closeActiveMessage();
     }
-    if (!event.target.closest('.chat-composer__tool') && !event.target.closest('.chat-tool-panel, .chat-questionnaire-panel')) {
+    if (!event.target.closest('.chat-composer__tool') && !event.target.closest('.chat-tool-panel, .chat-questionnaire-panel, .sticker-grid')) {
       closeToolPanel();
     }
   });
@@ -1338,7 +1597,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
       renderChatMessages();
       scheduleLatestScroll();
     },
-    addSystemMessage: (content) => {
+    addSystemMessage: (content, turnId) => {
       addChatMessage(
         {
           id: createMessageId(),
@@ -1346,6 +1605,8 @@ export function initChatView(root = document.getElementById('view-chat')) {
           type: 'text',
           content,
           timestamp: Date.now(),
+          turnId,
+          sequence: nextSequence(),
           read: true,
           favorited: false,
           starFavorited: false,

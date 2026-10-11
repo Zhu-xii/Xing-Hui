@@ -598,6 +598,8 @@ export function normalizeChatMessage(message) {
   if (!message || typeof message !== 'object' || Array.isArray(message)) return null;
   const role = message.role === 'star' ? 'star' : message.role === 'system' ? 'system' : 'user';
   const type = ['sticker', 'pat', 'questionnaire', 'image'].includes(message.type) ? message.type : 'text';
+  const turnId = message.turnId ? String(message.turnId) : '';
+  const sequence = Number.isFinite(Number(message.sequence)) ? Number(message.sequence) : 0;
   return {
     id: String(message.id || createId('msg')),
     role,
@@ -609,6 +611,8 @@ export function normalizeChatMessage(message) {
     starFavorited: Boolean(message.starFavorited),
     withdrawn: Boolean(message.withdrawn),
     tag: typeof message.tag === 'string' ? message.tag.trim().slice(0, 20) : '',
+    turnId,
+    sequence,
     questionnaire: type === 'questionnaire'
       ? (() => {
           const questionnaire = normalizeQuestionnaire(message.questionnaire || message.questionnaireData);
@@ -1055,3 +1059,4 @@ export function normalizeBackupPayload(input) {
       : null,
   };
 }
+
