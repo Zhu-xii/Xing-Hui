@@ -530,8 +530,9 @@ function scrollToLatestIfAtBottom() {
 }
 
 function syncVisualViewport() {
-  if (visualViewportFrame !== null) return;
-  if (document.hidden || document.body.dataset.view !== 'chat') return;
+  if (visualViewportFrame !== null) {
+    window.cancelAnimationFrame(visualViewportFrame);
+  }
 
   visualViewportFrame = window.requestAnimationFrame(() => {
     visualViewportFrame = null;

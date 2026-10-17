@@ -1,54 +1,11 @@
-/* ===== 星回设计令牌 · 柔和暖白 =====
-   配色思路：底色带一点暖调（不是纯灰），主色不用纯黑而用暖墨，
-   边框压到几乎看不见，靠「大而淡的阴影」分层——这是柔和感的来源。 */
-
 :root {
-  color-scheme: light;
-
-  /* 主色：暖墨（比 #111 柔，不是死黑） */
-  --color-primary: #2B2A28;
-  --color-primary-deep: #1C1B19;
-  --color-primary-soft: #55524D;
-  --color-accent: #2B2A28;
-  --color-accent-strong: #1C1B19;
-
-  /* 表面与底色：暖白，有纸感 */
-  --color-canvas: #F4F1EC;
-  --color-bg: #F4F1EC;
-  --color-bg-soft: #FAF8F5;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #FDFBF8;
-  --color-app-top: #FBF9F6;
-  --color-app-mid: #F7F4EF;
-  --color-app-bottom: #F1EDE7;
-
-  /* 边框：几乎不可见，只用来看出层级 */
-  --color-border: #EAE5DD;
-  --color-border-soft: #F1EDE7;
-  --border-hairline: rgba(43, 42, 40, 0.06);
-  --border-hairline-strong: rgba(43, 42, 40, 0.1);
-
-  /* 文字 */
-  --color-text: #2B2A28;
-  --color-text-muted: #8A857C;
-  --color-text-faint: #B3ADA3;
-  --color-button-text: #FFFFFF;
-
-  /* 辅助色 */
-  --color-silver: #E3DED5;
-  --color-silver-soft: #F3F0EA;
-  --color-danger: #B4553F;
-
-  /* 阴影：大、淡、暖。柔和的关键 */
-  --shadow-soft: 0 2px 10px rgba(60, 50, 38, 0.04);
-  --shadow-card: 0 2px 14px rgba(60, 50, 38, 0.05), 0 12px 40px rgba(60, 50, 38, 0.04);
-  --shadow-float: 0 4px 12px rgba(60, 50, 38, 0.06), 0 18px 50px rgba(60, 50, 38, 0.08);
-
-  /* 导航与气泡 */
-  --nav-bg: rgba(252, 250, 247, 0.86);
-  --bubble-color: #FFFFFF;
-  --bubble-text: #2B2A28;
-  --bubble-border: #EFEAE3;
+  /* 单一浅色方案：墨白纸感（对齐参考站 mochi 的无彩度配色） */
+  --color-primary: #111111;
+  --color-primary-deep: #000000;
+  --color-primary-soft: #4A4A4A;
+  --color-white: #FFFFFF;
+  --color-silver: #D6D6D6;
+  --color-silver-soft: #F2F2F2;
 
   /* 间距基准 8px */
   --space-1: 8px;
@@ -60,11 +17,18 @@
   --space-block-md: 32px;
   --space-block-lg: 48px;
 
-  /* 圆角：整体放大一档，圆角越大越软 */
-  --radius-bubble: 20px;
-  --radius-button: 14px;
-  --radius-card: 22px;
+  /* 圆角 */
+  --radius-bubble: 18px;
+  --radius-button: 12px;
+  --radius-card: 20px;
   --radius-pill: 999px;
+
+  /* 细边框 + 轻阴影：头像 / 卡片 / 按钮统一风格 */
+  --border-hairline: rgba(17, 17, 17, 0.08);
+  --border-hairline-strong: rgba(17, 17, 17, 0.14);
+  --shadow-soft: 0 6px 18px rgba(17, 17, 17, 0.06);
+  --shadow-card: 0 8px 24px rgba(17, 17, 17, 0.05);
+  --shadow-float: 0 12px 30px rgba(17, 17, 17, 0.1);
 
   /* 字体：全部使用本机系统字体，离线不发起字体请求 */
   --font-title: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', sans-serif;
@@ -72,9 +36,4 @@
   --font-body: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
 
   --content-max: 720px;
-
-  /* 统一的缓动曲线：柔和感有一半来自「慢一点、软一点」的动效 */
-  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --dur-fast: 0.18s;
-  --dur-base: 0.26s;
 }

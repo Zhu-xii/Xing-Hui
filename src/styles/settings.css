@@ -38,7 +38,7 @@
   border: 1px solid var(--color-border);
   border-radius: 20px;
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  box-shadow: 0 10px 28px rgba(60, 50, 38, 0.055);
+  box-shadow: 0 10px 28px rgba(30, 58, 95, 0.055);
 }
 
 .settings-card__heading {
@@ -103,7 +103,7 @@
   border-color: var(--color-border);
   background: var(--color-surface);
   color: var(--color-primary);
-  box-shadow: 0 6px 16px rgba(60, 50, 38, 0.08);
+  box-shadow: 0 6px 16px rgba(43, 95, 143, 0.08);
 }
 
 .settings-field {
@@ -249,7 +249,7 @@
   height: 21px;
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(60, 50, 38, 0.2);
+  box-shadow: 0 2px 6px rgba(30, 58, 95, 0.2);
   transition: transform 0.18s ease;
 }
 
@@ -473,10 +473,10 @@
   flex: 0 0 auto;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(60, 50, 38, 0.16);
+  border: 1px solid rgba(43, 95, 143, 0.16);
   border-radius: 50%;
   background: var(--swatch-color);
-  box-shadow: 0 4px 10px rgba(60, 50, 38, 0.08);
+  box-shadow: 0 4px 10px rgba(43, 95, 143, 0.08);
   transition: transform 0.16s ease, outline-color 0.16s ease;
 }
 
@@ -534,7 +534,7 @@
   border-radius: 12px;
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 14px 34px rgba(60, 50, 38, 0.18);
+  box-shadow: 0 14px 34px rgba(30, 58, 95, 0.18);
   font-size: 0.75rem;
   line-height: 1.45;
   text-align: center;

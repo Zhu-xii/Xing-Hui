@@ -19,6 +19,8 @@ import { initPromptEngine } from './lib/prompt-engine.js';
 import { getAvatarBlob, listStickerRecords, migrateLegacyMedia, setBlobImage } from './lib/media-db.js';
 import { initSettingsView, onSettingsViewEnter } from './views/settings.js';
 import { initBackupView, onBackupViewEnter } from './views/backup.js';
+import './styles/polish.css';
+import './styles/mochi-theme.css';
 import {
   BACKUP_STATUS_CHANGED_EVENT,
   CARD_STORAGE_KEY,
@@ -218,7 +220,7 @@ function render() {
   document.title = `${TITLES[view] || '星回'} · 星回`;
 
   if (view === 'home') {
-    startClock();
+    updateClock();
     renderHomeStarAvatar();
     renderHomeStatus();
     renderBackupReminder();
@@ -323,31 +325,10 @@ function updateClock() {
   const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
   const dateText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
 
-  // 只在文本真的变了才写 DOM。秒级定时器每秒都赋值会让浏览器每秒跑一次布局，
-  // 而分钟级的时钟其实每分钟才需要更新一次。
-  const nextTime = `${hh}:${mm}`;
-  if (timeEl.textContent !== nextTime) timeEl.textContent = nextTime;
-  if (dateEl.textContent !== dateText) dateEl.textContent = dateText;
+  timeEl.textContent = `${hh}:${mm}`;
+  dateEl.textContent = dateText;
   renderDailyGreeting(now);
 }
-
-/* 时钟只在首页可见时才需要走。离开首页、或标签页进后台时直接停表，
-   这就是「挂着不管也一直掉电/掉帧」的主要原因。 */
-let clockTimer = null;
-
-function tickClock() {
-  if (document.hidden || currentView() !== 'home') return;
-  updateClock();
-}
-
-function startClock() {
-  tickClock();
-  if (clockTimer === null) clockTimer = window.setInterval(tickClock, 1000);
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && currentView() === 'home') updateClock();
-});
 
 document.getElementById('backButton')?.addEventListener('click', () => {
   navigateTo('home');
@@ -428,5 +409,5 @@ renderHomeStarAvatar();
 renderHomeStatus();
 renderBackupReminder();
 render();
-startClock();
+setInterval(updateClock, 1000);
 
