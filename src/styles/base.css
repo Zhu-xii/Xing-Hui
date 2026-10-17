@@ -1,3 +1,5 @@
+/* 基础层：排版、重置、仅与「阅读感」有关的全局规则 */
+
 *,
 *::before,
 *::after {
@@ -27,17 +29,15 @@ html[data-font-size='large'] {
 body {
   font-family: var(--font-body);
   font-size: 16px;
-  line-height: 1.6;
+  /* 行高放大到 1.7：放松的行间距是柔和感的第一要素 */
+  line-height: 1.7;
   color: var(--color-text);
   background-color: var(--color-canvas);
-  background-image:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.72), transparent 26%),
-    radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.5), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(168, 198, 229, 0.34), transparent 46%);
-  background-attachment: fixed;
   min-height: 100dvh;
   max-width: 100%;
   overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -45,9 +45,11 @@ h2,
 h3,
 h4 {
   font-family: var(--font-title);
+  /* 标题字重降到 600，去掉 700 的压迫感 */
   font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  line-height: 1.3;
+  /* 轻微负字距让标题更「收」，但不至于锐利 */
+  letter-spacing: -0.005em;
 }
 
 a {
@@ -93,4 +95,16 @@ img {
 
 [hidden] {
   display: none !important;
+}
+
+/* 尊重系统的「减少动效」设置。柔和不等于晃，卡顿有时就是动效在抢帧。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,28 +1,5 @@
+/* 主题令牌的唯一来源是 tokens.css，这里不再重复定义色值，
+   避免两处色值不一致导致覆盖顺序打架。 */
 :root {
   color-scheme: light;
-  --color-primary: #111111;
-  --color-primary-deep: #000000;
-  --color-primary-soft: #4A4A4A;
-  --color-accent: #111111;
-  --color-silver: #D6D6D6;
-  --color-accent-strong: #000000;
-  --color-canvas: #E9E9E9;
-  --color-bg: #E9E9E9;
-  --color-bg-soft: #F3F3F3;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #FAFAFA;
-  --color-border: #E2E2E2;
-  --color-border-soft: #EFEFEF;
-  --color-text: #111111;
-  --color-text-muted: #7A7A7A;
-  --color-text-faint: #A3A3A3;
-  --color-button-text: #FFFFFF;
-  --color-app-top: #FDFDFD;
-  --color-app-mid: #F4F4F4;
-  --color-app-bottom: #E9E9E9;
-  --nav-bg: rgba(255, 255, 255, 0.94);
-  --bubble-color: #FFFFFF;
-  --bubble-text: #111111;
-  --bubble-border: #E6E6E6;
-  --color-danger: #A32D2D;
 }

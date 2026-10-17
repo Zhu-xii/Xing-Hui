@@ -38,7 +38,7 @@
   border: 1px solid var(--color-border);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 8px 22px rgba(43, 95, 143, 0.05);
+  box-shadow: 0 8px 22px rgba(60, 50, 38, 0.05);
 }
 
 .questionnaire-section-heading {
@@ -85,7 +85,7 @@
 }
 
 .questionnaire-button--primary {
-  box-shadow: 0 5px 13px rgba(43, 95, 143, 0.08);
+  box-shadow: 0 5px 13px rgba(60, 50, 38, 0.08);
 }
 
 .questionnaire-text-button {
@@ -319,7 +319,7 @@
 .questionnaire-filters button.is-active {
   background: var(--color-surface);
   color: var(--color-primary);
-  box-shadow: 0 3px 9px rgba(43, 95, 143, 0.08);
+  box-shadow: 0 3px 9px rgba(60, 50, 38, 0.08);
 }
 
 .history-list {

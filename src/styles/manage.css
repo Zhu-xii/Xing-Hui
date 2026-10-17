@@ -68,7 +68,7 @@
   border-color: var(--color-border);
   background: var(--color-surface);
   color: var(--color-primary);
-  box-shadow: 0 7px 16px rgba(43, 95, 143, 0.08);
+  box-shadow: 0 7px 16px rgba(60, 50, 38, 0.08);
 }
 
 .manage-button--primary:hover:not(:disabled) {
@@ -102,7 +102,7 @@
 
 .manage-panel {
   padding: 15px;
-  border: 1px solid rgba(30, 58, 95, 0.09);
+  border: 1px solid rgba(60, 50, 38, 0.09);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 8px 22px rgba(41, 67, 94, 0.045);
@@ -202,14 +202,14 @@
   padding: 0 4px;
   place-items: center;
   border-radius: 999px;
-  background: rgba(30, 58, 95, 0.07);
+  background: rgba(60, 50, 38, 0.07);
   color: var(--color-text-faint);
   font-size: 0.6rem;
   font-variant-numeric: tabular-nums;
 }
 
 .manage-group.is-active .manage-group__count {
-  background: rgba(30, 58, 95, 0.11);
+  background: rgba(60, 50, 38, 0.11);
   color: var(--color-primary-soft);
 }
 
@@ -234,7 +234,7 @@
 }
 
 .manage-group__action:hover {
-  background: rgba(30, 58, 95, 0.08);
+  background: rgba(60, 50, 38, 0.08);
   color: var(--color-primary);
 }
 
@@ -250,7 +250,7 @@
   gap: 8px;
   margin-top: 13px;
   padding-top: 11px;
-  border-top: 1px solid rgba(30, 58, 95, 0.065);
+  border-top: 1px solid rgba(60, 50, 38, 0.065);
 }
 
 .manage-select-all {
@@ -295,7 +295,7 @@
 .manage-checkbox input:indeterminate + span {
   border-color: var(--color-primary);
   background: var(--color-primary);
-  box-shadow: 0 2px 6px rgba(30, 58, 95, 0.12);
+  box-shadow: 0 2px 6px rgba(60, 50, 38, 0.12);
 }
 
 .manage-checkbox input:checked + span::after {
@@ -598,9 +598,7 @@
 .manage-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(16, 38, 61, 0.28);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(43, 40, 36, 0.22);
 }
 
 .manage-modal__panel {
@@ -771,7 +769,7 @@
   height: 14px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(30, 58, 95, 0.2);
+  box-shadow: 0 1px 3px rgba(60, 50, 38, 0.2);
   transition: transform 0.16s ease;
 }
 
@@ -808,11 +806,11 @@
   z-index: 120;
   max-width: min(300px, calc(100vw - 36px));
   padding: 9px 12px;
-  border: 1px solid rgba(30, 58, 95, 0.08);
+  border: 1px solid rgba(60, 50, 38, 0.08);
   border-radius: 11px;
-  background: rgba(30, 58, 95, 0.94);
+  background: rgba(60, 50, 38, 0.94);
   color: #fff;
-  box-shadow: 0 10px 26px rgba(30, 58, 95, 0.2);
+  box-shadow: 0 10px 26px rgba(60, 50, 38, 0.2);
   font-size: 0.7rem;
   line-height: 1.45;
 }
