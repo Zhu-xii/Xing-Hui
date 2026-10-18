@@ -185,8 +185,9 @@ button svg,
 }
 
 .chat-message--user .message-bubble__tag {
-  background: color-mix(in srgb, currentColor 16%, transparent) !important;
-  border-color: color-mix(in srgb, currentColor 30%, transparent) !important;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
   color: inherit !important;
 }
 

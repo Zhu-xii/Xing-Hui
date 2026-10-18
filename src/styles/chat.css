@@ -314,6 +314,33 @@ body[data-view='chat'] .views {
   user-select: none;
 }
 
+.message-bubble--tagged {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.message-bubble__text {
+  white-space: pre-wrap;
+}
+
+.message-bubble__tag {
+  display: block;
+  align-self: flex-start;
+  color: inherit;
+  font-family: var(--font-small-label);
+  font-size: 0.56rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  opacity: 0.56;
+}
+
+.chat-message--user .message-bubble__tag {
+  align-self: flex-end;
+}
+
 .chat-message .message-bubble:focus-visible {
   box-shadow: 0 0 0 2px rgba(43, 95, 143, 0.28);
 }

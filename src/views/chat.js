@@ -621,14 +621,13 @@ function createMessageBubble(message, context = createChatRenderContext()) {
     bubble.classList.add('message-bubble--text');
     if (message.tag) {
       bubble.classList.add('message-bubble--tagged');
-      const tag = document.createElement('span');
-      tag.className = 'message-bubble__tag';
-      tag.textContent = message.tag;
-      bubble.append(tag);
       const text = document.createElement('span');
       text.className = 'message-bubble__text';
       text.textContent = message.content || ' ';
-      bubble.append(text);
+      const tag = document.createElement('span');
+      tag.className = 'message-bubble__tag';
+      tag.textContent = message.tag === '拼接字卡' ? '字卡拼接' : message.tag;
+      bubble.append(text, tag);
     } else {
       bubble.textContent = message.content || ' ';
     }

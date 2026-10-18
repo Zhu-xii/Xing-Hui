@@ -1,7 +1,7 @@
 import { pickRandom } from './random.js';
 
 // 字卡来源标签（聊天气泡上的小 chip）
-export const SPELL_CARD_TAG = '拼接字卡';
+export const SPELL_CARD_TAG = '字卡拼接';
 export const MULTI_REPLY_TAG = '字卡连发';
 
 // 内置连接符：逗号、句号、顿号、空格、省略号、感叹号、问号、破折号

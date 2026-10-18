@@ -31,9 +31,10 @@
   --shadow-float: 0 12px 30px rgba(17, 17, 17, 0.1);
 
   /* 字体：全部使用本机系统字体，离线不发起字体请求 */
-  --font-title: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', sans-serif;
-  --font-round: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', sans-serif;
-  --font-body: 'PingFang SC', 'Microsoft YaHei', -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-title: 'LXGW WenKai', 'LXGW WenKai TC', 'LXGW WenKai Screen', '霞鹜文楷', 'Kaiti SC', 'STKaiti', 'KaiTi', 'Noto Serif SC', serif;
+  --font-round: 'LXGW WenKai', 'LXGW WenKai TC', 'LXGW WenKai Screen', '霞鹜文楷', 'Kaiti SC', 'STKaiti', 'KaiTi', 'Noto Serif SC', serif;
+  --font-body: 'LXGW WenKai', 'LXGW WenKai TC', 'LXGW WenKai Screen', '霞鹜文楷', 'Kaiti SC', 'STKaiti', 'KaiTi', 'Noto Serif SC', serif;
+  --font-small-label: 'GenJyuu Gothic', 'GenJyuuGothic', 'Gen Jyuu Gothic', '源柔黑', 'Yu Gothic', 'YouYuan', 'Microsoft YaHei', sans-serif;
 
   --content-max: 720px;
 }
