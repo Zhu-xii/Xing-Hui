@@ -16,6 +16,7 @@
       <div class="status-bar" aria-hidden="true">
         <span class="status-bar__brand">星回</span>
         <span class="status-bar__icons">
+          <time class="status-bar__time" id="clockTime" aria-live="polite">--:--</time>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18v-1M7 18v-3M10 18v-5M13 18v-3M16 18v-7M19 18V7"/></svg>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a9 9 0 0 1 16 0"/><path d="M7 13a5 5 0 0 1 10 0"/><path d="M10.5 16.5h3"/></svg>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="17" height="9" rx="2"/><path d="M21 11v3"/><path d="M5 11.5h7"/></svg>
@@ -30,15 +31,19 @@
         <!-- 首页 -->
         <section class="view home-page is-active" id="view-home" data-view="home">
           <header class="hero">
-            <div class="clock" aria-live="polite">
-              <p class="clock-time" id="clockTime">--:--</p>
-              <p class="clock-date" id="clockDate">····</p>
+            <div class="home-relationship">
+              <div class="home-avatar home-star-avatar" id="homeStarAvatar" data-pat-avatar role="button" tabindex="0" aria-label="星回头像，长按拍一拍"><span>星</span></div>
+              <div class="home-avatar home-user-avatar" id="homeUserAvatar" role="img" aria-label="我的头像"><span>我</span></div>
             </div>
-            <div class="home-star-avatar" id="homeStarAvatar" data-pat-avatar role="button" tabindex="0" aria-label="星回头像，长按拍一拍"><span>星</span></div>
-            <p class="greeting" id="greeting">你好，星回</p>
-            <div class="home-status" id="homeStatus">
-              <span class="home-status__label">今日状态</span>
-              <strong id="homeStatusText">还没有设置状态</strong>
+            <div class="home-notes">
+              <section class="home-note home-note--words" aria-labelledby="homeGreetingLabel">
+                <span class="home-note__label" id="homeGreetingLabel">想说的话</span>
+                <p class="greeting" id="greeting">你好，星回</p>
+              </section>
+              <section class="home-note home-status" id="homeStatus" aria-labelledby="homeStatusLabel">
+                <span class="home-status__label" id="homeStatusLabel">今日状态</span>
+                <strong id="homeStatusText">还没有设置状态</strong>
+              </section>
             </div>
           </header>
 
@@ -73,14 +78,8 @@
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.5l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z"/></svg></span>
               <span class="entry-label">收藏</span>
             </a>
-            <a class="entry-card" href="#/manage" data-route="manage">
-              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M8.5 12.5h7"/></svg></span>
-              <span class="entry-label">管理</span>
-            </a>
-            <a class="entry-card" href="#/settings" data-route="settings">
-              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.36.95A7 7 0 0 0 14.2 5.4L14 3h-4l-.2 2.4a7 7 0 0 0-2.3 1.14L5.1 5.6l-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .47.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95a7 7 0 0 0 2.3 1.14L10 21h4l.2-2.4a7 7 0 0 0 2.3-1.14l2.36.95 2-3.46-2-1.55A7 7 0 0 0 19 12z"/></svg></span>
-              <span class="entry-label">设置</span>
-            </a>
+            <span class="entry-card-placeholder" aria-hidden="true"></span>
+            <span class="entry-card-placeholder" aria-hidden="true"></span>
             <a class="entry-card" href="#/backup" data-route="backup" hidden>
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9l4-4 4 4"/><path d="M4 13v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4"/></svg></span>
               <span class="entry-label">数据备份</span>
@@ -110,9 +109,9 @@
         <!-- 朋友圈 -->
         <section class="view view--back" id="view-feed" data-view="feed"></section>
 
-        <!-- 管理 -->
+        <!-- 字卡 -->
         <section class="view" id="view-manage" data-view="manage">
-          <h2 class="view-title">管理</h2>
+          <h2 class="view-title">字卡</h2>
           <p class="view-placeholder">字卡、表情包与拍一拍管理将在此处实现。</p>
         </section>
 
@@ -154,7 +153,7 @@
         </a>
         <a class="nav-item" href="#/manage" data-route="manage">
           <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.5A2 2 0 0 1 5.5 4.5h4l2 2.5h7A2 2 0 0 1 20.5 9v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></span>
-          <span class="nav-label">管理</span>
+          <span class="nav-label">字卡</span>
         </a>
         <a class="nav-item" href="#/settings" data-route="settings">
           <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><circle cx="9" cy="7" r="2.2"/><path d="M4 17h16"/><circle cx="15" cy="17" r="2.2"/></svg></span>

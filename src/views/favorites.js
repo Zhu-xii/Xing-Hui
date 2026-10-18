@@ -308,16 +308,18 @@ function handleFavoritesClick(event) {
   const type = button.dataset.favoriteType;
   if (toggleFavorite(id, column, type)) {
     showFavoritesToast('已取消收藏');
-    renderFavorites();
   }
 }
 
 function bindEvents() {
   if (eventsBound || typeof window === 'undefined') return;
 
-  window.addEventListener(CHAT_CHANGED_EVENT, renderFavorites);
-  window.addEventListener(FEED_CHANGED_EVENT, renderFavorites);
-  window.addEventListener(DATA_RESTORED_EVENT, renderFavorites);
+  const renderIfActive = () => {
+    if (document.body.dataset.view === 'favorites') renderFavorites();
+  };
+  window.addEventListener(CHAT_CHANGED_EVENT, renderIfActive);
+  window.addEventListener(FEED_CHANGED_EVENT, renderIfActive);
+  window.addEventListener(DATA_RESTORED_EVENT, renderIfActive);
   viewRoot?.addEventListener('click', handleFavoritesClick);
   eventsBound = true;
 }

@@ -26,10 +26,17 @@ li {
 
 body,
 .app,
-.chat-shell,
 .chat-view {
   background-image: none !important;
   background-color: var(--color-bg) !important;
+}
+
+.chat-shell {
+  background-color: var(--chat-background-color, var(--color-bg)) !important;
+  background-image: var(--chat-background-image, none) !important;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
 }
 
 .home-board,

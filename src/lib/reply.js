@@ -14,6 +14,7 @@ import {
   updateSettings,
 } from './storage.js';
 import {
+  CALL_CHECK_EVENT,
   addChatMessage,
   markChatMessageRead,
   setStarTyping,
@@ -87,7 +88,10 @@ export function getAvailableCards(groupId, cards = readCards()) {
   return sourceCards
     .filter((card) => card && typeof card === 'object')
     .filter((card) => !card.disabled)
-    .filter((card) => String(card.groupId || '') === targetGroupId)
+    .filter((card) => (
+      targetGroupId === DEFAULT_GROUP_ID
+      || String(card.groupId || '') === targetGroupId
+    ))
     .map((card) => ({ ...card, content: typeof card.content === 'string' ? card.content.trim() : '' }))
     .filter((card) => card.content);
 }
@@ -300,6 +304,9 @@ export async function scheduleStarReply(
       added.push(addMessage(payload, { persist: true, scroll: true }));
     }
 
+    if (added.length && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(CALL_CHECK_EVENT, { detail: { messages: added } }));
+    }
     return added.length === 1 ? added[0] : added;
   } finally {
     hideTyping();

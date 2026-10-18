@@ -3,7 +3,6 @@ import {
   QUESTIONNAIRE_CATEGORY_NAME,
   hasManageCategory,
   readQuestionnaireAnswers,
-  readCharacter,
   readChatMessages,
   writeChatMessages,
 } from './storage.js';
@@ -37,9 +36,8 @@ export function buildQuestionnaireMessage(form) {
     question,
     options,
     type,
-    thinkMin: Math.min(60, Math.max(1, Number(form.thinkMin) || 10)),
+    thinkMin: Math.min(60, Math.max(1, Number(form.thinkMin) || 5)),
     thinkMax: Math.min(60, Math.max(1, Number(form.thinkMax) || 15)),
-    answerNow: Math.min(100, Math.max(0, Number(form.answerNow) || 60)),
     multiMin,
     multiMax,
     status: 'pending',
@@ -138,7 +136,7 @@ async function processQueue() {
       if (current.questionnaire.status === 'pending') {
         current.questionnaire.status = 'thinking';
         updateMessage(current);
-        engineCallbacks.onMessageChanged();
+        engineCallbacks.onMessageChanged(current);
       }
 
       engineCallbacks.setThinking(true);
@@ -153,19 +151,11 @@ async function processQueue() {
       if (!current || current.withdrawn) continue;
       if (!current.questionnaire || !ACTIVE_STATUSES.has(current.questionnaire.status)) continue;
 
-      if (Math.random() * 100 >= current.questionnaire.answerNow) {
-        current.questionnaire.status = 'delayed';
-        current.questionnaire.delayNotice = true;
-        updateMessage(current);
-        const { name } = readCharacter();
-        engineCallbacks.addSystemMessage(`${name}选择延迟作答`, current.turnId);
-      } else {
-        current.questionnaire = answerQuestionnaire(current.questionnaire);
-        updateMessage(current);
-      }
+      current.questionnaire = answerQuestionnaire(current.questionnaire);
+      updateMessage(current);
 
       engineCallbacks.setThinking(false);
-      engineCallbacks.onMessageChanged();
+      engineCallbacks.onMessageChanged(current);
     }
   } finally {
     running = false;

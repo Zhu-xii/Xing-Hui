@@ -58,7 +58,7 @@ const TITLES = {
   questionnaire: '问卷',
   feed: '朋友圈',
   period: '经期记录',
-  manage: '管理',
+  manage: '字卡',
   favorites: '收藏',
   settings: '设置',
   backup: '数据备份',
@@ -66,6 +66,25 @@ const TITLES = {
 };
 
 let homePageIndex = 0;
+
+const initializedViews = new Set();
+const lazyViewInitializers = {
+  questionnaire: initQuestionnaireView,
+  period: initPeriodView,
+  manage: initManageView,
+  favorites: initFavoritesView,
+  settings: initSettingsView,
+  backup: initBackupView,
+};
+
+function ensureViewInitialized(view) {
+  if (initializedViews.has(view)) return false;
+  const initializer = lazyViewInitializers[view];
+  if (!initializer) return false;
+  const initialized = Boolean(initializer());
+  if (initialized) initializedViews.add(view);
+  return initialized;
+}
 
 // 按底色亮度自动取高对比文字色，避免浅底配白字看不清。
 function bubbleInk(hex) {
@@ -131,6 +150,43 @@ async function renderHomeStarAvatar() {
 
   image.src = avatar;
 }
+
+async function renderHomeUserAvatar() {
+  const container = document.getElementById('homeUserAvatar');
+  if (!container) return;
+  const { userAvatar, userName } = readSettings();
+  const displayName = String(userName || '我').trim().slice(0, 20) || '我';
+  container.replaceChildren();
+  container.setAttribute('aria-label', displayName + '的头像');
+
+  if (!userAvatar) {
+    const fallback = document.createElement('span');
+    fallback.textContent = displayName.slice(0, 1);
+    container.append(fallback);
+    return;
+  }
+
+  const image = document.createElement('img');
+  image.alt = displayName + '头像';
+  container.append(image);
+
+  if (userAvatar === 'idb:user') {
+    try {
+      const blob = await getAvatarBlob('user');
+      if (!blob) throw new Error('avatar-missing');
+      setBlobImage(image, blob);
+    } catch {
+      image.remove();
+      const fallback = document.createElement('span');
+      fallback.textContent = displayName.slice(0, 1);
+      container.append(fallback);
+    }
+    return;
+  }
+
+  image.src = userAvatar;
+}
+
 function renderHomeStatus() {
   const container = document.getElementById('homeStatus');
   const label = document.getElementById('homeStatusText');
@@ -175,14 +231,14 @@ function renderHomePage() {
   const status = document.getElementById('homePageStatus');
   if (!grid || !pagination || !prevButton || !nextButton || !status) return;
 
-  const cards = Array.from(grid.querySelectorAll('.entry-card'));
-  const totalPages = Math.max(1, Math.ceil(cards.length / HOME_PAGE_SIZE));
+  const slots = Array.from(grid.querySelectorAll('.entry-card, .entry-card-placeholder'));
+  const totalPages = Math.max(1, Math.ceil(slots.length / HOME_PAGE_SIZE));
   homePageIndex = Math.min(Math.max(homePageIndex, 0), totalPages - 1);
 
   const start = homePageIndex * HOME_PAGE_SIZE;
   const end = start + HOME_PAGE_SIZE;
-  cards.forEach((card, index) => {
-    card.hidden = index < start || index >= end;
+  slots.forEach((slot, index) => {
+    slot.hidden = index < start || index >= end;
   });
 
   pagination.hidden = totalPages <= 1;
@@ -195,6 +251,7 @@ function renderHomePage() {
 
 function render() {
   const view = currentView();
+  const justInitialized = ensureViewInitialized(view);
 
   document.querySelectorAll('.view').forEach((el) => {
     el.classList.toggle('is-active', el.dataset.view === view);
@@ -225,14 +282,16 @@ function render() {
     renderHomeStatus();
     renderBackupReminder();
   }
-  if (view === 'chat') onChatViewEnter();
-  if (view === 'questionnaire') onQuestionnaireViewEnter();
-  if (view === 'feed') onFeedViewEnter();
-  if (view === 'period') onPeriodViewEnter();
-  if (view === 'favorites') onFavoritesViewEnter();
-  if (view === 'manage') onManageViewEnter();
-  if (view === 'settings') onSettingsViewEnter();
-  if (view === 'backup') onBackupViewEnter();
+  if (!justInitialized) {
+    if (view === 'chat') onChatViewEnter();
+    if (view === 'questionnaire') onQuestionnaireViewEnter();
+    if (view === 'feed') onFeedViewEnter();
+    if (view === 'period') onPeriodViewEnter();
+    if (view === 'favorites') onFavoritesViewEnter();
+    if (view === 'manage') onManageViewEnter();
+    if (view === 'settings') onSettingsViewEnter();
+    if (view === 'backup') onBackupViewEnter();
+  }
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
@@ -316,17 +375,14 @@ function renderDailyGreeting(now = new Date()) {
 }
 function updateClock() {
   const timeEl = document.getElementById('clockTime');
-  const dateEl = document.getElementById('clockDate');
-  if (!timeEl || !dateEl) return;
-
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
-  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-  const dateText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
 
-  timeEl.textContent = `${hh}:${mm}`;
-  dateEl.textContent = dateText;
+  if (timeEl) {
+    timeEl.textContent = `${hh}:${mm}`;
+    timeEl.dateTime = now.toISOString();
+  }
   renderDailyGreeting(now);
 }
 
@@ -342,7 +398,7 @@ document.getElementById('homePrevPage')?.addEventListener('click', () => {
 
 document.getElementById('homeNextPage')?.addEventListener('click', () => {
   const grid = document.getElementById('homeEntryGrid');
-  const totalPages = Math.max(1, Math.ceil((grid?.querySelectorAll('.entry-card').length || 0) / HOME_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil((grid?.querySelectorAll('.entry-card, .entry-card-placeholder').length || 0) / HOME_PAGE_SIZE));
   if (homePageIndex >= totalPages - 1) return;
   homePageIndex += 1;
   renderHomePage();
@@ -353,13 +409,17 @@ window.addEventListener('xinghui:manage-data-changed', () => {
   renderDailyGreeting();
   renderHomeStatus();
 });
-window.addEventListener(SETTINGS_CHANGED_EVENT, (event) => applyAppearance(event.detail || readSettings()));
+window.addEventListener(SETTINGS_CHANGED_EVENT, (event) => {
+  applyAppearance(event.detail || readSettings());
+  void renderHomeUserAvatar();
+});
 window.addEventListener(CHARACTER_CHANGED_EVENT, () => renderHomeStarAvatar());
 window.addEventListener(BACKUP_STATUS_CHANGED_EVENT, () => renderBackupReminder());
 window.addEventListener(DATA_RESTORED_EVENT, () => {
   applyAppearance(readSettings());
   renderDailyGreeting();
   renderHomeStarAvatar();
+  void renderHomeUserAvatar();
   renderHomeStatus();
   renderBackupReminder();
 });
@@ -395,17 +455,15 @@ if (!window.location.hash) {
 }
 renderHomePage();
 initChatView();
+initializedViews.add('chat');
 initReplyEngine();
-initQuestionnaireView();
-initPeriodView();
 initFeedView();
+initializedViews.add('feed');
 initPromptEngine();
-initManageView();
-initFavoritesView();
 initPatView();
-initSettingsView();
-initBackupView();
+initializedViews.add('pat');
 renderHomeStarAvatar();
+void renderHomeUserAvatar();
 renderHomeStatus();
 renderBackupReminder();
 render();

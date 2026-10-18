@@ -286,16 +286,6 @@ function syncState() {
     if (!visibleIds.has(id)) state.selectedCardIds.delete(id);
   });
 
-  writeStoredArray(GROUP_STORAGE_KEY, state.groups);
-  writeStoredArray(CARD_STORAGE_KEY, state.cards);
-  writeStoredArray(STICKER_STORAGE_KEY, state.stickers);
-  writeStoredArray(IMAGE_STORAGE_KEY, state.images);
-  writeStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY, state.questionnaireAnswers);
-  writeStoredArray(STATUS_STORAGE_KEY, state.statuses);
-  writeStoredArray(STORAGE_MOOD_KEY, state.moods);
-  writeStoredArray(STORAGE_ROAST_KEY, state.roasts);
-  writeStoredArray(PAT_CARD_STORAGE_KEY, state.patCards);
-  writeCurrentGroupId();
 }
 
 function escapeHtml(value) {
@@ -312,6 +302,7 @@ function groupById(groupId) {
 }
 
 function cardsInGroup(groupId) {
+  if (groupId === DEFAULT_GROUP_ID) return state.cards;
   return state.cards.filter((card) => card.groupId === groupId);
 }
 
@@ -800,7 +791,7 @@ function deleteGroup(groupId) {
         ? `该类别内的 ${itemCount} 项内容会保留，重新创建同名类别后可以继续使用。`
         : '删除类别后，依赖它的功能会提示“请先重建该类别”。'
       : itemCount > 0
-        ? `分组内的 ${itemCount} 张字卡会移入“默认分组”，不会删除。`
+        ? `分组内的 ${itemCount} 张字卡会保留在“默认分组”中，不会删除。`
         : '该分组没有字卡，删除后无法恢复。',
     confirmLabel: category ? '删除类别' : '删除分组',
     danger: true,
@@ -818,7 +809,7 @@ function deleteGroup(groupId) {
       setToast(category
         ? `类别“${group.name}”已删除，内容仍保留`
         : itemCount > 0
-          ? `分组已删除，${itemCount} 张字卡已移入默认分组`
+          ? `分组已删除，${itemCount} 张字卡已保留在默认分组`
           : '分组已删除');
       return true;
     },
@@ -997,6 +988,7 @@ function cardEditor(cardId = '') {
         <span>所属分组</span>
         <select id="manageCardGroup">${groupOptionsHtml(initialGroupId)}</select>
       </label>
+      <p class="manage-field__hint">默认分组会显示所有分组的字卡；修改所属分组只会改变分类，不会从默认分组移除。</p>
       <label class="manage-switch-field">
         <input id="manageCardDisabled" type="checkbox" ${card?.disabled ? 'checked' : ''} />
         <span class="manage-switch-field__control" aria-hidden="true"></span>
@@ -1187,9 +1179,9 @@ function moveSelectedCards() {
   if (!count || currentCategory()) return;
 
   openModal({
-    title: `移动 ${count} 张字卡`,
-    description: '请选择移动后的目标分组。',
-    confirmLabel: '移动',
+    title: `为 ${count} 张字卡分类`,
+    description: '选择目标分组。默认分组会继续保留这些字卡，不会移出总库。',
+    confirmLabel: '分类',
     body: `
       <label class="manage-field">
         <span>目标分组</span>
@@ -1214,7 +1206,7 @@ function moveSelectedCards() {
       state.selectedCardIds.clear();
       saveData();
       render();
-      setToast(moved ? `已将 ${moved} 张字卡移动到“${target.name}”` : '字卡已在该分组中');
+      setToast(moved ? `已将 ${moved} 张字卡分类到“${target.name}”` : '字卡已在该分组中');
       return true;
     },
   });
@@ -1833,7 +1825,7 @@ export function initManageView(root = document.getElementById('view-manage')) {
       <header class="manage-header">
         <div>
           <p class="manage-eyebrow">CARD LIBRARY</p>
-          <h2 class="manage-title">字卡管理</h2>
+          <h2 class="manage-title">字卡</h2>
           <p class="manage-summary" id="manageSummary">正在读取字卡库…</p>
         </div>
         <button class="manage-button manage-button--primary manage-button--compact" type="button" data-manage-action="create-card">
@@ -1886,7 +1878,7 @@ export function initManageView(root = document.getElementById('view-manage')) {
           <div>
             <button type="button" data-manage-action="batch-enable">启用</button>
             <button type="button" data-manage-action="batch-disable">禁用</button>
-            <button type="button" data-manage-action="batch-move">移动</button>
+            <button type="button" data-manage-action="batch-move">分类</button>
             <button class="is-danger" type="button" data-manage-action="batch-delete">删除</button>
           </div>
         </div>

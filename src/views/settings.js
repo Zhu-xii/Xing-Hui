@@ -142,6 +142,12 @@ function syncSettings() {
   syncProbability('feedReplyProbability', settings.feedReplyProbability);
   syncProbability('feedReplyToCommentProbability', settings.feedReplyToCommentProbability);
   syncProbability('roastProbability', settings.roastProbability);
+  syncProbability('callIncomingProbability', settings.callIncomingProbability);
+  syncProbability('callPickupProbability', settings.callPickupProbability);
+  syncProbability('callBusyProbability', settings.callBusyProbability);
+  syncProbability('callRejectProbability', settings.callRejectProbability);
+  syncProbability('callHangupProbability', settings.callHangupProbability);
+  if (elements.callNoHangup) elements.callNoHangup.checked = settings.callNoHangup;
 
   if (elements.feedEnabled) elements.feedEnabled.checked = settings.feedEnabled;
   if (elements.feedAutoPost) elements.feedAutoPost.checked = settings.feedAutoPostEnabled;
@@ -185,7 +191,7 @@ function saveDelayRange(preferMin = false) {
 function saveProbability(key, value, minimum = null) {
   const settings = readSettings();
   const floor = minimum === null
-    ? (key === "starFavorite" || key === "starFavoriteCard" || key === "starFavoriteFeed" || key === "roastProbability" || key.startsWith("feed") ? 0 : 1)
+    ? (key === "starFavorite" || key === "starFavoriteCard" || key === "starFavoriteFeed" || key === "roastProbability" || key.startsWith("feed") || key.startsWith("call") ? 0 : 1)
     : minimum;
   const next = enabledValue(value, settings[key] ?? DEFAULT_SETTINGS[key], floor);
   updateSettings({ [key]: next });
@@ -237,6 +243,12 @@ function saveAllSettings() {
     roastEnabled: elements.roastEnabled.checked,
     roastProbability: elements.roastProbabilityNumber.value,
     roastIntervalMinutes: elements.roastInterval.value,
+    callIncomingProbability: elements.callIncomingProbabilityNumber.value,
+    callPickupProbability: elements.callPickupProbabilityNumber.value,
+    callBusyProbability: elements.callBusyProbabilityNumber.value,
+    callRejectProbability: elements.callRejectProbabilityNumber.value,
+    callHangupProbability: elements.callHangupProbabilityNumber.value,
+    callNoHangup: elements.callNoHangup.checked,
     chatBackgroundType: elements.chatBackgroundType.value,
     chatBackgroundColor: elements.chatBackgroundColor.value,
     bubbleColor: elements.bubbleColor.value,
@@ -488,6 +500,7 @@ function handleSettingsChange(event) {
   }
   if (setting === "roast-enabled") { updateSettings({ roastEnabled: target.checked }); return; }
   if (setting === "roast-interval") { updateSettings({ roastIntervalMinutes: target.value }); syncSettings(); return; }
+  if (setting === "call-no-hangup") { updateSettings({ callNoHangup: target.checked }); return; }
 }
 
 function handleChatBackgroundUpload(event) {
@@ -803,6 +816,97 @@ export function initSettingsView(root = document.getElementById('view-settings')
           </div>
         </div>
       </section>
+      <section class="settings-card" aria-labelledby="settingsCallTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">通话</p>
+            <h3 id="settingsCallTitle">语音通话</h3>
+          </div>
+        </div>
+        <p class="settings-description">聊天工具中的“通话”可主动拨打；星回回复时也会按照来电概率尝试拨打。忙线、拒接、接听按顺序判定，合计不足 100% 时会出现未接通。</p>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>来电概率</span>
+            <small>星回每次回复后单独判定一次，默认 15%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="callIncomingProbability">
+            <input id="settingCallIncomingProbabilityRange" data-probability-range="callIncomingProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingCallIncomingProbabilityNumber" data-setting="probability-number" data-probability="callIncomingProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingCallIncomingProbabilityOutput">15%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>接听概率</span>
+            <small>拨打后优先判定忙线与拒接，再判定是否接听，默认 70%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="callPickupProbability">
+            <input id="settingCallPickupProbabilityRange" data-probability-range="callPickupProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingCallPickupProbabilityNumber" data-setting="probability-number" data-probability="callPickupProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingCallPickupProbabilityOutput">70%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>忙线概率</span>
+            <small>拨打后最先判定，默认 15%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="callBusyProbability">
+            <input id="settingCallBusyProbabilityRange" data-probability-range="callBusyProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingCallBusyProbabilityNumber" data-setting="probability-number" data-probability="callBusyProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingCallBusyProbabilityOutput">15%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>拒接概率</span>
+            <small>忙线未命中后判定，默认 15%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="callRejectProbability">
+            <input id="settingCallRejectProbabilityRange" data-probability-range="callRejectProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingCallRejectProbabilityNumber" data-setting="probability-number" data-probability="callRejectProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingCallRejectProbabilityOutput">15%</output>
+          </div>
+        </div>
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>通话中挂断概率</span>
+            <small>接通满 3 分钟后每分钟判定一次，默认 2%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="callHangupProbability">
+            <input id="settingCallHangupProbabilityRange" data-probability-range="callHangupProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingCallHangupProbabilityNumber" data-setting="probability-number" data-probability="callHangupProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingCallHangupProbabilityOutput">2%</output>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>禁止星回主动挂断</strong>
+            <small>开启后，通话中挂断概率不会生效</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingCallNoHangup" data-setting="call-no-hangup" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+      </section>
+
       <section class="settings-card" aria-labelledby="settingsSpellCardTitle">
         <div class="settings-card__heading">
           <div>
@@ -1402,10 +1506,11 @@ export function initSettingsView(root = document.getElementById('view-settings')
     feedDailyMax: viewRoot.querySelector('#settingFeedDailyMax'),
     roastEnabled: viewRoot.querySelector('#settingRoastEnabled'),
     roastInterval: viewRoot.querySelector('#settingRoastInterval'),
+    callNoHangup: viewRoot.querySelector('#settingCallNoHangup'),
   };
 
   // 概率类控件（滑块 + 数字 + 输出）统一登记，便于同步与保存。
-  ["starFavorite", "starFavoriteCard", "starFavoriteFeed", "feedPostChance", "feedLikeProbability", "feedCommentProbability", "feedReplyProbability", "feedReplyToCommentProbability", "roastProbability"].forEach((key) => {
+  ["starFavorite", "starFavoriteCard", "starFavoriteFeed", "feedPostChance", "feedLikeProbability", "feedCommentProbability", "feedReplyProbability", "feedReplyToCommentProbability", "roastProbability", "callIncomingProbability", "callPickupProbability", "callBusyProbability", "callRejectProbability", "callHangupProbability"].forEach((key) => {
     const cap = key[0].toUpperCase() + key.slice(1);
     elements[key + "Range"] = viewRoot.querySelector("#setting" + cap + "Range");
     elements[key + "Number"] = viewRoot.querySelector("#setting" + cap + "Number");

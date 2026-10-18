@@ -30,6 +30,12 @@ import { navigateTo } from '../lib/router.js';
 const MESSAGE_ACTION_EVENT = 'xinghui:message-action';
 const STAR_REPLY_TRIGGER_EVENT = 'xinghui:trigger-star-reply';
 const CHAT_PLACEHOLDER_EVENT = 'xinghui:chat-placeholder';
+const CALL_CHECK_EVENT = 'xinghui:maybe-incoming-call';
+const CALL_RING_TIMEOUT_MS = 30_000;
+const CALL_INCOMING_COOLDOWN_MS = 5 * 60_000;
+const CALL_HANGUP_GRACE_MS = 3 * 60_000;
+const CALL_LAST_INCOMING_KEY = 'xinghui_call_last_incoming_at';
+const CHAT_RENDER_PAGE_SIZE = 80;
 
 let viewRoot = null;
 let elements = null;
@@ -39,6 +45,13 @@ let eventsBound = false;
 let visualViewportFrame = null;
 let stickerPanelToken = 0;
 let chatToastTimer = null;
+let chatRenderLimit = CHAT_RENDER_PAGE_SIZE;
+const avatarDataUrlCache = new Map();
+let activeCall = null;
+let callPendingTimer = null;
+let callTickTimer = null;
+let callRingTimer = null;
+let callHangupTimer = null;
 
 function showChatToast(message) {
   const toast = elements?.toast;
@@ -49,6 +62,189 @@ function showChatToast(message) {
   chatToastTimer = window.setTimeout(() => { toast.hidden = true; }, 2600);
 }
 
+function readLastIncomingCallAt() {
+  try {
+    return Number(localStorage.getItem(CALL_LAST_INCOMING_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeLastIncomingCallAt(timestamp) {
+  try {
+    localStorage.setItem(CALL_LAST_INCOMING_KEY, String(timestamp));
+  } catch {
+    // Ignore private-mode storage failures.
+  }
+}
+
+function formatCallDuration(milliseconds) {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function clearCallTimers() {
+  window.clearTimeout(callPendingTimer);
+  window.clearTimeout(callRingTimer);
+  window.clearInterval(callTickTimer);
+  window.clearInterval(callHangupTimer);
+  callPendingTimer = null;
+  callRingTimer = null;
+  callTickTimer = null;
+  callHangupTimer = null;
+}
+
+function setCallButtons(mode) {
+  if (!elements) return;
+  if (elements.callAnswer) elements.callAnswer.hidden = mode !== 'ringing';
+  if (elements.callReject) elements.callReject.hidden = mode !== 'ringing';
+  if (elements.callHangup) elements.callHangup.hidden = !(mode === 'calling' || mode === 'connected');
+}
+
+function updateCallDurationDisplay() {
+  if (!activeCall || !elements?.callDuration) return;
+  if (activeCall.status === 'ringing') {
+    const remaining = Math.max(0, Math.ceil((CALL_RING_TIMEOUT_MS - (Date.now() - activeCall.startedAt)) / 1000));
+    elements.callDuration.textContent = `${remaining} 秒后自动挂断`;
+    return;
+  }
+  if (activeCall.connectedAt) {
+    elements.callDuration.textContent = formatCallDuration(Date.now() - activeCall.connectedAt);
+    return;
+  }
+  elements.callDuration.textContent = '00:00';
+}
+
+function showCallPanel(statusText, mode) {
+  if (!elements?.callPanel) return;
+  const context = createChatRenderContext();
+  if (elements.callName) elements.callName.textContent = context.starName;
+  if (elements.callAvatar) fillStarAvatar(elements.callAvatar, context);
+  if (elements.callStatus) elements.callStatus.textContent = statusText;
+  elements.callPanel.hidden = false;
+  setCallButtons(mode);
+  updateCallDurationDisplay();
+}
+
+function addCallSystemMessage(content) {
+  addChatMessage(
+    {
+      id: createMessageId(),
+      role: 'system',
+      type: 'text',
+      content,
+      timestamp: Date.now(),
+      sequence: nextSequence(),
+      read: true,
+      favorited: false,
+      starFavorited: false,
+    },
+    { persist: true, scroll: true },
+  );
+}
+
+function finishCall(resultText) {
+  if (!activeCall) return;
+  const connectedAt = activeCall.connectedAt;
+  const duration = connectedAt ? Date.now() - connectedAt : 0;
+  clearCallTimers();
+  if (elements?.callPanel) elements.callPanel.hidden = true;
+  activeCall = null;
+
+  const content = connectedAt
+    ? `语音通话 · ${resultText} · ${formatCallDuration(duration)}`
+    : `语音通话 · ${resultText}`;
+  addCallSystemMessage(content);
+  showChatToast(content);
+}
+
+function startCallTick() {
+  window.clearInterval(callTickTimer);
+  updateCallDurationDisplay();
+  callTickTimer = window.setInterval(updateCallDurationDisplay, 1000);
+}
+
+function startCounterpartHangupMonitor() {
+  window.clearInterval(callHangupTimer);
+  const callRef = activeCall;
+  if (!callRef) return;
+  callHangupTimer = window.setInterval(() => {
+    if (!activeCall || activeCall !== callRef || activeCall.status !== 'connected' || !activeCall.connectedAt) return;
+    if (Date.now() - activeCall.connectedAt < CALL_HANGUP_GRACE_MS) return;
+    const settings = readSettings();
+    if (settings.callNoHangup) return;
+    if (Math.random() * 100 < settings.callHangupProbability) finishCall('对方已挂断');
+  }, 60_000);
+}
+
+function connectCall() {
+  if (!activeCall) return;
+  window.clearTimeout(callRingTimer);
+  callRingTimer = null;
+  activeCall.status = 'connected';
+  activeCall.connectedAt = Date.now();
+  if (elements?.callStatus) elements.callStatus.textContent = '通话中…';
+  setCallButtons('connected');
+  startCallTick();
+  startCounterpartHangupMonitor();
+  showChatToast('通话已接通');
+}
+
+function startOutboundCall() {
+  if (activeCall) {
+    showChatToast('已有通话中');
+    return;
+  }
+  const settings = readSettings();
+  activeCall = { direction: 'out', status: 'calling', startedAt: Date.now(), connectedAt: 0 };
+  const callRef = activeCall;
+  showCallPanel('正在呼叫…', 'calling');
+
+  const roll = Math.random() * 100;
+  const busy = Number(settings.callBusyProbability) || 0;
+  const reject = Number(settings.callRejectProbability) || 0;
+  const pickup = Number(settings.callPickupProbability) || 0;
+
+  callPendingTimer = window.setTimeout(() => {
+    if (activeCall !== callRef || callRef.status !== 'calling') return;
+    if (roll < busy) finishCall('对方忙线中');
+    else if (roll < busy + reject) finishCall('对方已拒绝');
+    else if (roll < busy + reject + pickup) connectCall();
+    else finishCall('对方未接通');
+  }, 1800 + Math.random() * 1500);
+}
+
+function maybeTriggerIncomingCall() {
+  if (activeCall || document.body.dataset.view !== 'chat') return;
+  const now = Date.now();
+  if (now - readLastIncomingCallAt() < CALL_INCOMING_COOLDOWN_MS) return;
+  const settings = readSettings();
+  if (Math.random() * 100 >= settings.callIncomingProbability) return;
+
+  writeLastIncomingCallAt(now);
+  activeCall = { direction: 'in', status: 'ringing', startedAt: now, connectedAt: 0 };
+  showCallPanel('来电中…', 'ringing');
+  startCallTick();
+  callRingTimer = window.setTimeout(() => {
+    if (activeCall && activeCall.status === 'ringing') finishCall('未接听');
+  }, CALL_RING_TIMEOUT_MS);
+}
+
+function answerIncomingCall() {
+  if (activeCall?.status === 'ringing') connectCall();
+}
+
+function rejectIncomingCall() {
+  if (activeCall?.status === 'ringing') finishCall('已拒绝来电');
+}
+
+function hangupCurrentCall() {
+  if (!activeCall) return;
+  if (activeCall.status === 'connected') finishCall('已挂断');
+  else finishCall('已取消呼叫');
+}
+
 // 「梦角收藏」：星回按概率收藏我发出的聊天消息 / 卡片。
 function maybeStarFavorite(messageId, chance) {
   if (!messageId || !randomChance(chance)) return false;
@@ -57,7 +253,6 @@ function maybeStarFavorite(messageId, chance) {
   if (!target || target.starFavorited) return false;
   target.starFavorited = true;
   if (!writeStoredMessages(messages)) return false;
-  renderChatMessages();
   showChatToast(`${readCharacter().name || '星回'}收藏了一条信息`);
   return true;
 }
@@ -159,7 +354,33 @@ function writeStoredMessages(messages) {
   return Boolean(writeChatMessages(messages));
 }
 
-async function fillAvatar(container, source, fallback) {
+function blobToDataUrl(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(typeof reader.result === 'string' ? reader.result : ''), { once: true });
+    reader.addEventListener('error', () => resolve(''), { once: true });
+    reader.readAsDataURL(blob);
+  });
+}
+
+function cachedAvatarDataUrl(role, source) {
+  const key = `${role}:${source}`;
+  if (!avatarDataUrlCache.has(key)) {
+    avatarDataUrlCache.set(
+      key,
+      getAvatarBlob(role)
+        .then((blob) => (blob ? blobToDataUrl(blob) : ''))
+        .catch(() => ''),
+    );
+  }
+  return avatarDataUrlCache.get(key);
+}
+
+function invalidateAvatarCache() {
+  avatarDataUrlCache.clear();
+}
+
+async function fillAvatar(container, source, fallback, role = '') {
   if (!container) return;
   container.replaceChildren();
   if (!source) {
@@ -172,11 +393,12 @@ async function fillAvatar(container, source, fallback) {
   container.append(image);
 
   if (source === 'idb:star' || source === 'idb:user') {
-    try {
-      const blob = await getAvatarBlob(source === 'idb:star' ? 'star' : 'user');
-      if (!blob) throw new Error('avatar-missing');
-      setBlobImage(image, blob);
-    } catch {
+    const resolvedRole = role || (source === 'idb:star' ? 'star' : 'user');
+    const src = await cachedAvatarDataUrl(resolvedRole, source);
+    if (!image.isConnected) return;
+    if (src) {
+      image.src = src;
+    } else {
       image.remove();
       container.textContent = fallback;
     }
@@ -191,24 +413,37 @@ function nicknameInitial(name, fallback) {
   return text ? text.slice(0, 1) : fallback;
 }
 
-function fillStarAvatar(container) {
-  const { name, avatar } = readCharacter();
-  return fillAvatar(container, avatar, nicknameInitial(name, '星'));
+function createChatRenderContext() {
+  const character = readCharacter();
+  const settings = readSettings();
+  const starName = String(character.name || '星回').trim().slice(0, 20) || '星回';
+  const userName = String(settings.userName || '我').trim().slice(0, 20) || '我';
+  return {
+    starName,
+    userName,
+    showTimestamp: settings.showTimestamp !== false,
+    starAvatar: character.avatar || '',
+    userAvatar: settings.userAvatar || '',
+  };
 }
 
-function fillUserAvatar(container) {
-  const { userAvatar, userName } = readSettings();
-  return fillAvatar(container, userAvatar, nicknameInitial(userName, '我'));
+function fillStarAvatar(container, context = createChatRenderContext()) {
+  return fillAvatar(container, context.starAvatar, nicknameInitial(context.starName, '星'), 'star');
 }
+
+function fillUserAvatar(container, context = createChatRenderContext()) {
+  return fillAvatar(container, context.userAvatar, nicknameInitial(context.userName, '我'), 'user');
+}
+
 function updateChatProfileAvatar() {
-  const starName = String(readCharacter().name || '星回').trim().slice(0, 20) || '星回';
+  const context = createChatRenderContext();
   if (elements?.profileAvatar) {
-    fillStarAvatar(elements.profileAvatar);
-    elements.profileAvatar.setAttribute('aria-label', starName + '的头像，长按拍一拍');
-    elements.profileAvatar.setAttribute('title', starName + '的头像');
+    fillStarAvatar(elements.profileAvatar, context);
+    elements.profileAvatar.setAttribute('aria-label', context.starName + '的头像，长按拍一拍');
+    elements.profileAvatar.setAttribute('title', context.starName + '的头像');
   }
-  if (elements?.title) elements.title.textContent = starName;
-  if (elements?.messageList) elements.messageList.setAttribute('aria-label', '与' + starName + '的聊天记录');
+  if (elements?.title) elements.title.textContent = context.starName;
+  if (elements?.messageList) elements.messageList.setAttribute('aria-label', '与' + context.starName + '的聊天记录');
 }
 
 function updateChatMood({ force = false } = {}) {
@@ -217,13 +452,14 @@ function updateChatMood({ force = false } = {}) {
   elements.mood.textContent = `心情 · ${mood.text}`;
   elements.mood.classList.toggle('is-warning', Boolean(mood.missing || mood.empty));
 }
-function createMessageAvatar(role) {
+
+function createMessageAvatar(role, context = createChatRenderContext()) {
   const avatar = document.createElement('span');
   avatar.className = `chat-message__avatar chat-message__avatar--${role}`;
   avatar.setAttribute('aria-hidden', 'true');
 
-  if (role === 'star') fillStarAvatar(avatar);
-  else fillUserAvatar(avatar);
+  if (role === 'star') fillStarAvatar(avatar, context);
+  else fillUserAvatar(avatar, context);
 
   return avatar;
 }
@@ -307,14 +543,13 @@ function createQuestionnaireBubble(message) {
 
   return bubble;
 }
-function createMessageBubble(message) {
+function createMessageBubble(message, context = createChatRenderContext()) {
   const bubble = document.createElement('div');
   bubble.className = `bubble message-bubble bubble--${message.role}`;
 
   if (message.withdrawn) {
     bubble.classList.add('message-bubble--withdrawn');
-    const starName = readCharacter().name || '星回';
-    bubble.textContent = message.role === 'user' ? '你撤回了一条消息' : starName + '撤回了一条消息';
+    bubble.textContent = message.role === 'user' ? '你撤回了一条消息' : context.starName + '撤回了一条消息';
     return bubble;
   }
 
@@ -408,7 +643,7 @@ function canWithdrawMessage(message) {
   return message.role === 'user' || Boolean(message.tag);
 }
 
-function createMessageElement(message) {
+function createMessageElement(message, context = createChatRenderContext()) {
   const isSystem = message.role === 'system';
   const article = document.createElement('article');
   article.className = `chat-message chat-message--${message.role}${message.withdrawn ? ' is-withdrawn' : ''}`;
@@ -416,13 +651,11 @@ function createMessageElement(message) {
   article.tabIndex = isSystem ? -1 : 0;
   article.setAttribute('role', isSystem ? 'status' : 'button');
   article.setAttribute('aria-expanded', 'false');
-  const starName = readCharacter().name || '星回';
-  const settingsName = readSettings().userName || '我';
   article.setAttribute(
     'aria-label',
     isSystem
       ? message.content || '拍一拍消息'
-      : `${message.role === 'user' ? settingsName : starName}的消息，点击查看操作`,
+      : `${message.role === 'user' ? context.userName : context.starName}的消息，点击查看操作`,
   );
 
   const actions = document.createElement('div');
@@ -446,7 +679,7 @@ function createMessageElement(message) {
 
     if (action === 'withdraw' && !canWithdrawMessage(message)) {
       button.disabled = true;
-      button.title = starName + '的消息不可撤回';
+      button.title = context.starName + '的消息不可撤回';
       button.setAttribute('aria-disabled', 'true');
     }
 
@@ -460,13 +693,12 @@ function createMessageElement(message) {
 
   const content = document.createElement('div');
   content.className = 'chat-message__content';
-  content.append(createMessageBubble(message));
+  content.append(createMessageBubble(message, context));
 
   const meta = document.createElement('div');
   meta.className = 'chat-message__meta';
 
-  const { showTimestamp } = readSettings();
-  if (showTimestamp) {
+  if (context.showTimestamp) {
     const time = document.createElement('time');
     time.dateTime = new Date(message.timestamp).toISOString();
     time.textContent = formatMessageTime(message.timestamp);
@@ -483,7 +715,7 @@ function createMessageElement(message) {
 
   if (meta.childElementCount > 0) content.append(meta);
   if (isSystem) article.append(content);
-  else article.append(actions, createMessageAvatar(message.role), content);
+  else article.append(actions, createMessageAvatar(message.role, context), content);
   return article;
 }
 
@@ -585,9 +817,8 @@ function questionnaireDraftFromForm() {
     question: elements.questionnaireQuestion.value.trim(),
     options: elements.questionnaireOptions.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
     type: elements.questionnaireType.value,
-    thinkMin: Number(elements.questionnaireThinkMin.value) || 10,
+    thinkMin: Number(elements.questionnaireThinkMin.value) || 5,
     thinkMax: Number(elements.questionnaireThinkMax.value) || 15,
-    answerNow: Number(elements.questionnaireAnswerNow.value) || 60,
     multiMin: Number(elements.questionnaireMultiMin.value) || 1,
     multiMax: Number(elements.questionnaireMultiMax.value) || 3,
   };
@@ -599,9 +830,8 @@ function hydrateQuestionnairePanel(draft) {
   elements.questionnaireQuestion.value = data.question || '';
   elements.questionnaireOptions.value = Array.isArray(data.options) ? data.options.join('\n') : '';
   elements.questionnaireType.value = ['qa', 'single', 'multiple'].includes(data.type) ? data.type : 'qa';
-  elements.questionnaireThinkMin.value = String(data.thinkMin ?? 10);
+  elements.questionnaireThinkMin.value = String(data.thinkMin ?? 5);
   elements.questionnaireThinkMax.value = String(data.thinkMax ?? 15);
-  elements.questionnaireAnswerNow.value = String(data.answerNow ?? 60);
   elements.questionnaireMultiMin.value = String(data.multiMin ?? 1);
   elements.questionnaireMultiMax.value = String(data.multiMax ?? 3);
   updateQuestionnairePanelControls();
@@ -684,6 +914,11 @@ function setQuestionnaireError(message) {
   elements.questionnaireError.textContent = message;
   elements.questionnaireError.hidden = !message;
 }
+function closeToolMenu() {
+  if (elements?.toolMenu) elements.toolMenu.hidden = true;
+  elements?.toolToggle?.setAttribute('aria-expanded', 'false');
+}
+
 function closeToolPanel() {
   if (elements?.toolPanel) {
     elements.toolPanel.hidden = true;
@@ -693,6 +928,26 @@ function closeToolPanel() {
   elements.toolButtons?.forEach((button) => {
     if (button.dataset.chatPlaceholder === 'sticker') button.setAttribute('aria-expanded', 'false');
   });
+  closeToolMenu();
+}
+
+function openToolMenu() {
+  const menu = elements?.toolMenu;
+  if (!menu) return;
+
+  if (elements?.toolPanel) {
+    elements.toolPanel.hidden = true;
+    elements.toolPanel.dataset.kind = '';
+  }
+  closeQuestionnairePanel();
+  elements.toolButtons?.forEach((button) => button.setAttribute('aria-expanded', 'false'));
+  menu.hidden = false;
+  elements.toolToggle?.setAttribute('aria-expanded', 'true');
+}
+
+function toggleToolMenu() {
+  if (elements?.toolMenu?.hidden) openToolMenu();
+  else closeToolMenu();
 }
 
 function stickerMessageContent(sticker) {
@@ -836,6 +1091,7 @@ function toggleToolPanel(kind) {
   const panel = elements?.toolPanel;
   if (!panel) return;
 
+  closeToolMenu();
   const shouldOpen = panel.hidden || panel.dataset.kind !== kind;
   panel.dataset.kind = shouldOpen ? kind : '';
   panel.hidden = !shouldOpen;
@@ -857,7 +1113,34 @@ function appendMessage(message) {
   if (!list) return;
 
   list.querySelector('.chat-empty')?.remove();
-  list.append(createMessageElement(message));
+  list.append(createMessageElement(message, createChatRenderContext()));
+}
+
+function findChatMessageElement(messageId) {
+  const list = elements?.messageList;
+  if (!list || !messageId) return null;
+  return Array.from(list.querySelectorAll('[data-message-id]'))
+    .find((element) => element.dataset.messageId === messageId) || null;
+}
+
+function replaceChatMessageElement(message) {
+  const element = findChatMessageElement(message?.id);
+  if (!element) return false;
+  if (activeMessageId === message.id) activeMessageId = null;
+  element.replaceWith(createMessageElement(message, createChatRenderContext()));
+  return true;
+}
+
+function loadOlderChatMessages() {
+  const list = elements?.messageList;
+  if (!list) return;
+  const previousHeight = list.scrollHeight;
+  const previousTop = list.scrollTop;
+  chatRenderLimit += CHAT_RENDER_PAGE_SIZE;
+  renderChatMessages({ scroll: false });
+  window.requestAnimationFrame(() => {
+    list.scrollTop = Math.max(0, list.scrollHeight - previousHeight + previousTop);
+  });
 }
 
 function renderStickerGrid() {
@@ -1107,7 +1390,7 @@ export function setQuestionnaireThinking(isThinking) {
   syncChatStatus();
 }
 
-export function renderChatMessages() {
+export function renderChatMessages({ scroll = true } = {}) {
   const list = elements?.messageList;
   if (!list) return;
 
@@ -1120,8 +1403,22 @@ export function renderChatMessages() {
     return;
   }
 
-  messages.forEach((message) => list.append(createMessageElement(message)));
-  scrollToLatest();
+  const visibleMessages = messages.slice(-chatRenderLimit);
+  const hiddenCount = messages.length - visibleMessages.length;
+  const fragment = document.createDocumentFragment();
+  if (hiddenCount > 0) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'chat-history-more';
+    more.dataset.chatHistoryMore = '';
+    more.textContent = `加载更早消息（还有 ${hiddenCount} 条）`;
+    fragment.append(more);
+  }
+
+  const context = createChatRenderContext();
+  visibleMessages.forEach((message) => fragment.append(createMessageElement(message, context)));
+  list.append(fragment);
+  if (scroll) scrollToLatest();
 }
 
 function emitMessageAction(action, message, changed) {
@@ -1152,7 +1449,11 @@ export function performChatMessageAction(action, messageOrId) {
     messages.splice(index, 1);
     if (!writeStoredMessages(messages)) return false;
     notifyQuestionnaireQueued();
-    renderChatMessages();
+    const element = findChatMessageElement(messageId);
+    element?.remove();
+    if (!messages.length && elements?.messageList) {
+      elements.messageList.replaceChildren(createEmptyState());
+    }
     return true;
   }
 
@@ -1165,7 +1466,7 @@ export function performChatMessageAction(action, messageOrId) {
     }
     if (!writeStoredMessages(messages)) return false;
     notifyQuestionnaireQueued();
-    renderChatMessages();
+    replaceChatMessageElement(current);
     return true;
   }
 
@@ -1173,7 +1474,11 @@ export function performChatMessageAction(action, messageOrId) {
     const nextFavorited = !current.favorited;
     current.favorited = nextFavorited;
     if (!writeStoredMessages(messages)) return false;
-    renderChatMessages();
+    const button = findChatMessageElement(messageId)?.querySelector('[data-message-action="favorite"]');
+    if (button) {
+      button.textContent = nextFavorited ? '取消收藏' : '收藏';
+      button.title = nextFavorited ? '取消这条收藏' : '';
+    }
     const myName = readSettings().userName || '我';
     showChatToast(nextFavorited ? `${myName}收藏了一条信息` : `${myName}取消了一条收藏`);
     return true;
@@ -1207,7 +1512,7 @@ function submitStarQuestionnaireAnswer(messageElement, answerValue = '') {
   questionnaire.status = 'answered';
   questionnaire.answeredAt = Date.now();
   if (!writeStoredMessages(messages)) return;
-  renderChatMessages();
+  replaceChatMessageElement(message);
   scheduleLatestScroll();
   maybeStarFavorite(message.id, readSettings().starFavoriteCard);
 }
@@ -1222,6 +1527,12 @@ function handleQuestionnaireAnswerSubmit(event) {
   submitStarQuestionnaireAnswer(messageElement, form.querySelector('input[name="answer"]')?.value || '');
 }
 function handleMessageListClick(event) {
+  if (event.target.closest('[data-chat-history-more]')) {
+    event.preventDefault();
+    loadOlderChatMessages();
+    return;
+  }
+
   const actionButton = event.target.closest('[data-message-action]');
   const messageElement = event.target.closest('[data-message-id]');
   if (!messageElement) return;
@@ -1329,7 +1640,19 @@ function bindEvents() {
   if (!elements || eventsBound) return;
 
   elements.form.addEventListener('submit', handleSendMessage);
-  elements.imageButton?.addEventListener('click', () => elements.imageInput?.click());
+  elements.toolToggle?.addEventListener('click', toggleToolMenu);
+  elements.imageButton?.addEventListener('click', () => {
+    closeToolMenu();
+    elements.imageInput?.click();
+  });
+  elements.callButton?.addEventListener('click', () => {
+    closeToolMenu();
+    startOutboundCall();
+  });
+  elements.callAnswer?.addEventListener('click', answerIncomingCall);
+  elements.callReject?.addEventListener('click', rejectIncomingCall);
+  elements.callHangup?.addEventListener('click', hangupCurrentCall);
+  window.addEventListener(CALL_CHECK_EVENT, maybeTriggerIncomingCall);
   elements.imageInput?.addEventListener('change', (event) => {
     // 先取出快照再清空 input，否则 FileList 会被一并清掉。
     const files = Array.from(event.target.files || []);
@@ -1347,14 +1670,18 @@ function bindEvents() {
     window.setTimeout(syncVisualViewport, 80);
   });
 
-  window.addEventListener(SETTINGS_CHANGED_EVENT, () => renderChatMessages());
+  window.addEventListener(SETTINGS_CHANGED_EVENT, () => {
+    invalidateAvatarCache();
+    if (document.body.dataset.view === 'chat') renderChatMessages({ scroll: false });
+  });
   window.addEventListener('xinghui:manage-data-changed', () => {
     updateChatMood();
     if (elements?.toolPanel?.dataset.kind === 'sticker') void renderStickerGrid();
   });
   window.addEventListener(CHARACTER_CHANGED_EVENT, () => {
+    invalidateAvatarCache();
     updateChatProfileAvatar();
-    renderChatMessages();
+    if (document.body.dataset.view === 'chat') renderChatMessages({ scroll: false });
   });
 
   elements.backButton?.addEventListener('click', () => {
@@ -1401,7 +1728,7 @@ function bindEvents() {
     if (!viewRoot?.contains(event.target) || !event.target.closest('.chat-message')) {
       closeActiveMessage();
     }
-    if (!event.target.closest('.chat-composer__tool') && !event.target.closest('.chat-tool-panel, .chat-questionnaire-panel, .sticker-grid')) {
+    if (!event.target.closest('.chat-composer__tool, .chat-tool-menu, .chat-tool-panel, .chat-questionnaire-panel, .sticker-grid')) {
       closeToolPanel();
     }
   });
@@ -1434,11 +1761,28 @@ export function initChatView(root = document.getElementById('view-chat')) {
         <span class="chat-topbar__copy">
           <strong id="chatTitle">星回</strong>
           <span class="chat-topbar__meta">
-            <span class="chat-profile__status" id="chatStatus">在线</span>
+            <span class="chat-status-line">
+              <span class="chat-status-line__label">状态：</span>
+              <span class="chat-profile__status" id="chatStatus">在线</span>
+            </span>
             <span class="chat-topbar__mood" id="chatMood">心情 · 还没有设置状态</span>
           </span>
         </span>
       </header>
+
+      <div class="chat-call-panel" id="chatCallPanel" role="dialog" aria-modal="true" aria-labelledby="chatCallName" hidden>
+        <div class="chat-call-card">
+          <div class="chat-call-avatar" id="chatCallAvatar" aria-hidden="true">星</div>
+          <strong class="chat-call-name" id="chatCallName">星回</strong>
+          <span class="chat-call-status" id="chatCallStatus">正在呼叫…</span>
+          <span class="chat-call-duration" id="chatCallDuration">00:00</span>
+          <div class="chat-call-actions">
+            <button class="chat-call-action chat-call-action--reject" id="chatCallReject" type="button" hidden>拒接</button>
+            <button class="chat-call-action chat-call-action--answer" id="chatCallAnswer" type="button" hidden>接听</button>
+            <button class="chat-call-action chat-call-action--hangup" id="chatCallHangup" type="button" hidden>挂断</button>
+          </div>
+        </div>
+      </div>
 
       <div class="chat-conversation">
         <div
@@ -1451,6 +1795,38 @@ export function initChatView(root = document.getElementById('view-chat')) {
         ></div>
 
         <div class="chat-composer-area">
+          <div class="chat-tool-menu" id="chatToolMenu" aria-label="聊天工具" hidden>
+            <button class="chat-tool-menu__item" type="button" id="chatImageButton" aria-label="发送图片">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
+                <circle cx="9" cy="10" r="1.3"></circle>
+                <path d="m5 16.5 4.5-4.5 3.2 3.2 2.6-2.6 4.2 4.2"></path>
+              </svg>
+              <span>发送图片</span>
+            </button>
+            <button class="chat-tool-menu__item" type="button" data-chat-placeholder="survey" aria-label="打开问卷面板" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 5.5h14v10H9l-4 3.2z"></path>
+                <circle cx="9" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
+                <circle cx="12" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
+                <circle cx="15" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
+              </svg>
+              <span>问卷</span>
+            </button>
+            <button class="chat-tool-menu__item" type="button" data-chat-placeholder="sticker" aria-label="打开表情包面板" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <path d="M9 10h.01M15 10h.01M8.8 14.2c1.7 1.7 4.7 1.7 6.4 0"></path>
+              </svg>
+              <span>表情包</span>
+            </button>
+            <button class="chat-tool-menu__item" type="button" id="chatCallButton" aria-label="发起语音通话">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.8 12.8 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.8 12.8 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+              <span>通话</span>
+            </button>
+          </div>
           <div class="chat-tool-panel" id="chatToolPanel" role="status" hidden></div>
           <div class="chat-questionnaire-panel" id="chatQuestionnairePanel" hidden>
             <form class="questionnaire-form" id="chatQuestionnaireForm">
@@ -1472,20 +1848,14 @@ export function initChatView(root = document.getElementById('view-chat')) {
                 <textarea id="chatQuestionnaireOptions" rows="4" placeholder="选项 A&#10;选项 B&#10;选项 C"></textarea>
               </label>
 
-              <div class="questionnaire-form__row">
-                <label class="questionnaire-field">
-                  <span>类型</span>
-                  <select id="chatQuestionnaireType">
-                    <option value="qa">问答问卷</option>
-                    <option value="single">单选题</option>
-                    <option value="multiple">多选题</option>
-                  </select>
-                </label>
-                <label class="questionnaire-field">
-                  <span>现在回答概率（%）</span>
-                  <input id="chatQuestionnaireAnswerNow" type="number" min="0" max="100" step="1" inputmode="numeric" />
-                </label>
-              </div>
+              <label class="questionnaire-field">
+                <span>类型</span>
+                <select id="chatQuestionnaireType">
+                  <option value="qa">问答问卷</option>
+                  <option value="single">单选题</option>
+                  <option value="multiple">多选题</option>
+                </select>
+              </label>
 
               <div class="questionnaire-form__row">
                 <label class="questionnaire-field">
@@ -1514,28 +1884,15 @@ export function initChatView(root = document.getElementById('view-chat')) {
             </form>
           </div>
           <form class="chat-composer" id="chatComposer">
-            <button class="chat-composer__tool" type="button" id="chatImageButton" aria-label="发送图片" title="图片">
+            <button class="chat-composer__tool chat-composer__menu-toggle" type="button" id="chatToolsToggle" aria-label="更多聊天工具" aria-controls="chatToolMenu" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
-                <circle cx="9" cy="10" r="1.3"></circle>
-                <path d="m5 16.5 4.5-4.5 3.2 3.2 2.6-2.6 4.2 4.2"></path>
+                <circle cx="12" cy="12" r="8.5"></circle>
+                <circle cx="8.2" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+                <circle cx="15.8" cy="12" r="1" fill="currentColor" stroke="none"></circle>
               </svg>
             </button>
             <input id="chatImageInput" type="file" accept="image/*" multiple hidden />
-            <button class="chat-composer__tool" type="button" data-chat-placeholder="survey" aria-label="打开问卷面板" aria-expanded="false" title="问卷">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 5.5h14v10H9l-4 3.2z"></path>
-                <circle cx="9" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
-                <circle cx="12" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
-                <circle cx="15" cy="10.5" r=".7" fill="currentColor" stroke="none"></circle>
-              </svg>
-            </button>
-            <button class="chat-composer__tool" type="button" data-chat-placeholder="sticker" aria-label="打开表情包面板" aria-expanded="false" title="表情包">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="8"></circle>
-                <path d="M9 10h.01M15 10h.01M8.8 14.2c1.7 1.7 4.7 1.7 6.4 0"></path>
-              </svg>
-            </button>
             <input
               class="chat-composer__input"
               id="chatInput"
@@ -1568,15 +1925,25 @@ export function initChatView(root = document.getElementById('view-chat')) {
     form: viewRoot.querySelector('#chatComposer'),
     input: viewRoot.querySelector('#chatInput'),
     messageList: viewRoot.querySelector('#chatMessageList'),
+    toolMenu: viewRoot.querySelector('#chatToolMenu'),
+    toolToggle: viewRoot.querySelector('#chatToolsToggle'),
     toolPanel: viewRoot.querySelector('#chatToolPanel'),
     toolButtons: Array.from(viewRoot.querySelectorAll('[data-chat-placeholder]')),
+    callButton: viewRoot.querySelector('#chatCallButton'),
+    callPanel: viewRoot.querySelector('#chatCallPanel'),
+    callAvatar: viewRoot.querySelector('#chatCallAvatar'),
+    callName: viewRoot.querySelector('#chatCallName'),
+    callStatus: viewRoot.querySelector('#chatCallStatus'),
+    callDuration: viewRoot.querySelector('#chatCallDuration'),
+    callReject: viewRoot.querySelector('#chatCallReject'),
+    callAnswer: viewRoot.querySelector('#chatCallAnswer'),
+    callHangup: viewRoot.querySelector('#chatCallHangup'),
     questionnairePanel: viewRoot.querySelector('#chatQuestionnairePanel'),
     questionnaireForm: viewRoot.querySelector('#chatQuestionnaireForm'),
     questionnaireQuestion: viewRoot.querySelector('#chatQuestionnaireQuestion'),
     questionnaireOptions: viewRoot.querySelector('#chatQuestionnaireOptions'),
     questionnaireOptionsField: viewRoot.querySelector('#chatQuestionnaireOptionsField'),
     questionnaireType: viewRoot.querySelector('#chatQuestionnaireType'),
-    questionnaireAnswerNow: viewRoot.querySelector('#chatQuestionnaireAnswerNow'),
     questionnaireThinkMin: viewRoot.querySelector('#chatQuestionnaireThinkMin'),
     questionnaireThinkMax: viewRoot.querySelector('#chatQuestionnaireThinkMax'),
     questionnaireMultiMin: viewRoot.querySelector('#chatQuestionnaireMultiMin'),
@@ -1589,13 +1956,13 @@ export function initChatView(root = document.getElementById('view-chat')) {
   bindEvents();
   updateChatProfileAvatar();
   updateChatMood();
-  renderChatMessages();
   startQuestionnaireEngine({
     getMessages: readStoredMessages,
     setThinking: setQuestionnaireThinking,
-    onMessageChanged: () => {
-      renderChatMessages();
-      scheduleLatestScroll();
+    onMessageChanged: (message) => {
+      if (message) replaceChatMessageElement(message);
+      else renderChatMessages({ scroll: false });
+      if (document.body.dataset.view === 'chat') scheduleLatestScroll();
     },
     addSystemMessage: (content, turnId) => {
       addChatMessage(
@@ -1628,6 +1995,7 @@ export function onChatViewEnter() {
 }
 
 export {
+  CALL_CHECK_EVENT,
   CHAT_STORAGE_KEY,
   MESSAGE_ACTION_EVENT,
   STAR_REPLY_TRIGGER_EVENT,

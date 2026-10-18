@@ -40,6 +40,14 @@
   letter-spacing: 0.02em;
 }
 
+.status-bar__time {
+  color: var(--color-text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .status-bar__icons {
   display: inline-flex;
   align-items: center;
@@ -85,70 +93,100 @@
   color: var(--color-text-muted);
 }
 
-/* 首页：大时钟 */
+/* 首页：双头像关系区 */
 .hero {
+  padding: 12px 0 10px;
   text-align: center;
-  padding: 40px 0 28px;
 }
 
-.clock-time {
-  font-family: var(--font-round);
-  font-weight: 700;
-  max-width: 100%;
-  font-size: clamp(2.4rem, 12.5vw, 3.6rem);
-  line-height: 1;
-  letter-spacing: 0.01em;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-primary);
-}
-
-.clock-date {
-  margin-top: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: clamp(0.88rem, 3.8vw, 1rem);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.greeting {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  margin-top: var(--space-3);
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  color: var(--color-primary);
-  font-family: var(--font-round);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.home-star-avatar {
+.home-relationship {
   display: grid;
-  width: 64px;
-  height: 64px;
-  margin: var(--space-3) auto 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(20px, 10vw, 48px);
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+.home-avatar {
+  display: grid;
+  width: clamp(82px, 26vw, 108px);
+  aspect-ratio: 1;
+  margin-inline: auto;
   place-items: center;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 72%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  background: #FFFFFF;
   color: var(--color-primary);
   font-family: var(--font-round);
-  font-size: 1.2rem;
+  font-size: clamp(1.25rem, 5vw, 1.8rem);
   font-weight: 700;
-  box-shadow: 0 10px 26px rgba(30, 58, 95, 0.1);
+  box-shadow: var(--shadow-soft);
 }
 
-.home-star-avatar img {
+.home-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.home-user-avatar {
+  cursor: default;
+}
+
+.home-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.home-note {
+  display: flex;
+  min-height: 78px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: #FFFFFF;
+  text-align: left;
+}
+
+.home-note__label,
+.home-status__label {
+  flex: 0 0 auto;
+  color: var(--color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.home-page .greeting {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111111;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.55;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.home-page .greeting:empty::before {
+  content: '还没有想说的话';
+  color: var(--color-text-faint);
+  font-weight: 500;
 }
 
 .home-backup-reminder {
@@ -309,33 +347,30 @@
 
 
 
-.home-status {
-  display: inline-flex;
-  max-width: min(100%, 420px);
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 7px 12px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--color-text);
-  font-size: 0.76rem;
-  line-height: 1.4;
+.home-page .home-status {
+  display: flex;
+  max-width: none;
+  min-height: 78px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: #FFFFFF;
+  color: #111111;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  text-align: left;
 }
 
-.home-status__label {
-  flex: 0 0 auto;
-  color: var(--color-text-faint);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.home-status strong {
+.home-page .home-status strong {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-weight: 650;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.55;
 }
 
 .home-status.is-warning {

@@ -26,7 +26,6 @@ function createPromptMessage(preset) {
     type: preset.type,
     thinkMin: 1,
     thinkMax: 1,
-    answerNow: 100,
     multiMin: 1,
     multiMax: preset.options.length || 1,
     status: 'awaiting-answer',

@@ -85,6 +85,12 @@ export const DEFAULT_SETTINGS = Object.freeze({
   starFavoriteCard: 30,
   starFavoriteFeed: 30,
   patReply: 70,
+  callIncomingProbability: 15,
+  callPickupProbability: 70,
+  callBusyProbability: 15,
+  callRejectProbability: 15,
+  callHangupProbability: 2,
+  callNoHangup: false,
   multiReplyEnabled: true,
   multiReplyMin: 1,
   multiReplyMax: 2,
@@ -354,6 +360,12 @@ export function normalizeSettings(settings = {}) {
     roastProbability: normalizePercentage(source.roastProbability, DEFAULT_SETTINGS.roastProbability, 0),
     roastIntervalMinutes: clamp(finiteNumber(source.roastIntervalMinutes, DEFAULT_SETTINGS.roastIntervalMinutes), 0, 1440),
     lastRoastAt: Math.max(0, finiteNumber(source.lastRoastAt, DEFAULT_SETTINGS.lastRoastAt)),
+    callIncomingProbability: normalizePercentage(source.callIncomingProbability, DEFAULT_SETTINGS.callIncomingProbability, 0),
+    callPickupProbability: normalizePercentage(source.callPickupProbability, DEFAULT_SETTINGS.callPickupProbability, 0),
+    callBusyProbability: normalizePercentage(source.callBusyProbability, DEFAULT_SETTINGS.callBusyProbability, 0),
+    callRejectProbability: normalizePercentage(source.callRejectProbability, DEFAULT_SETTINGS.callRejectProbability, 0),
+    callHangupProbability: normalizePercentage(source.callHangupProbability, DEFAULT_SETTINGS.callHangupProbability, 0),
+    callNoHangup: source.callNoHangup === true,
     showTimestamp: source.showTimestamp !== false,
     fontSize: FONT_SIZES.has(source.fontSize) ? source.fontSize : DEFAULT_SETTINGS.fontSize,
     currentGroupId: String(source.currentGroupId || '').trim() || DEFAULT_GROUP_ID,
@@ -570,13 +582,8 @@ export function normalizeQuestionnaire(questionnaire) {
     question,
     options,
     type,
-    thinkMin: clamp(finiteNumber(questionnaire.thinkMin, 10), 1, 60),
+    thinkMin: clamp(finiteNumber(questionnaire.thinkMin, 5), 1, 60),
     thinkMax: clamp(finiteNumber(questionnaire.thinkMax, 15), 1, 60),
-    answerNow: (() => {
-      const raw = finiteNumber(questionnaire.answerNow, 60);
-      const percent = raw > 0 && raw <= 1 ? raw * 100 : raw;
-      return clamp(percent, 0, 100);
-    })(),
     multiMin: clamp(finiteNumber(questionnaire.multiMin, 1), 1, 10),
     multiMax: clamp(finiteNumber(questionnaire.multiMax, options.length || 3), 1, 10),
     status: ['pending', 'thinking', 'awaiting-answer', 'delayed', 'answered', 'cancelled', 'withdrawn'].includes(questionnaire.status)

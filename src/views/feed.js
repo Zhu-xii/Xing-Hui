@@ -3,7 +3,6 @@ import { getAvatarBlob, getStickerBlob, setBlobImage } from '../lib/media-db.js'
 import { pickRandom, randomChance } from '../lib/random.js';
 import {
   CHARACTER_CHANGED_EVENT,
-  DEFAULT_GROUP_ID,
   FEED_CHANGED_EVENT,
   FEED_NOTICES_CHANGED_EVENT,
   SETTINGS_CHANGED_EVENT,
@@ -522,7 +521,7 @@ function updatePosts(mutator) {
 }
 
 function starReplyContent() {
-  const cards = readCards().filter((card) => !card.disabled && card.content && String(card.groupId || DEFAULT_GROUP_ID) === DEFAULT_GROUP_ID);
+  const cards = readCards().filter((card) => !card.disabled && card.content);
   return applyNicknamePlaceholders(pickRandom(cards)?.content || '看到啦，我给你点个赞。');
 }
 
@@ -875,7 +874,7 @@ function maybeAutoPost() {
     return;
   }
 
-  const cards = readCards().filter((card) => !card.disabled && card.content && String(card.groupId || DEFAULT_GROUP_ID) === DEFAULT_GROUP_ID);
+  const cards = readCards().filter((card) => !card.disabled && card.content);
   const content = applyNicknamePlaceholders(String(pickRandom(cards)?.content || pickRandom(STAR_FALLBACK_POSTS) || '').trim());
   if (!content) {
     writeFeedAutoPostState({ ...state, nextAt: now + randomAutoPostDelay(settings) });
@@ -988,7 +987,6 @@ export function initFeedView(root = document.getElementById('view-feed')) {
   };
 
   bindEvents();
-  render();
   startAutoPostScheduler();
   return true;
 }
