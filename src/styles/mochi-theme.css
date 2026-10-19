@@ -539,3 +539,15 @@ button[class*='danger'] {
   object-fit: cover;
   border-radius: 10px;
 }
+
+@media (pointer: coarse) {
+  .chat-composer__tool,
+  .chat-composer__send,
+  .chat-call-minimize,
+  .chat-call-mini__hang,
+  .settings-swatch,
+  .home-pagination__button {
+    min-height: 0;
+    aspect-ratio: 1;
+  }
+}
