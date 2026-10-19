@@ -254,8 +254,12 @@
     height: 20px;
   }
 
-  .status-bar__brand {
+  .status-bar__brand--desktop {
     display: none;
+  }
+
+  .status-bar__brand--mobile {
+    display: inline;
   }
 
   .status-bar {

@@ -33,6 +33,10 @@
   pointer-events: none;
 }
 
+.status-bar__brand--mobile {
+  display: none;
+}
+
 .status-bar__brand {
   font-family: var(--font-round);
   font-weight: 700;
