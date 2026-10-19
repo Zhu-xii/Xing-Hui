@@ -258,6 +258,14 @@
     display: none;
   }
 
+  .status-bar {
+    justify-content: flex-end;
+  }
+
+  .status-bar__icons {
+    margin-left: auto;
+  }
+
   .back-button {
     top: calc(6px + env(safe-area-inset-top, 0px));
     left: 10px;
