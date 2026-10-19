@@ -1,0 +1,15 @@
+@font-face {
+  font-family: 'LXGW WenKai';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/lxgw-wenkai-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'GenJyuu Gothic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/genjyuu-gothic-400.woff2') format('woff2');
+}
