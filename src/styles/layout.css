@@ -84,6 +84,11 @@
   padding-top: 132px;
 }
 
+#view-feed,
+#view-favorites {
+  padding-top: calc(104px + env(safe-area-inset-top, 0px));
+}
+
 .view-title {
   font-size: 1.4rem;
   margin-bottom: var(--space-2);
@@ -100,12 +105,11 @@
 }
 
 .home-relationship {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
   align-items: center;
-  gap: clamp(20px, 10vw, 48px);
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  max-width: 420px;
   margin-inline: auto;
 }
 

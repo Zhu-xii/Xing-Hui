@@ -607,6 +607,14 @@ export function normalizeChatMessage(message) {
   const type = ['sticker', 'pat', 'questionnaire', 'image'].includes(message.type) ? message.type : 'text';
   const turnId = message.turnId ? String(message.turnId) : '';
   const sequence = Number.isFinite(Number(message.sequence)) ? Number(message.sequence) : 0;
+  const quote = message.quote && typeof message.quote === 'object' && !Array.isArray(message.quote)
+    ? {
+        id: String(message.quote.id || '').slice(0, 120),
+        role: ['user', 'star', 'system'].includes(message.quote.role) ? message.quote.role : 'star',
+        type: ['text', 'sticker', 'questionnaire', 'image'].includes(message.quote.type) ? message.quote.type : 'text',
+        text: typeof message.quote.text === 'string' ? message.quote.text.slice(0, 500) : '',
+      }
+    : undefined;
   return {
     id: String(message.id || createId('msg')),
     role,
@@ -620,6 +628,7 @@ export function normalizeChatMessage(message) {
     tag: typeof message.tag === 'string' ? message.tag.trim().slice(0, 20) : '',
     turnId,
     sequence,
+    quote,
     questionnaire: type === 'questionnaire'
       ? (() => {
           const questionnaire = normalizeQuestionnaire(message.questionnaire || message.questionnaireData);

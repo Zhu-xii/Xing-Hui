@@ -35,6 +35,7 @@ const CALL_RING_TIMEOUT_MS = 30_000;
 const CALL_INCOMING_COOLDOWN_MS = 5 * 60_000;
 const CALL_HANGUP_GRACE_MS = 3 * 60_000;
 const CALL_LAST_INCOMING_KEY = 'xinghui_call_last_incoming_at';
+const CALL_MINI_POS_KEY = 'xinghui_call_mini_position';
 const CHAT_RENDER_PAGE_SIZE = 80;
 
 let viewRoot = null;
@@ -52,6 +53,9 @@ let callPendingTimer = null;
 let callTickTimer = null;
 let callRingTimer = null;
 let callHangupTimer = null;
+let pendingQuote = null;
+let callMiniDragState = null;
+let callPanelMinimized = false;
 
 function showChatToast(message) {
   const toast = elements?.toast;
@@ -100,6 +104,7 @@ function setCallButtons(mode) {
   if (elements.callAnswer) elements.callAnswer.hidden = mode !== 'ringing';
   if (elements.callReject) elements.callReject.hidden = mode !== 'ringing';
   if (elements.callHangup) elements.callHangup.hidden = !(mode === 'calling' || mode === 'connected');
+  if (elements.callMinimize) elements.callMinimize.hidden = !(mode === 'calling' || mode === 'connected');
 }
 
 function updateCallDurationDisplay() {
@@ -107,13 +112,17 @@ function updateCallDurationDisplay() {
   if (activeCall.status === 'ringing') {
     const remaining = Math.max(0, Math.ceil((CALL_RING_TIMEOUT_MS - (Date.now() - activeCall.startedAt)) / 1000));
     elements.callDuration.textContent = `${remaining} 秒后自动挂断`;
+    if (elements.callMiniDuration) elements.callMiniDuration.textContent = '来电中';
     return;
   }
   if (activeCall.connectedAt) {
-    elements.callDuration.textContent = formatCallDuration(Date.now() - activeCall.connectedAt);
+    const text = formatCallDuration(Date.now() - activeCall.connectedAt);
+    elements.callDuration.textContent = text;
+    if (elements.callMiniDuration) elements.callMiniDuration.textContent = text;
     return;
   }
   elements.callDuration.textContent = '00:00';
+  if (elements.callMiniDuration) elements.callMiniDuration.textContent = '00:00';
 }
 
 function showCallPanel(statusText, mode) {
@@ -122,9 +131,78 @@ function showCallPanel(statusText, mode) {
   if (elements.callName) elements.callName.textContent = context.starName;
   if (elements.callAvatar) fillStarAvatar(elements.callAvatar, context);
   if (elements.callStatus) elements.callStatus.textContent = statusText;
+  if (elements.callMiniName) elements.callMiniName.textContent = context.starName;
+  if (elements.callMiniAvatar) fillStarAvatar(elements.callMiniAvatar, context);
+  if (elements.callMini) elements.callMini.hidden = true;
   elements.callPanel.hidden = false;
   setCallButtons(mode);
   updateCallDurationDisplay();
+}
+
+function readCallMiniPosition() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CALL_MINI_POS_KEY) || 'null');
+    if (!value || !Number.isFinite(Number(value.left)) || !Number.isFinite(Number(value.top))) return null;
+    return { left: Number(value.left), top: Number(value.top) };
+  } catch {
+    return null;
+  }
+}
+
+function writeCallMiniPosition(position) {
+  if (!position) return;
+  try {
+    localStorage.setItem(CALL_MINI_POS_KEY, JSON.stringify(position));
+  } catch {
+    // Ignore storage failures in private mode.
+  }
+}
+
+function applyCallMiniPosition() {
+  const mini = elements?.callMini;
+  if (!mini) return;
+  const saved = readCallMiniPosition();
+  if (!saved) {
+    mini.style.left = '';
+    mini.style.top = '';
+    mini.style.bottom = '';
+    mini.style.transform = '';
+    return;
+  }
+  const maxLeft = Math.max(4, window.innerWidth - mini.offsetWidth - 4);
+  const maxTop = Math.max(4, window.innerHeight - mini.offsetHeight - 4);
+  mini.style.left = `${Math.max(4, Math.min(maxLeft, saved.left))}px`;
+  mini.style.top = `${Math.max(4, Math.min(maxTop, saved.top))}px`;
+  mini.style.bottom = 'auto';
+  mini.style.transform = 'none';
+}
+
+function showCallMini() {
+  if (!activeCall || !elements?.callMini) return;
+  const context = createChatRenderContext();
+  if (elements.callMiniName) elements.callMiniName.textContent = context.starName;
+  if (elements.callMiniAvatar) fillStarAvatar(elements.callMiniAvatar, context);
+  elements.callMini.hidden = false;
+  applyCallMiniPosition();
+  updateCallDurationDisplay();
+}
+
+function minimizeCallPanel() {
+  if (!activeCall || !elements?.callPanel || !elements?.callMini) return;
+  if (!['calling', 'connected'].includes(activeCall.status)) return;
+  callPanelMinimized = true;
+  elements.callPanel.hidden = true;
+  showCallMini();
+}
+
+function restoreCallPanel() {
+  if (!activeCall) return;
+  callPanelMinimized = false;
+  if (elements?.callMini) elements.callMini.hidden = true;
+  showCallPanel(
+    activeCall.status === 'connected' ? '通话中…' : '正在呼叫…',
+    activeCall.status,
+  );
 }
 
 function addCallSystemMessage(content) {
@@ -149,7 +227,9 @@ function finishCall(resultText) {
   const connectedAt = activeCall.connectedAt;
   const duration = connectedAt ? Date.now() - connectedAt : 0;
   clearCallTimers();
+  callPanelMinimized = false;
   if (elements?.callPanel) elements.callPanel.hidden = true;
+  if (elements?.callMini) elements.callMini.hidden = true;
   activeCall = null;
 
   const content = connectedAt
@@ -197,6 +277,7 @@ function startOutboundCall() {
     return;
   }
   const settings = readSettings();
+  callPanelMinimized = false;
   activeCall = { direction: 'out', status: 'calling', startedAt: Date.now(), connectedAt: 0 };
   const callRef = activeCall;
   showCallPanel('正在呼叫…', 'calling');
@@ -223,6 +304,7 @@ function maybeTriggerIncomingCall() {
   if (Math.random() * 100 >= settings.callIncomingProbability) return;
 
   writeLastIncomingCallAt(now);
+  callPanelMinimized = false;
   activeCall = { direction: 'in', status: 'ringing', startedAt: now, connectedAt: 0 };
   showCallPanel('来电中…', 'ringing');
   startCallTick();
@@ -262,6 +344,8 @@ async function sendChatImages(files) {
   const list = (Array.isArray(files) ? files : Array.from(files || [])).filter((file) => String(file.type || '').startsWith('image/'));
   if (!list.length) return;
   const settings = readSettings();
+  const quoteSnapshot = pendingQuote;
+  let quoteUsed = false;
   for (const file of list) {
     let blob = file;
     try {
@@ -283,13 +367,20 @@ async function sendChatImages(files) {
         type: 'image',
         content: `idb:${id}`,
         timestamp: Date.now(),
+        quote: !quoteUsed ? quoteSnapshot : undefined,
         read: false,
         favorited: false,
         starFavorited: false,
       },
       { persist: true, scroll: true },
     );
-    if (saved) maybeStarFavorite(saved.id, settings.starFavorite);
+    if (saved) {
+      if (!quoteUsed && quoteSnapshot) {
+        quoteUsed = true;
+        if (pendingQuote === quoteSnapshot) clearPendingQuote();
+      }
+      maybeStarFavorite(saved.id, settings.starFavorite);
+    }
   }
 }
 let messageSequenceCounter = 0;
@@ -308,17 +399,20 @@ function nextSequence() {
 }
 
 function sortMessages(messages) {
-  return messages.slice().sort((a, b) => {
-    const aHas = Boolean(a.turnId);
-    const bHas = Boolean(b.turnId);
-    if (aHas && bHas && a.turnId !== b.turnId) {
-      return a.timestamp - b.timestamp;
-    }
-    if (aHas && !bHas) return 1;
-    if (!aHas && bHas) return -1;
-    if (a.sequence !== b.sequence) return a.sequence - b.sequence;
-    return a.timestamp - b.timestamp;
-  });
+  const roleRank = { user: 0, star: 1, system: 2 };
+  return messages
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const firstTime = Number(a.message.timestamp) || 0;
+      const secondTime = Number(b.message.timestamp) || 0;
+      if (firstTime !== secondTime) return firstTime - secondTime;
+
+      const firstRole = roleRank[a.message.role] ?? 9;
+      const secondRole = roleRank[b.message.role] ?? 9;
+      if (firstRole !== secondRole) return firstRole - secondRole;
+      return a.index - b.index;
+    })
+    .map((entry) => entry.message);
 }
 
 function formatMessageTime(timestamp) {
@@ -425,6 +519,78 @@ function createChatRenderContext() {
     starAvatar: character.avatar || '',
     userAvatar: settings.userAvatar || '',
   };
+}
+
+function quoteTextForMessage(message) {
+  if (!message) return '消息';
+  if (message.withdrawn) return '已撤回的消息';
+  if (message.type === 'questionnaire') {
+    const question = String(message.questionnaire?.question || message.content || '').trim();
+    return question ? `问卷：${question.slice(0, 180)}` : '问卷';
+  }
+  if (message.type === 'image') return '图片';
+  if (message.type === 'sticker') return '表情包';
+  return String(message.content || '').trim().slice(0, 180) || '消息';
+}
+
+function quoteSenderLabel(role, context = createChatRenderContext()) {
+  if (role === 'user') return context.userName;
+  if (role === 'system') return '消息';
+  return context.starName;
+}
+
+function createQuoteBlock(quote, context = createChatRenderContext()) {
+  const block = document.createElement('div');
+  block.className = 'message-bubble__quote';
+  if (quote?.id) block.dataset.quoteId = quote.id;
+
+  const sender = document.createElement('strong');
+  sender.textContent = quoteSenderLabel(quote?.role, context);
+  const text = document.createElement('span');
+  text.textContent = quote?.text || '消息';
+  block.append(sender, text);
+  return block;
+}
+
+function snapshotQuote(message) {
+  if (!message) return null;
+  return {
+    id: String(message.id || ''),
+    role: ['user', 'star', 'system'].includes(message.role) ? message.role : 'star',
+    type: ['text', 'sticker', 'questionnaire', 'image'].includes(message.type) ? message.type : 'text',
+    text: quoteTextForMessage(message),
+  };
+}
+
+function renderPendingQuoteBar() {
+  if (!elements?.quoteBar) return;
+  if (!pendingQuote) {
+    elements.quoteBar.hidden = true;
+    if (elements.quoteText) elements.quoteText.textContent = '';
+    return;
+  }
+  const context = createChatRenderContext();
+  if (elements.quoteName) elements.quoteName.textContent = quoteSenderLabel(pendingQuote.role, context);
+  if (elements.quoteText) elements.quoteText.textContent = pendingQuote.text || '消息';
+  elements.quoteBar.hidden = false;
+}
+
+function setPendingQuote(message) {
+  pendingQuote = snapshotQuote(message);
+  renderPendingQuoteBar();
+  elements?.input?.focus({ preventScroll: true });
+}
+
+function clearPendingQuote() {
+  pendingQuote = null;
+  renderPendingQuoteBar();
+}
+
+function takePendingQuote() {
+  const quote = pendingQuote;
+  pendingQuote = null;
+  renderPendingQuoteBar();
+  return quote;
 }
 
 function fillStarAvatar(container, context = createChatRenderContext()) {
@@ -553,6 +719,8 @@ function createMessageBubble(message, context = createChatRenderContext()) {
     return bubble;
   }
 
+  if (message.quote) bubble.append(createQuoteBlock(message.quote, context));
+
   if (message.type === 'questionnaire') {
     return createQuestionnaireBubble(message);
   }
@@ -664,6 +832,7 @@ function createMessageElement(message, context = createChatRenderContext()) {
   const availableActions = message.withdrawn
     ? [['delete', '删除']]
     : [
+        ['quote', '引用'],
         ['delete', '删除'],
         ['withdraw', '撤回'],
         ['favorite', message.favorited ? '取消收藏' : '收藏'],
@@ -889,6 +1058,7 @@ function handleQuestionnaireSubmit(event) {
     timestamp: Date.now(),
     turnId,
     sequence: nextSequence(),
+    quote: pendingQuote || undefined,
     read: false,
     favorited: false,
     starFavorited: false,
@@ -901,6 +1071,7 @@ function handleQuestionnaireSubmit(event) {
     return;
   }
 
+  clearPendingQuote();
   maybeStarFavorite(saved.id, readSettings().starFavoriteCard);
 
   closeQuestionnairePanel();
@@ -1015,6 +1186,7 @@ function sendStickerMessage(sticker) {
     type: 'sticker',
     content,
     timestamp: Date.now(),
+    quote: pendingQuote || undefined,
     read: false,
     favorited: false,
     starFavorited: false,
@@ -1022,6 +1194,7 @@ function sendStickerMessage(sticker) {
 
   const savedMessage = addChatMessage(message, { persist: true, scroll: true });
   if (!savedMessage) return false;
+  clearPendingQuote();
 
   closeToolPanel();
   maybeChangeChatMood(0.35);
@@ -1294,6 +1467,7 @@ function sendSticker(sticker) {
     timestamp: Date.now(),
     turnId,
     sequence: nextSequence(),
+    quote: pendingQuote || undefined,
     read: false,
     favorited: false,
     starFavorited: false,
@@ -1301,6 +1475,7 @@ function sendSticker(sticker) {
 
   const saved = addChatMessage(message, { persist: true, scroll: true });
   if (!saved) return null;
+  clearPendingQuote();
 
   closeToolPanel();
   maybeChangeChatMood(0.35);
@@ -1568,9 +1743,15 @@ function handleMessageListClick(event) {
     if (actionButton.disabled) return;
 
     const message = getChatMessages().find((item) => item.id === messageElement.dataset.messageId);
+    const action = actionButton.dataset.messageAction;
+    if (message && action === 'quote') {
+      setPendingQuote(message);
+      closeActiveMessage();
+      return;
+    }
     if (message) {
-      const changed = performChatMessageAction(actionButton.dataset.messageAction, message);
-      emitMessageAction(actionButton.dataset.messageAction, message, changed);
+      const changed = performChatMessageAction(action, message);
+      emitMessageAction(action, message, changed);
     }
     closeActiveMessage();
     return;
@@ -1611,6 +1792,7 @@ function handleSendMessage(event) {
     timestamp: Date.now(),
     turnId,
     sequence: nextSequence(),
+    quote: pendingQuote || undefined,
     read: false,
     favorited: false,
     starFavorited: false,
@@ -1618,6 +1800,7 @@ function handleSendMessage(event) {
 
   const savedMessage = addChatMessage(message, { persist: true, scroll: true });
   if (!savedMessage) return;
+  clearPendingQuote();
 
   maybeStarFavorite(savedMessage.id, readSettings().starFavorite);
 
@@ -1648,10 +1831,63 @@ function bindEvents() {
     closeToolMenu();
     startOutboundCall();
   });
+  elements.quoteCancel?.addEventListener('click', clearPendingQuote);
   elements.callAnswer?.addEventListener('click', answerIncomingCall);
   elements.callReject?.addEventListener('click', rejectIncomingCall);
   elements.callHangup?.addEventListener('click', hangupCurrentCall);
+  elements.callMinimize?.addEventListener('click', minimizeCallPanel);
+  elements.callMiniHang?.addEventListener('click', hangupCurrentCall);
   window.addEventListener(CALL_CHECK_EVENT, maybeTriggerIncomingCall);
+
+  elements.callMini?.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('#chatCallMiniHang')) return;
+    const rect = elements.callMini.getBoundingClientRect();
+    callMiniDragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+      moved: false,
+    };
+    try {
+      elements.callMini.setPointerCapture(event.pointerId);
+    } catch {
+      // Ignore unsupported pointer capture.
+    }
+    event.preventDefault();
+  });
+  document.addEventListener('pointermove', (event) => {
+    if (!callMiniDragState || !elements?.callMini) return;
+    const dx = event.clientX - callMiniDragState.startX;
+    const dy = event.clientY - callMiniDragState.startY;
+    if (!callMiniDragState.moved && Math.hypot(dx, dy) < 4) return;
+    callMiniDragState.moved = true;
+    const maxLeft = Math.max(4, window.innerWidth - elements.callMini.offsetWidth - 4);
+    const maxTop = Math.max(4, window.innerHeight - elements.callMini.offsetHeight - 4);
+    const left = Math.max(4, Math.min(maxLeft, callMiniDragState.startLeft + dx));
+    const top = Math.max(4, Math.min(maxTop, callMiniDragState.startTop + dy));
+    elements.callMini.style.left = `${left}px`;
+    elements.callMini.style.top = `${top}px`;
+    elements.callMini.style.bottom = 'auto';
+    elements.callMini.style.transform = 'none';
+    event.preventDefault();
+  }, { passive: false });
+  const finishCallMiniDrag = () => {
+    if (!callMiniDragState || !elements?.callMini) return;
+    const wasMoved = callMiniDragState.moved;
+    callMiniDragState = null;
+    if (wasMoved) {
+      writeCallMiniPosition({
+        left: parseFloat(elements.callMini.style.left) || 4,
+        top: parseFloat(elements.callMini.style.top) || 4,
+      });
+    } else {
+      restoreCallPanel();
+    }
+  };
+  document.addEventListener('pointerup', finishCallMiniDrag);
+  document.addEventListener('pointercancel', finishCallMiniDrag);
   elements.imageInput?.addEventListener('change', (event) => {
     // 先取出快照再清空 input，否则 FileList 会被一并清掉。
     const files = Array.from(event.target.files || []);
@@ -1771,6 +2007,9 @@ export function initChatView(root = document.getElementById('view-chat')) {
 
       <div class="chat-call-panel" id="chatCallPanel" role="dialog" aria-modal="true" aria-labelledby="chatCallName" hidden>
         <div class="chat-call-card">
+          <button class="chat-call-minimize" id="chatCallMinimize" type="button" aria-label="缩小通话窗口" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v5H3M16 3v5h5M8 21v-5H3M16 21v-5h5"></path></svg>
+          </button>
           <div class="chat-call-avatar" id="chatCallAvatar" aria-hidden="true">星</div>
           <strong class="chat-call-name" id="chatCallName">星回</strong>
           <span class="chat-call-status" id="chatCallStatus">正在呼叫…</span>
@@ -1781,6 +2020,17 @@ export function initChatView(root = document.getElementById('view-chat')) {
             <button class="chat-call-action chat-call-action--hangup" id="chatCallHangup" type="button" hidden>挂断</button>
           </div>
         </div>
+      </div>
+
+      <div class="chat-call-mini" id="chatCallMini" hidden>
+        <div class="chat-call-mini__avatar" id="chatCallMiniAvatar" aria-hidden="true">星</div>
+        <div class="chat-call-mini__copy">
+          <strong id="chatCallMiniName">星回</strong>
+          <span id="chatCallMiniDuration">00:00</span>
+        </div>
+        <button class="chat-call-mini__hang" id="chatCallMiniHang" type="button" aria-label="挂断通话">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 9c-1.6 0-3.1.25-4.5.7v2.1c0 .4-.2.7-.6.9-.8.4-1.5.9-2.2 1.5-.3.3-.7.3-1 0l-1.9-1.9c-.3-.3-.3-.8 0-1.1C4.8 8.9 8.2 7 12 7s7.2 1.9 10.2 5.2c.3.3.3.8 0 1.1l-1.9 1.9c-.3.3-.7.3-1 0-.7-.6-1.4-1.1-2.2-1.5-.4-.2-.6-.5-.6-.9v-2.1C15.1 9.25 13.6 9 12 9z"></path></svg>
+        </button>
       </div>
 
       <div class="chat-conversation">
@@ -1794,6 +2044,13 @@ export function initChatView(root = document.getElementById('view-chat')) {
         ></div>
 
         <div class="chat-composer-area">
+          <div class="chat-quote-bar" id="chatQuoteBar" hidden>
+            <div class="chat-quote-bar__copy">
+              <strong id="chatQuoteName">引用</strong>
+              <span id="chatQuoteText"></span>
+            </div>
+            <button class="chat-quote-bar__close" id="chatQuoteCancel" type="button" aria-label="取消引用">×</button>
+          </div>
           <div class="chat-tool-menu" id="chatToolMenu" aria-label="聊天工具" hidden>
             <button class="chat-tool-menu__item" type="button" id="chatImageButton" aria-label="发送图片">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1924,6 +2181,10 @@ export function initChatView(root = document.getElementById('view-chat')) {
     form: viewRoot.querySelector('#chatComposer'),
     input: viewRoot.querySelector('#chatInput'),
     messageList: viewRoot.querySelector('#chatMessageList'),
+    quoteBar: viewRoot.querySelector('#chatQuoteBar'),
+    quoteName: viewRoot.querySelector('#chatQuoteName'),
+    quoteText: viewRoot.querySelector('#chatQuoteText'),
+    quoteCancel: viewRoot.querySelector('#chatQuoteCancel'),
     toolMenu: viewRoot.querySelector('#chatToolMenu'),
     toolToggle: viewRoot.querySelector('#chatToolsToggle'),
     toolPanel: viewRoot.querySelector('#chatToolPanel'),
@@ -1937,6 +2198,12 @@ export function initChatView(root = document.getElementById('view-chat')) {
     callReject: viewRoot.querySelector('#chatCallReject'),
     callAnswer: viewRoot.querySelector('#chatCallAnswer'),
     callHangup: viewRoot.querySelector('#chatCallHangup'),
+    callMinimize: viewRoot.querySelector('#chatCallMinimize'),
+    callMini: viewRoot.querySelector('#chatCallMini'),
+    callMiniAvatar: viewRoot.querySelector('#chatCallMiniAvatar'),
+    callMiniName: viewRoot.querySelector('#chatCallMiniName'),
+    callMiniDuration: viewRoot.querySelector('#chatCallMiniDuration'),
+    callMiniHang: viewRoot.querySelector('#chatCallMiniHang'),
     questionnairePanel: viewRoot.querySelector('#chatQuestionnairePanel'),
     questionnaireForm: viewRoot.querySelector('#chatQuestionnaireForm'),
     questionnaireQuestion: viewRoot.querySelector('#chatQuestionnaireQuestion'),
@@ -1953,6 +2220,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
   };
 
   bindEvents();
+  renderPendingQuoteBar();
   updateChatProfileAvatar();
   updateChatMood();
   startQuestionnaireEngine({
@@ -1987,6 +2255,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
 export function onChatViewEnter() {
   closeActiveMessage();
   closeToolPanel();
+  renderPendingQuoteBar();
   updateChatProfileAvatar();
   updateChatMood();
   renderChatMessages();

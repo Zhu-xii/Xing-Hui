@@ -16,6 +16,7 @@ let viewRoot = null;
 let elements = null;
 let eventsBound = false;
 let toastTimer = null;
+let activeFavoritesTab = 'mine';
 
 // 收藏分类：聊天（含表情包与图片）/ 卡片（问卷类信息）/ 朋友圈。
 const KIND_LABEL = { chat: '聊天', card: '卡片', feed: '朋友圈' };
@@ -265,20 +266,27 @@ function renderFavorites() {
 
   const countKind = (list, kind) => list.filter((item) => item.kind === kind).length;
   if (elements.stats) {
-    elements.stats.textContent = `共 ${mine.length + star.length} 条 · 我收藏 ${mine.length} 条（聊天 ${countKind(mine, 'chat')} · 卡片 ${countKind(mine, 'card')} · 朋友圈 ${countKind(mine, 'feed')}） · 梦角收藏 ${star.length} 条`;
+    elements.stats.textContent = `共 ${mine.length + star.length} 条 · 我收藏 ${mine.length} 条（聊天 ${countKind(mine, 'chat')} · 卡片 ${countKind(mine, 'card')} · 朋友圈 ${countKind(mine, 'feed')}） · 他的收藏 ${star.length} 条`;
   }
 
+  const isStar = activeFavoritesTab === 'star';
+  const items = isStar ? star : mine;
+  elements.tabButtons.forEach((button) => {
+    const selected = button.dataset.favoritesTab === activeFavoritesTab;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-selected', String(selected));
+  });
+  if (elements.activeMark) elements.activeMark.textContent = isStar ? '他' : '我';
+  if (elements.activeTitle) elements.activeTitle.textContent = isStar ? '他的收藏' : '我的收藏';
+  if (elements.activeCount) elements.activeCount.textContent = `${items.length} 条`;
+
   renderColumn(
-    elements.mineList,
-    mine,
-    '还没有收藏内容',
-    '聊天消息、问卷卡片与朋友圈动态都可以收藏，收藏后会出现在这里。',
-  );
-  renderColumn(
-    elements.starList,
-    star,
-    '星回还没有收藏内容',
-    '在设置里调整「星回自动收藏」概率后，星回会收藏你的消息、卡片或朋友圈。',
+    elements.list,
+    items,
+    isStar ? '他还没有收藏内容' : '还没有收藏内容',
+    isStar
+      ? '在设置里调整「星回自动收藏」概率后，他会收藏你的消息、卡片或朋友圈。'
+      : '聊天消息、问卷卡片与朋友圈动态都可以收藏，收藏后会出现在这里。',
   );
 }
 
@@ -301,6 +309,16 @@ function toggleFavorite(id, column, type) {
 }
 
 function handleFavoritesClick(event) {
+  const tab = event.target.closest('[data-favorites-tab]');
+  if (tab) {
+    const nextTab = tab.dataset.favoritesTab;
+    if (nextTab === 'mine' || nextTab === 'star') {
+      activeFavoritesTab = nextTab;
+      renderFavorites();
+    }
+    return;
+  }
+
   const button = event.target.closest('[data-favorite-remove]');
   if (!button) return;
   const id = button.dataset.favoriteRemove;
@@ -337,29 +355,25 @@ export function initFavoritesView(root = document.getElementById('view-favorites
         <p class="favorites-stats" id="favoritesStats">—</p>
       </header>
 
-      <div class="favorites-grid">
-        <section class="favorites-panel" aria-labelledby="favoritesMineTitle">
-          <div class="favorites-panel__heading">
-            <div>
-              <span class="favorites-panel__mark" aria-hidden="true">我</span>
-              <h3 id="favoritesMineTitle">我收藏的</h3>
-            </div>
-            <span id="favoritesMineCount">0 条</span>
-          </div>
-          <div class="favorites-list" id="favoritesMineList"></div>
-        </section>
-
-        <section class="favorites-panel favorites-panel--star" aria-labelledby="favoritesStarTitle">
-          <div class="favorites-panel__heading">
-            <div>
-              <span class="favorites-panel__mark" aria-hidden="true">星</span>
-              <h3 id="favoritesStarTitle">梦角收藏的</h3>
-            </div>
-            <span id="favoritesStarCount">0 条</span>
-          </div>
-          <div class="favorites-list" id="favoritesStarList"></div>
-        </section>
+      <div class="favorites-tabs" role="tablist" aria-label="收藏分类">
+        <button class="favorites-tab is-active" type="button" role="tab" aria-selected="true" data-favorites-tab="mine">
+          我的收藏 <span id="favoritesMineCount">0 条</span>
+        </button>
+        <button class="favorites-tab" type="button" role="tab" aria-selected="false" data-favorites-tab="star">
+          他的收藏 <span id="favoritesStarCount">0 条</span>
+        </button>
       </div>
+
+      <section class="favorites-panel" aria-labelledby="favoritesActiveTitle">
+        <div class="favorites-panel__heading">
+          <div>
+            <span class="favorites-panel__mark" id="favoritesActiveMark" aria-hidden="true">我</span>
+            <h3 id="favoritesActiveTitle">我的收藏</h3>
+          </div>
+          <span id="favoritesActiveCount">0 条</span>
+        </div>
+        <div class="favorites-list" id="favoritesList"></div>
+      </section>
 
       <div class="favorites-toast" id="favoritesToast" role="status" aria-live="polite" hidden></div>
     </div>
@@ -368,8 +382,11 @@ export function initFavoritesView(root = document.getElementById('view-favorites
   elements = {
     mineCount: viewRoot.querySelector('#favoritesMineCount'),
     starCount: viewRoot.querySelector('#favoritesStarCount'),
-    mineList: viewRoot.querySelector('#favoritesMineList'),
-    starList: viewRoot.querySelector('#favoritesStarList'),
+    list: viewRoot.querySelector('#favoritesList'),
+    tabButtons: Array.from(viewRoot.querySelectorAll('[data-favorites-tab]')),
+    activeMark: viewRoot.querySelector('#favoritesActiveMark'),
+    activeTitle: viewRoot.querySelector('#favoritesActiveTitle'),
+    activeCount: viewRoot.querySelector('#favoritesActiveCount'),
     stats: viewRoot.querySelector('#favoritesStats'),
     toast: viewRoot.querySelector('#favoritesToast'),
   };
