@@ -2,10 +2,13 @@ import { pickRandom, randomBetween, randomInt } from './random.js';
 import {
   QUESTIONNAIRE_CATEGORY_NAME,
   hasManageCategory,
+  normalizeSettings,
   readQuestionnaireAnswers,
   readChatMessages,
+  readSettings,
   writeChatMessages,
 } from './storage.js';
+import { joinSpellCards } from './spell-cards.js';
 
 const ACTIVE_STATUSES = new Set(['pending', 'thinking']);
 
@@ -21,6 +24,15 @@ function shuffle(items) {
     [copy[index], copy[target]] = [copy[target], copy[index]];
   }
   return copy;
+}
+
+function pickN(items, count) {
+  const copy = items.slice();
+  const picked = [];
+  while (copy.length && picked.length < count) {
+    picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+  }
+  return picked;
 }
 
 export function buildQuestionnaireMessage(form) {
@@ -49,7 +61,11 @@ export function buildQuestionnaireMessage(form) {
   };
 }
 
-export function answerQuestionnaire(questionnaire, answers = readQuestionnaireAnswers()) {
+export function answerQuestionnaire(
+  questionnaire,
+  answers = readQuestionnaireAnswers(),
+  settings = readSettings(),
+) {
   const result = { ...questionnaire, status: 'answered', delayNotice: false };
 
   if (result.type === 'single' && result.options.length) {
@@ -60,10 +76,12 @@ export function answerQuestionnaire(questionnaire, answers = readQuestionnaireAn
   }
 
   if (result.type === 'multiple' && result.options.length) {
-    const count = Math.max(1, Math.min(result.options.length, randomInt(result.multiMin, result.multiMax)));
-    const selected = shuffle(result.options).slice(0, count).sort(
-      (first, second) => result.options.indexOf(first) - result.options.indexOf(second),
-    );
+    const optionCount = result.options.length;
+    const count = Math.max(1, Math.min(optionCount, randomInt(result.multiMin, result.multiMax)));
+    const indexes = shuffle(Array.from({ length: optionCount }, (_, index) => index))
+      .slice(0, count)
+      .sort((first, second) => first - second);
+    const selected = indexes.map((index) => result.options[index]);
     result.selected = selected;
     result.answer = selected.join('、');
     return result;
@@ -75,8 +93,19 @@ export function answerQuestionnaire(questionnaire, answers = readQuestionnaireAn
     return result;
   }
 
-  const answer = pickRandom(answers);
-  result.answer = answer?.content || '（暂无可用回答）';
+  const answerPool = answers
+    .map((answer) => String(answer?.content || '').trim())
+    .filter(Boolean);
+  const answerCount = Math.min(5, answerPool.length);
+  const selectedAnswers = pickN(answerPool, 1 + Math.floor(Math.random() * answerCount));
+  const options = normalizeSettings(settings);
+  result.answer = selectedAnswers.length
+    ? (selectedAnswers.length === 1
+        ? selectedAnswers[0]
+        : (options.spellCardEnabled
+            ? joinSpellCards(selectedAnswers, options)
+            : selectedAnswers.join(' ')))
+    : '（暂无可用回答）';
   result.selected = [];
   return result;
 }

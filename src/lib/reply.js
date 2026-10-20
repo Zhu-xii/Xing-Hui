@@ -30,6 +30,44 @@ export {
 };
 
 export const FALLBACK_REPLY = '嗯嗯';
+const FALLBACK_REPLY_POOL = Object.freeze(['收到～', '好呀', '好～', '嗯嗯', '知道啦', '好哒', '嗯嗯，我在听']);
+const EMOJI_REPLY_CHANCE = 5;
+const IMAGE_REPLY_CHANCE = 5;
+const KAOMOJI_REPLY_CHANCE = 5;
+
+// 与 Mochi 相同：文字、颜文字、emoji 从内容本身判定，不新增分类设置或数据结构。
+const CHAT_READABLE_RE = /[A-Za-z0-9\u4e00-\u9fff\u3041-\u3096\u30a1-\u30fa]/;
+const CHAT_KAOMOJI_FACE_RE = /[｡◕‿・▽´｀￣﹏◠◡≧≦ω＾￢¬^•˙˘๑٩۶ฅヽノ]/;
+const CHAT_BRACKET_SHELL_RE = /^[\s()（）[\]【】<>《》]+$/;
+
+function isBracketedKaomojiCard(content) {
+  return !CHAT_BRACKET_SHELL_RE.test(content)
+    && /[\(（｡◕(◕)(づ｡(¬)]/.test(content)
+    && /[\)）】)]/.test(content)
+    && !(CHAT_READABLE_RE.test(content) && !CHAT_KAOMOJI_FACE_RE.test(content));
+}
+
+function isEmojiCard(content) {
+  if (/[\uD800-\uDBFF]/.test(content)) return true;
+  if (CHAT_READABLE_RE.test(content)) return false;
+  if (isBracketedKaomojiCard(content) || CHAT_KAOMOJI_FACE_RE.test(content)) return false;
+  for (const character of content) {
+    const codePoint = character.codePointAt(0);
+    if (
+      (codePoint >= 0x1F000 && codePoint <= 0x1FAFF)
+      || (codePoint >= 0x2600 && codePoint <= 0x27BF)
+      || (codePoint >= 0x2B00 && codePoint <= 0x2BFF)
+    ) return true;
+  }
+  return false;
+}
+
+function isKaomojiCard(content) {
+  if (isBracketedKaomojiCard(content)) return true;
+  if (CHAT_READABLE_RE.test(content)) return false;
+  return CHAT_KAOMOJI_FACE_RE.test(content);
+}
+
 export const DEFAULT_REPLY_SETTINGS = Object.freeze({
   replyDelayMin: 1,
   replyDelayMax: 3,
@@ -108,35 +146,121 @@ export function getEnabledStickers(stickers = readStickers()) {
     .filter((sticker) => sticker.image || (sticker.storage === 'indexeddb' && sticker.id));
 }
 
-function shuffle(items) {
+function pickN(items, count) {
   const copy = items.slice();
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const target = randomInt(0, index);
-    [copy[index], copy[target]] = [copy[target], copy[index]];
+  const picked = [];
+  while (copy.length && picked.length < count) {
+    picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
   }
-  return copy;
+  return picked;
 }
 
-// 同一批拼字优先抽不同字卡；张数超过去重后数量时允许复用，但绝不让相邻两张重复。
-function pickUniqueTextCards(cards, count) {
-  const texts = cards.map((card) => applyNicknamePlaceholders(card.content)).filter(Boolean);
-  if (!texts.length) return [];
+function pickNonBlank(items) {
+  if (!Array.isArray(items) || !items.length) return '';
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const value = pickRandom(items);
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '';
+}
 
-  const uniquePool = Array.from(new Set(texts));
-  const segments = [];
-  let last = '';
+function normalizeReplyText(value) {
+  return applyNicknamePlaceholders(String(value ?? '').trim());
+}
 
-  for (let index = 0; index < count; index += 1) {
-    const unused = uniquePool.filter((text) => !segments.includes(text));
-    let candidates = (unused.length ? unused : uniquePool).filter((text) => text !== last);
-    if (!candidates.length) candidates = texts.filter((text) => text !== last);
-    if (!candidates.length) candidates = uniquePool;
-    const picked = pickRandom(candidates);
-    if (!picked) break;
-    segments.push(picked);
-    last = picked;
+function buildReplyPool(cards, stickers, images) {
+  const text = [];
+  const kaomoji = [];
+  const emoji = [];
+
+  cards.forEach((card) => {
+    const content = String(card?.content || '').trim();
+    if (!content) return;
+    if (isEmojiCard(content)) emoji.push(content);
+    else if (isKaomojiCard(content)) kaomoji.push(content);
+    else text.push(content);
+  });
+
+  return { text, kaomoji, emoji, sticker: stickers, image: images };
+}
+
+function replySignature(payload) {
+  if (!payload) return '';
+  const content = String(payload.content || '');
+  return `${payload.type || 'text'}|${content.length}|${content.slice(0, 160)}|${content.slice(-64)}`;
+}
+
+let lastReplySignature = '';
+
+function drawSingleReply(options, pool) {
+  const stickerHit = pool.sticker.length > 0 && randomChance(options.stickerReply);
+  const imageHit = pool.image.length > 0 && randomChance(IMAGE_REPLY_CHANCE);
+
+  if (stickerHit) {
+    const payload = stickerPayload(options, pickRandom(pool.sticker));
+    if (payload) return payload;
   }
 
+  if (pool.emoji.length && randomChance(EMOJI_REPLY_CHANCE)) {
+    const content = pickNonBlank(pool.emoji);
+    if (content) return createPayload(options, { content: normalizeReplyText(content) });
+  }
+
+  if (imageHit) {
+    const payload = stickerPayload(options, pickRandom(pool.image));
+    if (payload) return payload;
+  }
+
+  if (pool.text.length) {
+    let content = normalizeReplyText(pickNonBlank(pool.text));
+    if (content) {
+      // Mochi 的普通文字回复会按颜文字概率追加一张颜文字卡，仍放在同一条文字消息里。
+      if (options.spellCardEnabled && pool.kaomoji.length && randomChance(KAOMOJI_REPLY_CHANCE)) {
+        const kaomoji = normalizeReplyText(pickNonBlank(pool.kaomoji));
+        if (kaomoji) content += ` ${kaomoji}`;
+      }
+      return createPayload(options, { content });
+    }
+  }
+
+  // 本地没有系统内置卡兜底；只有符号卡时仍从现有卡里出，不退化成固定空回复。
+  const fallbackCard = pickNonBlank(pool.kaomoji) || pickNonBlank(pool.emoji);
+  if (fallbackCard) return createPayload(options, { content: normalizeReplyText(fallbackCard) });
+
+  return createPayload(options, { content: pickRandom(FALLBACK_REPLY_POOL) || FALLBACK_REPLY });
+}
+
+function drawSingleReplyWithReroll(options, pool) {
+  let payload = drawSingleReply(options, pool);
+  let signature = replySignature(payload);
+
+  // 对齐 Mochi genOneReply：与上一条完全相同时，再抽一次；池子太小则接受重复。
+  if (signature && signature === lastReplySignature) {
+    const alternate = drawSingleReply(options, pool);
+    const alternateSignature = replySignature(alternate);
+    if (alternateSignature && alternateSignature !== signature) {
+      payload = alternate;
+      signature = alternateSignature;
+    }
+  }
+
+  lastReplySignature = signature;
+  return payload;
+}
+
+function drawMultiTextSegments(options, pool) {
+  if (pool.text.length < 2) return [];
+  const maxCount = Math.min(options.spellCardMax, pool.text.length);
+  const minCount = Math.min(maxCount, Math.max(1, options.spellCardMin));
+  const count = randomInt(minCount, maxCount);
+  let segments = pickN(pool.text, count).map(normalizeReplyText).filter(Boolean);
+  if (segments.length < 2) return [];
+
+  const signature = `multi|${segments.join('\u0001')}`;
+  if (signature === lastReplySignature) {
+    segments = pickN(pool.text, count).map(normalizeReplyText).filter(Boolean);
+  }
+  lastReplySignature = `multi|${segments.join('\u0001')}`;
   return segments;
 }
 
@@ -180,16 +304,13 @@ export function createReplyBatch({ settings, cards, stickers } = {}) {
   );
   // 「图片」字卡与表情包共用同一发送管线。
   const availableImages = getEnabledStickers(readImages());
-  const availableMedia = [...availableStickers, ...availableImages];
+  const pool = buildReplyPool(availableCards, availableStickers, availableImages);
 
   if (
     options.spellCardEnabled
-    && availableCards.length >= 2
+    && pool.text.length >= 2
     && randomChance(options.spellCardChance)
   ) {
-    const maxCount = Math.min(options.spellCardMax, availableCards.length);
-    const count = randomInt(Math.min(options.spellCardMin, maxCount), maxCount);
-
     // 「连发时也拼接」：连发 N 条，每条各自拼接 1 组字卡。
     if (options.spellCardMode === 'each') {
       const messageCount = options.multiReplyEnabled
@@ -197,7 +318,7 @@ export function createReplyBatch({ settings, cards, stickers } = {}) {
         : 1;
       const joined = [];
       for (let index = 0; index < messageCount; index += 1) {
-        const segments = pickUniqueTextCards(availableCards, count);
+        const segments = drawMultiTextSegments(options, pool);
         const content = joinSpellCards(segments, options);
         if (!content) continue;
         const payload = createPayload(options, { content, tag: SPELL_CARD_TAG });
@@ -207,7 +328,7 @@ export function createReplyBatch({ settings, cards, stickers } = {}) {
       if (joined.length) return joined;
     }
 
-    const segments = pickUniqueTextCards(availableCards, count);
+    const segments = drawMultiTextSegments(options, pool);
     if (segments.length >= 2) {
       if (options.spellCardMode === 'split') {
         return segments.map((content, index) => {
@@ -223,23 +344,17 @@ export function createReplyBatch({ settings, cards, stickers } = {}) {
   const payloadCount = options.multiReplyEnabled
     ? randomInt(options.multiReplyMin, options.multiReplyMax)
     : 1;
-  const textDeck = shuffle(availableCards);
   const payloads = [];
   for (let index = 0; index < payloadCount; index += 1) {
-    const canSendSticker = availableMedia.length > 0 && randomChance(options.stickerReply);
-    const payload = canSendSticker
-      ? stickerPayload(options, pickRandom(availableMedia))
-      : createPayload(options, {
-          content: applyNicknamePlaceholders(textDeck[index % Math.max(1, textDeck.length)]?.content || FALLBACK_REPLY),
-          tag: payloadCount > 1 ? MULTI_REPLY_TAG : '',
-        });
+    const payload = drawSingleReplyWithReroll(options, pool);
     if (payload) {
+      payload.tag = payloadCount > 1 ? MULTI_REPLY_TAG : '';
       payload.timestamp = Date.now() + index;
       payloads.push(payload);
     }
   }
 
-  return payloads.length ? payloads : [createPayload(options, { content: FALLBACK_REPLY })];
+  return payloads.length ? payloads : [createPayload(options, { content: pickRandom(FALLBACK_REPLY_POOL) || FALLBACK_REPLY })];
 }
 
 export function createReplyPayload(options = {}) {
