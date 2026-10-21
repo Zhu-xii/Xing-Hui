@@ -675,6 +675,7 @@ body[data-view='chat'] .views {
 .chat-call-mini__hang svg {
   width: 17px;
   height: 17px;
+  color: #FFFFFF !important;
 }
 
 .chat-call-avatar {

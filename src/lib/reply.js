@@ -2,6 +2,7 @@ import { pickRandom, randomBetween, randomChance, randomInt } from './random.js'
 import {
   CARD_STORAGE_KEY,
   DEFAULT_GROUP_ID,
+  REPLY_ALL_GROUPS_ID,
   SETTINGS_KEY,
   STICKER_STORAGE_KEY,
   applyNicknamePlaceholders,
@@ -25,6 +26,7 @@ import { MULTI_REPLY_TAG, SPELL_CARD_TAG, joinSpellCards } from './spell-cards.j
 export {
   CARD_STORAGE_KEY,
   DEFAULT_GROUP_ID,
+  REPLY_ALL_GROUPS_ID,
   SETTINGS_KEY,
   STICKER_STORAGE_KEY,
 };
@@ -120,14 +122,14 @@ export function getReplyDelayMs(settings = readSettings()) {
 }
 
 export function getAvailableCards(groupId, cards = readCards()) {
-  const targetGroupId = String(groupId || DEFAULT_GROUP_ID).trim() || DEFAULT_GROUP_ID;
+  const targetGroupId = String(groupId || REPLY_ALL_GROUPS_ID).trim() || REPLY_ALL_GROUPS_ID;
   const sourceCards = Array.isArray(cards) ? cards : [];
 
   return sourceCards
     .filter((card) => card && typeof card === 'object')
     .filter((card) => !card.disabled)
     .filter((card) => (
-      targetGroupId === DEFAULT_GROUP_ID
+      targetGroupId === REPLY_ALL_GROUPS_ID
       || String(card.groupId || '') === targetGroupId
     ))
     .map((card) => ({ ...card, content: typeof card.content === 'string' ? card.content.trim() : '' }))
@@ -296,7 +298,7 @@ export function createReplyBatch({ settings, cards, stickers } = {}) {
   if (roastPayload) return [roastPayload];
 
   const availableCards = getAvailableCards(
-    options.currentGroupId,
+    options.replyGroupId,
     cards === undefined ? readCards() : cards,
   );
   const availableStickers = getEnabledStickers(

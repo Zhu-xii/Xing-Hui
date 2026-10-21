@@ -3,6 +3,7 @@ import { deleteImageBlob, deleteStickerBlob, getStickerBlob, putImageBlob, putSt
 import {
   CARD_STORAGE_KEY as STORAGE_CARD_KEY,
   DEFAULT_GROUP_ID as STORAGE_DEFAULT_GROUP_ID,
+  REPLY_ALL_GROUPS_ID as STORAGE_REPLY_ALL_GROUPS_ID,
   GREETING_GROUP_ID as STORAGE_GREETING_GROUP_ID,
   GROUP_STORAGE_KEY as STORAGE_GROUP_KEY,
   MANAGE_CATEGORIES,
@@ -16,6 +17,8 @@ import {
   IMAGE_STORAGE_KEY as STORAGE_IMAGE_KEY,
   getManageCategory,
   readJson,
+  readSettings,
+  updateSettings,
   writeJson,
 } from '../lib/storage.js';
 
@@ -33,6 +36,7 @@ export const DEFAULT_GROUP_ID = STORAGE_DEFAULT_GROUP_ID;
 export const GREETING_GROUP_ID = STORAGE_GREETING_GROUP_ID;
 
 const CARD_PAGE_SIZE = 120;
+const MANAGE_GROUP_STORAGE_KEY = 'xinghui_manage_group_id';
 
 const TEXT_CATEGORY_META = Object.freeze({
   questionnaire: { label: '问卷回答', icon: '？', hint: '问卷回答会保存在本地，供问卷入口调用。' },
@@ -214,10 +218,7 @@ function readManageData() {
     .map(normalizePatCard)
     .filter(Boolean);
 
-  const parsed = readJson(SETTINGS_KEY, {});
-  const settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-
-  const requestedGroupId = String(settings.currentGroupId || '').trim();
+  const requestedGroupId = String(readJson(MANAGE_GROUP_STORAGE_KEY, '') || '').trim();
   const currentGroupId = groupIds.has(requestedGroupId) ? requestedGroupId : DEFAULT_GROUP_ID;
 
   return { groups, cards, stickers, images, questionnaireAnswers, statuses, moods, roasts, patCards, currentGroupId };
@@ -228,11 +229,7 @@ function writeStoredArray(key, value) {
 }
 
 function writeCurrentGroupId() {
-  const parsed = readJson(SETTINGS_KEY, {});
-  const settings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-
-  settings.currentGroupId = state.currentGroupId;
-  return writeJson(SETTINGS_KEY, settings);
+  return writeJson(MANAGE_GROUP_STORAGE_KEY, state.currentGroupId);
 }
 
 function saveData() {
@@ -302,7 +299,6 @@ function groupById(groupId) {
 }
 
 function cardsInGroup(groupId) {
-  if (groupId === DEFAULT_GROUP_ID) return state.cards;
   return state.cards.filter((card) => card.groupId === groupId);
 }
 
@@ -803,6 +799,7 @@ function deleteGroup(groupId) {
       }
       state.groups = state.groups.filter((item) => item.id !== groupId);
       if (state.currentGroupId === groupId) state.currentGroupId = DEFAULT_GROUP_ID;
+      if (readSettings().replyGroupId === groupId) updateSettings({ replyGroupId: STORAGE_REPLY_ALL_GROUPS_ID });
       state.selectedCardIds.clear();
       saveData();
       render();

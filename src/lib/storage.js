@@ -44,6 +44,7 @@ export const FEED_NOTICES_STORAGE_KEY = STORAGE_KEYS.feedNotices;
 export const FEED_AUTO_POST_STORAGE_KEY = STORAGE_KEYS.feedAutoPost;
 export const CHARACTER_STORAGE_KEY = STORAGE_KEYS.character;
 export const DEFAULT_GROUP_ID = 'group_default';
+export const REPLY_ALL_GROUPS_ID = '__reply_all_groups__';
 export const GREETING_GROUP_ID = 'group_greeting';
 export const STICKER_GROUP_ID = 'group_stickers';
 export const IMAGE_GROUP_ID = 'group_images';
@@ -131,6 +132,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   lastRoastAt: 0,
   showTimestamp: true,
   fontSize: 'medium',
+  replyGroupId: REPLY_ALL_GROUPS_ID,
+  replyPoolVersion: 2,
   currentGroupId: DEFAULT_GROUP_ID,
 });
 
@@ -288,6 +291,16 @@ export function normalizeSeparatorList(value) {
   return result.slice(0, MAX_CUSTOM_SEPARATORS);
 }
 
+function normalizeReplyGroupId(source) {
+  const candidate = String(source.replyGroupId || source.currentGroupId || '').trim();
+  const migrated = source.replyPoolVersion === 2 || candidate !== DEFAULT_GROUP_ID
+    ? candidate
+    : REPLY_ALL_GROUPS_ID;
+  return migrated && !MANAGE_CATEGORIES.some((category) => category.id === migrated)
+    ? migrated
+    : REPLY_ALL_GROUPS_ID;
+}
+
 export function normalizeSettings(settings = {}) {
   const source = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {};
   const firstDelay = clamp(finiteNumber(source.replyDelayMin, DEFAULT_SETTINGS.replyDelayMin), 0, 600);
@@ -368,6 +381,8 @@ export function normalizeSettings(settings = {}) {
     callNoHangup: source.callNoHangup === true,
     showTimestamp: source.showTimestamp !== false,
     fontSize: FONT_SIZES.has(source.fontSize) ? source.fontSize : DEFAULT_SETTINGS.fontSize,
+    replyGroupId: normalizeReplyGroupId(source),
+    replyPoolVersion: 2,
     currentGroupId: String(source.currentGroupId || '').trim() || DEFAULT_GROUP_ID,
   };
 }

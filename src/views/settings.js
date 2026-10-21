@@ -1,8 +1,14 @@
 import '../styles/settings.css';
 import {
+  DEFAULT_GROUP_ID,
   DEFAULT_SETTINGS,
+  GREETING_GROUP_ID,
+  GROUP_STORAGE_KEY,
+  MANAGE_CATEGORIES,
   normalizeSettings,
+  REPLY_ALL_GROUPS_ID,
   readCharacter,
+  readJson,
   readSettings,
   updateSettings,
   writeCharacter,
@@ -11,6 +17,42 @@ import { joinSpellCards } from '../lib/spell-cards.js';
 import { deleteAvatarBlob, getAvatarBlob, putAvatarBlob, setBlobImage } from '../lib/media-db.js';
 
 const MAX_CHAT_BACKGROUND_BYTES = 2 * 1024 * 1024;
+const REPLY_GROUP_ALL_LABEL = '全部字卡';
+const MANAGE_CATEGORY_IDS = new Set(MANAGE_CATEGORIES.map((category) => category.id));
+
+function readReplyGroupChoices() {
+  const choices = [
+    { id: REPLY_ALL_GROUPS_ID, name: REPLY_GROUP_ALL_LABEL },
+    { id: DEFAULT_GROUP_ID, name: '默认分组' },
+    { id: GREETING_GROUP_ID, name: '问候语字卡' },
+  ];
+  const seen = new Set(choices.map((choice) => choice.id));
+  const groups = readJson(GROUP_STORAGE_KEY, []);
+  if (Array.isArray(groups)) {
+    groups.forEach((group) => {
+      const id = String(group?.id || '').trim();
+      const name = String(group?.name || '').trim();
+      if (!id || !name || seen.has(id) || group?.category || MANAGE_CATEGORY_IDS.has(id)) return;
+      seen.add(id);
+      choices.push({ id, name });
+    });
+  }
+  return choices;
+}
+
+function syncReplyGroup(settings) {
+  if (!elements?.replyGroup) return;
+  const choices = readReplyGroupChoices();
+  elements.replyGroup.replaceChildren(...choices.map((choice) => {
+    const option = document.createElement('option');
+    option.value = choice.id;
+    option.textContent = choice.name;
+    return option;
+  }));
+  elements.replyGroup.value = choices.some((choice) => choice.id === settings.replyGroupId)
+    ? settings.replyGroupId
+    : REPLY_ALL_GROUPS_ID;
+}
 
 let viewRoot = null;
 let elements = null;
@@ -113,6 +155,7 @@ function syncSettings() {
 
   elements.delayMin.value = String(settings.replyDelayMin);
   elements.delayMax.value = String(settings.replyDelayMax);
+  syncReplyGroup(settings);
   elements.typingIndicator.checked = settings.typingIndicator;
   if (elements.multiReplyEnabled) elements.multiReplyEnabled.checked = settings.multiReplyEnabled;
   if (elements.multiReplyMin) elements.multiReplyMin.value = String(settings.multiReplyMin);
@@ -204,6 +247,7 @@ function saveAllSettings() {
   const patch = {
     replyDelayMin: elements.delayMin.value,
     replyDelayMax: elements.delayMax.value,
+    replyGroupId: elements.replyGroup.value,
     typingIndicator: elements.typingIndicator.checked,
     multiReplyEnabled: elements.multiReplyEnabled.checked,
     multiReplyMin: elements.multiReplyMin.value,
@@ -350,6 +394,13 @@ function handleSettingsChange(event) {
 
   if (setting === 'probability-number') {
     saveProbability(target.dataset.probability, target.value);
+    return;
+  }
+
+  if (setting === 'reply-group') {
+    const validGroup = readReplyGroupChoices().some((choice) => choice.id === target.value);
+    updateSettings({ replyGroupId: validGroup ? target.value : REPLY_ALL_GROUPS_ID });
+    target.value = readSettings().replyGroupId;
     return;
   }
 
@@ -718,6 +769,14 @@ export function initSettingsView(root = document.getElementById('view-settings')
             </label>
             <span class="settings-unit">秒</span>
           </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingReplyGroup">
+            <strong>回复字卡分组</strong>
+            <small>聊天随机回复只从该分组抽取，字卡页浏览不会改变它</small>
+          </label>
+          <select id="settingReplyGroup" data-setting="reply-group"></select>
         </div>
 
         <label class="settings-switch-row">
@@ -1455,6 +1514,7 @@ export function initSettingsView(root = document.getElementById('view-settings')
     toast: viewRoot.querySelector('#settingsToast'),
     delayMin: viewRoot.querySelector('#settingDelayMin'),
     delayMax: viewRoot.querySelector('#settingDelayMax'),
+    replyGroup: viewRoot.querySelector('#settingReplyGroup'),
     typingIndicator: viewRoot.querySelector('#settingTypingIndicator'),
     multiReplyEnabled: viewRoot.querySelector('#settingMultiReplyEnabled'),
     multiReplyMin: viewRoot.querySelector('#settingMultiReplyMin'),

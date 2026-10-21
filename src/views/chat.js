@@ -632,13 +632,15 @@ function createMessageAvatar(role, context = createChatRenderContext()) {
 
 let questionnaireThinkingCount = 0;
 
-function createQuestionnaireBubble(message) {
+function createQuestionnaireBubble(message, context = createChatRenderContext()) {
   const questionnaire = message.questionnaire || {};
   const isAwaitingAnswer = message.role === 'star'
     && questionnaire.direction === 'star-asked'
     && questionnaire.status === 'awaiting-answer';
   const bubble = document.createElement('div');
   bubble.className = `bubble message-bubble message-bubble--questionnaire bubble--${message.role}`;
+
+  if (message.quote) bubble.append(createQuoteBlock(message.quote, context));
 
   const question = document.createElement('p');
   question.className = 'questionnaire-bubble__question';
@@ -722,7 +724,7 @@ function createMessageBubble(message, context = createChatRenderContext()) {
   if (message.quote) bubble.append(createQuoteBlock(message.quote, context));
 
   if (message.type === 'questionnaire') {
-    return createQuestionnaireBubble(message);
+    return createQuestionnaireBubble(message, context);
   }
 
   if (message.type === 'image') {
@@ -797,7 +799,7 @@ function createMessageBubble(message, context = createChatRenderContext()) {
       tag.textContent = message.tag === '拼接字卡' ? '字卡拼接' : message.tag;
       bubble.append(text, tag);
     } else {
-      bubble.textContent = message.content || ' ';
+      bubble.append(document.createTextNode(message.content || ' '));
     }
   }
 
@@ -1700,6 +1702,28 @@ function handleQuestionnaireAnswerSubmit(event) {
   if (!messageElement) return;
   submitStarQuestionnaireAnswer(messageElement, form.querySelector('input[name="answer"]')?.value || '');
 }
+let quoteTouchGuardUntil = 0;
+
+function selectMessageForQuote(messageElement) {
+  if (!messageElement) return false;
+  const message = getChatMessages().find((item) => item.id === messageElement.dataset.messageId);
+  if (!message) return false;
+  setPendingQuote(message);
+  closeActiveMessage();
+  return true;
+}
+
+function handleMessageListTouchEnd(event) {
+  const actionButton = event.target.closest('[data-message-action="quote"]');
+  if (!actionButton || actionButton.disabled) return;
+  const messageElement = actionButton.closest('[data-message-id]');
+  if (!messageElement || messageElement.classList.contains('chat-message--system')) return;
+  event.preventDefault();
+  event.stopPropagation();
+  quoteTouchGuardUntil = Date.now() + 800;
+  selectMessageForQuote(messageElement);
+}
+
 function handleMessageListClick(event) {
   if (event.target.closest('[data-chat-history-more]')) {
     event.preventDefault();
@@ -1742,13 +1766,11 @@ function handleMessageListClick(event) {
 
     if (actionButton.disabled) return;
 
-    const message = getChatMessages().find((item) => item.id === messageElement.dataset.messageId);
     const action = actionButton.dataset.messageAction;
-    if (message && action === 'quote') {
-      setPendingQuote(message);
-      closeActiveMessage();
-      return;
-    }
+    if (action === 'quote' && Date.now() < quoteTouchGuardUntil) return;
+    if (action === 'quote' && selectMessageForQuote(messageElement)) return;
+
+    const message = getChatMessages().find((item) => item.id === messageElement.dataset.messageId);
     if (message) {
       const changed = performChatMessageAction(action, message);
       emitMessageAction(action, message, changed);
@@ -1895,6 +1917,7 @@ function bindEvents() {
     void sendChatImages(files);
   });
   elements.messageList.addEventListener('click', handleMessageListClick);
+  elements.messageList.addEventListener('touchend', handleMessageListTouchEnd, { passive: false });
   elements.messageList.addEventListener('submit', handleQuestionnaireAnswerSubmit);
   elements.messageList.addEventListener('keydown', handleMessageListKeydown);
   elements.input.addEventListener('focus', () => {
