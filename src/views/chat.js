@@ -22,7 +22,7 @@ import {
   notifyQuestionnaireQueued,
   startQuestionnaireEngine,
 } from '../lib/questionnaire.js';
-import { getCurrentChatMood, maybeChangeChatMood } from '../lib/mood.js';
+import { getCurrentStatus, maybeChangeStatus } from '../lib/status.js';
 import { compressImageFile, getAvatarBlob, getStickerBlob, putImageBlob, setBlobImage, detectOrphanStickers, putStickerBlob } from '../lib/media-db.js';
 import { randomChance } from '../lib/random.js';
 import { navigateTo } from '../lib/router.js';
@@ -42,6 +42,7 @@ let viewRoot = null;
 let elements = null;
 let activeMessageId = null;
 let typingRequestCount = 0;
+let currentStatusText = '';
 let eventsBound = false;
 let visualViewportFrame = null;
 let stickerPanelToken = 0;
@@ -612,11 +613,11 @@ function updateChatProfileAvatar() {
   if (elements?.messageList) elements.messageList.setAttribute('aria-label', '与' + context.starName + '的聊天记录');
 }
 
-function updateChatMood({ force = false } = {}) {
-  if (!elements?.mood) return;
-  const mood = getCurrentChatMood({ force });
-  elements.mood.textContent = `心情 · ${mood.text}`;
-  elements.mood.classList.toggle('is-warning', Boolean(mood.missing || mood.empty));
+function updateChatStatus({ force = false } = {}) {
+  if (!elements?.status) return;
+  const status = getCurrentStatus({ force });
+  currentStatusText = status.text;
+  syncChatStatus();
 }
 
 function createMessageAvatar(role, context = createChatRenderContext()) {
@@ -1199,8 +1200,8 @@ function sendStickerMessage(sticker) {
   clearPendingQuote();
 
   closeToolPanel();
-  maybeChangeChatMood(0.35);
-  updateChatMood();
+  maybeChangeStatus(0.35);
+  updateChatStatus();
   scheduleLatestScroll();
   window.dispatchEvent(
     new CustomEvent(STAR_REPLY_TRIGGER_EVENT, {
@@ -1480,8 +1481,8 @@ function sendSticker(sticker) {
   clearPendingQuote();
 
   closeToolPanel();
-  maybeChangeChatMood(0.35);
-  updateChatMood();
+  maybeChangeStatus(0.35);
+  updateChatStatus();
   scheduleLatestScroll();
 
   window.dispatchEvent(
@@ -1534,8 +1535,8 @@ export function addChatMessage(message, { persist = true, scroll = true } = {}) 
   appendMessage(normalized);
   if (scroll) scrollToLatest({ behavior: 'smooth' });
   if (normalized.role === 'star') {
-    maybeChangeChatMood(0.25);
-    updateChatMood();
+    maybeChangeStatus(0.25);
+    updateChatStatus();
     if (normalized.starFavorited) {
       showChatToast(`${readCharacter().name || '星回'}收藏了一条信息`);
     }
@@ -1552,7 +1553,7 @@ function syncChatStatus() {
     ? '对方正在思考中'
     : typingActive
       ? '对方正在输入…'
-      : '在线';
+      : currentStatusText || '还没有设置状态';
   elements.status.classList.toggle('is-typing', active);
 }
 
@@ -1828,8 +1829,8 @@ function handleSendMessage(event) {
 
   input.value = '';
   closeToolPanel();
-  maybeChangeChatMood(0.35);
-  updateChatMood();
+  maybeChangeStatus(0.35);
+  updateChatStatus();
   input.focus({ preventScroll: true });
   scheduleLatestScroll();
 
@@ -1933,7 +1934,7 @@ function bindEvents() {
     if (document.body.dataset.view === 'chat') renderChatMessages({ scroll: false });
   });
   window.addEventListener('xinghui:manage-data-changed', () => {
-    updateChatMood();
+    updateChatStatus();
     if (elements?.toolPanel?.dataset.kind === 'sticker') void renderStickerGrid();
   });
   window.addEventListener(CHARACTER_CHANGED_EVENT, () => {
@@ -2021,9 +2022,8 @@ export function initChatView(root = document.getElementById('view-chat')) {
           <span class="chat-topbar__meta">
             <span class="chat-status-line">
               <span class="chat-status-line__label">状态：</span>
-              <span class="chat-profile__status" id="chatStatus">在线</span>
+              <span class="chat-profile__status" id="chatStatus">还没有设置状态</span>
             </span>
-            <span class="chat-topbar__mood" id="chatMood">心情 · 还没有设置状态</span>
           </span>
         </span>
       </header>
@@ -2200,7 +2200,6 @@ export function initChatView(root = document.getElementById('view-chat')) {
     profileAvatar: viewRoot.querySelector('.chat-profile__avatar'),
     title: viewRoot.querySelector('#chatTitle'),
     status: viewRoot.querySelector('#chatStatus'),
-    mood: viewRoot.querySelector('#chatMood'),
     form: viewRoot.querySelector('#chatComposer'),
     input: viewRoot.querySelector('#chatInput'),
     messageList: viewRoot.querySelector('#chatMessageList'),
@@ -2245,7 +2244,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
   bindEvents();
   renderPendingQuoteBar();
   updateChatProfileAvatar();
-  updateChatMood();
+  updateChatStatus();
   startQuestionnaireEngine({
     getMessages: readStoredMessages,
     setThinking: setQuestionnaireThinking,
@@ -2280,7 +2279,7 @@ export function onChatViewEnter() {
   closeToolPanel();
   renderPendingQuoteBar();
   updateChatProfileAvatar();
-  updateChatMood();
+  updateChatStatus();
   renderChatMessages();
   syncVisualViewport();
 }

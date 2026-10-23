@@ -325,10 +325,16 @@ async function renderAvatar() {
 function renderStats() {
   if (!elements) return;
   const snapshot = getStorageSnapshot();
+  const feedFavoriteCount = snapshot.feedPosts.reduce(
+    (count, post) => count + Number(Boolean(post.favorited)) + Number(Boolean(post.starFavorited)),
+    0,
+  );
   elements.cardCount.textContent = String(snapshot.cards.length);
   elements.stickerCount.textContent = String(snapshot.stickers.length);
   elements.messageCount.textContent = String(snapshot.chatMessages.length);
-  elements.favoriteCount.textContent = String(snapshot.favorites.mine.length + snapshot.favorites.star.length);
+  elements.favoriteCount.textContent = String(
+    snapshot.favorites.mine.length + snapshot.favorites.star.length + feedFavoriteCount,
+  );
   elements.promptCount.textContent = String(snapshot.promptQuestionnaires.length);
   elements.periodCount.textContent = String(snapshot.periodRecords.length);
   if (elements.feedCount) elements.feedCount.textContent = String(snapshot.feedPosts.length);

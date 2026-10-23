@@ -16,6 +16,24 @@
   overflow-x: clip;
 }
 
+.app::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-image: var(--global-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-radius: inherit;
+  content: '';
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+body[data-view='chat'] .app::before {
+  content: none;
+}
+
 /* 状态栏：保持手机感，不承载业务数据 */
 .status-bar {
   position: relative;
@@ -74,6 +92,11 @@
   margin-inline: auto;
 }
 
+.footer {
+  position: relative;
+  z-index: 1;
+}
+
 .view {
   display: none;
   min-width: 0;
@@ -112,7 +135,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0;
   width: 100%;
   margin-inline: auto;
 }
@@ -121,7 +144,7 @@
   display: grid;
   width: clamp(82px, 26vw, 108px);
   aspect-ratio: 1;
-  margin-inline: auto;
+  margin: 0;
   place-items: center;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -176,6 +199,7 @@
 
 .home-page .greeting {
   display: block;
+  flex: 1 1 auto;
   max-width: 100%;
   margin: 0;
   padding: 0;
@@ -189,6 +213,11 @@
   line-height: 1.55;
   text-align: left;
   overflow-wrap: anywhere;
+}
+
+.home-page .greeting.is-placeholder {
+  color: var(--color-text-faint);
+  font-weight: 500;
 }
 
 .home-page .greeting:empty::before {
@@ -374,6 +403,8 @@
 }
 
 .home-page .home-status strong {
+  flex: 1 1 auto;
+  max-width: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 0.85rem;

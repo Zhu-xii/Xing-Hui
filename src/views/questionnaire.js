@@ -2,9 +2,7 @@ import '../styles/questionnaire.css';
 import {
   CHAT_CHANGED_EVENT,
   readChatMessages,
-  readPromptQuestionnaires,
   writeChatMessages,
-  writePromptQuestionnaires,
 } from '../lib/storage.js';
 import { cancelQuestionnaire } from '../lib/questionnaire.js';
 
@@ -14,13 +12,8 @@ const DIRECTION_LABELS = { 'user-asked': '我问他的', 'star-asked': '他问�
 let viewRoot = null;
 let elements = null;
 let eventsBound = false;
-let editingId = '';
 let historyFilter = 'all';
 const selectedHistoryIds = new Set();
-
-function createId(prefix) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
 
 function escapeHtml(value) {
   return String(value)
@@ -51,44 +44,6 @@ function filteredHistory() {
   if (historyFilter === 'user') return messages.filter((message) => message.questionnaire.direction === 'user-asked');
   if (historyFilter === 'star') return messages.filter((message) => message.questionnaire.direction === 'star-asked');
   return messages;
-}
-
-function renderPresets() {
-  const presets = readPromptQuestionnaires();
-  if (!presets.length) {
-    elements.presetList.innerHTML = `
-      <div class="questionnaire-empty questionnaire-empty--compact">
-        <strong>还没有预设问卷</strong>
-        <p>新增后，星回会按概率和间隔随机发题。</p>
-      </div>
-    `;
-    return;
-  }
-
-  elements.presetList.innerHTML = presets.map((preset) => `
-    <article class="prompt-card${preset.enabled ? '' : ' is-disabled'}">
-      <div class="prompt-card__copy">
-        <p>${escapeHtml(preset.question)}</p>
-        <small>${TYPE_LABELS[preset.type] || '问答问卷'}${preset.options.length ? ` · ${preset.options.length} 个选项` : ''}</small>
-      </div>
-      <div class="prompt-card__actions">
-        <button type="button" data-questionnaire-action="toggle-preset" data-id="${escapeHtml(preset.id)}">${preset.enabled ? '停用' : '启用'}</button>
-        <button type="button" data-questionnaire-action="edit-preset" data-id="${escapeHtml(preset.id)}">编辑</button>
-        <button class="is-danger" type="button" data-questionnaire-action="delete-preset" data-id="${escapeHtml(preset.id)}">删除</button>
-      </div>
-    </article>
-  `).join('');
-}
-
-function renderEditor() {
-  const presets = readPromptQuestionnaires();
-  const preset = editingId ? presets.find((item) => item.id === editingId) : null;
-  elements.editorQuestion.value = preset?.question || '';
-  elements.editorOptions.value = preset?.options?.join('\n') || '';
-  elements.editorType.value = preset?.type || 'qa';
-  elements.editorTitle.textContent = preset ? '编辑预设问卷' : '新增预设问卷';
-  elements.editorCancel.hidden = !preset;
-  elements.editorOptionsField.hidden = elements.editorType.value === 'qa';
 }
 
 function renderHistory() {
@@ -137,32 +92,6 @@ function renderHistory() {
   }).join('');
 }
 
-function render() {
-  renderPresets();
-  renderEditor();
-  renderHistory();
-}
-
-function savePreset() {
-  const question = elements.editorQuestion.value.trim();
-  const options = elements.editorOptions.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const type = elements.editorType.value;
-  if (!question) return;
-  if (type !== 'qa' && options.length < 2) return;
-
-  const presets = readPromptQuestionnaires();
-  if (editingId) {
-    const preset = presets.find((item) => item.id === editingId);
-    if (!preset) return;
-    Object.assign(preset, { question, options, type });
-  } else {
-    presets.push({ id: createId('prompt'), question, options, type, enabled: true });
-  }
-  writePromptQuestionnaires(presets);
-  editingId = '';
-  render();
-}
-
 function deleteHistory(ids) {
   const idSet = new Set(ids);
   if (!idSet.size) return;
@@ -176,7 +105,6 @@ function deleteHistory(ids) {
 }
 
 function handleClick(event) {
-  const button = event.target.closest('[data-questionnaire-action]');
   const filterButton = event.target.closest('[data-filter]');
   if (filterButton) {
     historyFilter = filterButton.dataset.filter;
@@ -184,38 +112,12 @@ function handleClick(event) {
     renderHistory();
     return;
   }
+
+  const button = event.target.closest('[data-questionnaire-action]');
   if (!button) return;
   const action = button.dataset.questionnaireAction;
   const id = button.dataset.id;
-  const presets = readPromptQuestionnaires();
 
-  if (action === 'new-preset') {
-    editingId = '';
-    renderEditor();
-  }
-  if (action === 'edit-preset') {
-    editingId = id;
-    renderEditor();
-    elements.editorQuestion.focus();
-  }
-  if (action === 'cancel-editor') {
-    editingId = '';
-    renderEditor();
-  }
-  if (action === 'toggle-preset') {
-    const preset = presets.find((item) => item.id === id);
-    if (preset) {
-      preset.enabled = !preset.enabled;
-      writePromptQuestionnaires(presets);
-      renderPresets();
-    }
-  }
-  if (action === 'delete-preset') {
-    if (!window.confirm('删除这份预设问卷？')) return;
-    writePromptQuestionnaires(presets.filter((item) => item.id !== id));
-    if (editingId === id) editingId = '';
-    render();
-  }
   if (action === 'delete-history') {
     deleteHistory([id]);
   }
@@ -241,13 +143,6 @@ function bindEvents() {
   if (eventsBound) return;
   viewRoot.addEventListener('click', handleClick);
   viewRoot.addEventListener('change', handleChange);
-  elements.editorForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    savePreset();
-  });
-  elements.editorType.addEventListener('change', () => {
-    elements.editorOptionsField.hidden = elements.editorType.value === 'qa';
-  });
   window.addEventListener(CHAT_CHANGED_EVENT, () => {
     if (document.body.dataset.view === 'questionnaire') renderHistory();
   });
@@ -262,44 +157,8 @@ export function initQuestionnaireView(root = document.getElementById('view-quest
       <header class="questionnaire-header">
         <p class="questionnaire-eyebrow">QUESTION ARCHIVE</p>
         <h2 class="questionnaire-title">问卷</h2>
-        <p class="questionnaire-intro">管理星回随机发题，并查看两个方向的问答记录。</p>
+        <p class="questionnaire-intro">查看已发送的问卷与问答记录。</p>
       </header>
-
-      <section class="questionnaire-card" aria-labelledby="presetTitle">
-        <div class="questionnaire-section-heading">
-          <div>
-            <p class="questionnaire-kicker">预设问卷</p>
-            <h3 id="presetTitle">星回可以问我的</h3>
-          </div>
-          <button class="questionnaire-button questionnaire-button--primary" type="button" data-questionnaire-action="new-preset">新增预设</button>
-        </div>
-        <form class="preset-editor" id="questionnairePresetEditor">
-          <div class="questionnaire-section-heading questionnaire-section-heading--compact">
-            <strong id="questionnaireEditorTitle">新增预设问卷</strong>
-            <button class="questionnaire-text-button" type="button" data-questionnaire-action="cancel-editor" id="questionnaireEditorCancel" hidden>取消</button>
-          </div>
-          <label class="questionnaire-field">
-            <span>问题</span>
-            <input id="questionnaireEditorQuestion" type="text" maxlength="500" placeholder="输入想让我问你的问题" />
-          </label>
-          <label class="questionnaire-field" id="questionnaireEditorOptionsField">
-            <span>选项（每行一个）</span>
-            <textarea id="questionnaireEditorOptions" rows="4" placeholder="选项 A&#10;选项 B&#10;选项 C"></textarea>
-          </label>
-          <div class="preset-editor__footer">
-            <label class="questionnaire-field">
-              <span>类型</span>
-              <select id="questionnaireEditorType">
-                <option value="qa">问答问卷</option>
-                <option value="single">单选题</option>
-                <option value="multiple">多选题</option>
-              </select>
-            </label>
-            <button class="questionnaire-button questionnaire-button--primary" type="submit">保存预设</button>
-          </div>
-        </form>
-        <div class="preset-list" id="questionnairePresetList"></div>
-      </section>
 
       <section class="questionnaire-card" aria-labelledby="historyTitle">
         <div class="questionnaire-section-heading">
@@ -323,25 +182,17 @@ export function initQuestionnaireView(root = document.getElementById('view-quest
   `;
 
   elements = {
-    presetList: viewRoot.querySelector('#questionnairePresetList'),
-    editorForm: viewRoot.querySelector('#questionnairePresetEditor'),
-    editorTitle: viewRoot.querySelector('#questionnaireEditorTitle'),
-    editorQuestion: viewRoot.querySelector('#questionnaireEditorQuestion'),
-    editorOptions: viewRoot.querySelector('#questionnaireEditorOptions'),
-    editorOptionsField: viewRoot.querySelector('#questionnaireEditorOptionsField'),
-    editorType: viewRoot.querySelector('#questionnaireEditorType'),
-    editorCancel: viewRoot.querySelector('#questionnaireEditorCancel'),
     historyCount: viewRoot.querySelector('#questionnaireHistoryCount'),
     historyList: viewRoot.querySelector('#questionnaireHistoryList'),
     historyFilterButtons: Array.from(viewRoot.querySelectorAll('[data-filter]')),
   };
 
   bindEvents();
-  render();
+  renderHistory();
   return true;
 }
 
 export function onQuestionnaireViewEnter() {
   selectedHistoryIds.clear();
-  render();
+  renderHistory();
 }

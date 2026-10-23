@@ -107,6 +107,13 @@
   background: var(--color-bg-soft);
 }
 
+.questionnaire-form-error {
+  margin-top: -4px;
+  color: #A32D2D;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
 .questionnaire-field {
   display: flex;
   flex-direction: column;

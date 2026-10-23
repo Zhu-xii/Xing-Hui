@@ -133,6 +133,11 @@ function syncAppearanceControls(settings = readSettings()) {
   elements.chatBackgroundFileName.textContent = settings.chatBackgroundType === 'image' && settings.chatBackgroundImage
     ? '已保存本地背景图片'
     : '未选择文件';
+  if (elements.globalBackgroundFileName) {
+    elements.globalBackgroundFileName.textContent = settings.globalBackgroundImage
+      ? '已保存全局背景图片'
+      : '未选择文件';
+  }
 
   viewRoot.querySelectorAll('[data-color-value]').forEach((button) => {
     const target = button.dataset.bubbleTarget === 'star' ? settings.bubbleColorStar : settings.bubbleColor;
@@ -591,6 +596,43 @@ function handleChatBackgroundUpload(event) {
   reader.readAsDataURL(file);
 }
 
+function handleGlobalBackgroundUpload(event) {
+  const [file] = event.target.files || [];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择本地图片文件。', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  if (file.size > MAX_CHAT_BACKGROUND_BYTES) {
+    showToast('全局背景图片不能超过 2MB。', 'warning');
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener('load', () => {
+    const image = typeof reader.result === 'string' ? reader.result : '';
+    if (!image.startsWith('data:image/')) {
+      showToast('图片读取失败，请重试。', 'warning');
+      return;
+    }
+
+    const saved = updateSettings({ globalBackgroundImage: image });
+    if (!saved) {
+      showToast('全局背景保存失败，图片可能过大。', 'warning');
+      return;
+    }
+
+    syncAppearanceControls();
+    showToast('全局背景已更新并即时生效。');
+  });
+  reader.addEventListener('error', () => showToast('图片读取失败，请重试。', 'warning'));
+  reader.readAsDataURL(file);
+}
+
 async function saveAvatarFile(file, avatarId, onSaved, onError) {
   if (!file?.type?.startsWith('image/')) {
     showToast('请选择本地图片文件。', 'warning');
@@ -692,6 +734,12 @@ function handleClick(event) {
     syncAppearanceControls();
     showToast('已恢复纯色聊天背景。');
   }
+  if (action === 'clear-global-background') {
+    updateSettings({ globalBackgroundImage: '' });
+    elements.globalBackgroundInput.value = '';
+    syncAppearanceControls();
+    showToast('已恢复默认全局背景。');
+  }
 }
 
 function bindEvents() {
@@ -709,6 +757,10 @@ function bindEvents() {
     }
     if (event.target === elements.chatBackgroundInput) {
       handleChatBackgroundUpload(event);
+      return;
+    }
+    if (event.target === elements.globalBackgroundInput) {
+      handleGlobalBackgroundUpload(event);
       return;
     }
     handleSettingsChange(event);
@@ -1375,6 +1427,22 @@ export function initSettingsView(root = document.getElementById('view-settings')
           </div>
         </div>
 
+        <fieldset class="settings-fieldset settings-global-background">
+          <legend>全局背景</legend>
+          <div class="settings-background-upload">
+            <div>
+              <strong>全局背景图片</strong>
+              <small>用于所有非聊天页面，图片透明度固定为 35%；聊天页背景保持独立。</small>
+            </div>
+            <div class="settings-avatar__actions">
+              <label class="settings-button" for="settingsGlobalBackgroundInput">选择图片</label>
+              <input class="settings-file-input" id="settingsGlobalBackgroundInput" type="file" accept="image/*" />
+              <button class="settings-text-button" type="button" data-settings-action="clear-global-background">恢复默认</button>
+            </div>
+            <span class="settings-file-name" id="settingsGlobalBackgroundFileName">未选择文件</span>
+          </div>
+        </fieldset>
+
         <fieldset class="settings-fieldset settings-chat-appearance">
           <legend>聊天背景</legend>
           <div class="settings-field settings-field--inline settings-field--flush">
@@ -1556,6 +1624,8 @@ export function initSettingsView(root = document.getElementById('view-settings')
     chatBackgroundColor: viewRoot.querySelector('#settingChatBackgroundColor'),
     chatBackgroundInput: viewRoot.querySelector('#settingsChatBackgroundInput'),
     chatBackgroundFileName: viewRoot.querySelector('#settingsChatBackgroundFileName'),
+    globalBackgroundInput: viewRoot.querySelector('#settingsGlobalBackgroundInput'),
+    globalBackgroundFileName: viewRoot.querySelector('#settingsGlobalBackgroundFileName'),
     bubbleColor: viewRoot.querySelector('#settingBubbleColor'),
     bubbleColorStar: viewRoot.querySelector('#settingBubbleColorStar'),
     saveAll: viewRoot.querySelector('[data-settings-action="save-all"]'),

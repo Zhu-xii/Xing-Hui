@@ -49,12 +49,14 @@ export const GREETING_GROUP_ID = 'group_greeting';
 export const STICKER_GROUP_ID = 'group_stickers';
 export const IMAGE_GROUP_ID = 'group_images';
 export const QUESTIONNAIRE_GROUP_ID = 'group_questionnaire';
+export const PRESET_QUESTIONNAIRE_GROUP_ID = 'group_preset_questionnaires';
 export const STATUS_GROUP_ID = 'group_status';
 export const MOOD_GROUP_ID = 'group_mood';
 export const ROAST_GROUP_ID = 'group_roast';
 export const STICKER_CATEGORY_NAME = '表情包';
 export const IMAGE_CATEGORY_NAME = '图片';
 export const QUESTIONNAIRE_CATEGORY_NAME = '问卷回答';
+export const PRESET_QUESTIONNAIRE_CATEGORY_NAME = '问答问卷';
 export const STATUS_CATEGORY_NAME = '状态';
 export const MOOD_CATEGORY_NAME = '心情';
 export const ROAST_CATEGORY_NAME = '他的吐槽';
@@ -62,8 +64,8 @@ export const MANAGE_CATEGORIES = Object.freeze([
   Object.freeze({ id: STICKER_GROUP_ID, name: STICKER_CATEGORY_NAME, type: 'stickers' }),
   Object.freeze({ id: IMAGE_GROUP_ID, name: IMAGE_CATEGORY_NAME, type: 'images' }),
   Object.freeze({ id: QUESTIONNAIRE_GROUP_ID, name: QUESTIONNAIRE_CATEGORY_NAME, type: 'questionnaire' }),
+  Object.freeze({ id: PRESET_QUESTIONNAIRE_GROUP_ID, name: PRESET_QUESTIONNAIRE_CATEGORY_NAME, type: 'prompt' }),
   Object.freeze({ id: STATUS_GROUP_ID, name: STATUS_CATEGORY_NAME, type: 'status' }),
-  Object.freeze({ id: MOOD_GROUP_ID, name: MOOD_CATEGORY_NAME, type: 'mood' }),
   Object.freeze({ id: ROAST_GROUP_ID, name: ROAST_CATEGORY_NAME, type: 'roast' }),
 ]);
 export const BACKUP_REMINDER_DAYS = 7;
@@ -112,6 +114,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   chatBackgroundType: 'color',
   chatBackgroundColor: '#EFEFEF',
   chatBackgroundImage: '',
+  globalBackgroundImage: '',
   userAvatar: '',
   userName: '我',
   // 朋友圈：星回自动发动态的间隔、频率与互动概率（分钟 / 百分比）
@@ -354,6 +357,9 @@ export function normalizeSettings(settings = {}) {
     chatBackgroundImage: typeof source.chatBackgroundImage === 'string' && /^data:image\//i.test(source.chatBackgroundImage)
       ? source.chatBackgroundImage
       : '',
+    globalBackgroundImage: typeof source.globalBackgroundImage === 'string' && /^data:image\//i.test(source.globalBackgroundImage)
+      ? source.globalBackgroundImage
+      : '',
     userAvatar: (() => {
       const avatar = String(source.userAvatar || '').trim();
       return avatar === 'idb:user' || /^data:image\//i.test(avatar) ? avatar : '';
@@ -512,10 +518,26 @@ export function hasManageCategory(category) {
 export function migrateManageCategories() {
   const storage = getStorage();
   // 迁移标记按版本推进：新增类别后提升版本号，保证老用户也会补齐新类别。
-  const MIGRATION_VERSION = '3';
+  const MIGRATION_VERSION = '4';
   if (!storage || storage.getItem(CATEGORY_MIGRATION_KEY) === MIGRATION_VERSION) return false;
 
-  const groups = readGroups();
+  const statusEntries = readStatuses();
+  const moodEntries = readMoods();
+  if (moodEntries.length) {
+    const statusByContent = new Map(statusEntries.map((entry) => [entry.content, entry]));
+    moodEntries.forEach((entry) => {
+      if (!statusByContent.has(entry.content)) {
+        statusEntries.push(entry);
+        statusByContent.set(entry.content, entry);
+      }
+    });
+    writeStatuses(statusEntries);
+    writeMoods([]);
+  }
+
+  const groups = readGroups().filter((group) => (
+    group.id !== MOOD_GROUP_ID && group.name !== MOOD_CATEGORY_NAME
+  ));
   const existingIds = new Set(groups.map((group) => group.id));
   const existingNames = new Set(groups.map((group) => group.name));
   MANAGE_CATEGORIES.forEach((category) => {

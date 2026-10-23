@@ -605,6 +605,7 @@ function reactAsStar(postId, userCommentId = '') {
 function publishPost() {
   const content = elements?.text?.value.trim() || '';
   if (!content && !draftImages.length) {
+    showFeedToast('请输入内容或添加图片');
     elements?.text?.focus();
     return;
   }
@@ -813,7 +814,12 @@ function handleSubmit(event) {
   const input = form.querySelector('input[name="comment"]');
   const content = input?.value.trim() || '';
   const sticker = pendingStickers.get(postId) || '';
-  if (!postId || (!content && !sticker)) return;
+  if (!postId) return;
+  if (!content && !sticker) {
+    showFeedToast('请输入评论或选择表情包');
+    input?.focus();
+    return;
+  }
 
   const reply = replyTargets.get(postId);
   const commentId = createId('feed_comment');

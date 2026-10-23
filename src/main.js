@@ -28,17 +28,12 @@ import {
   CHARACTER_CHANGED_EVENT,
   DATA_RESTORED_EVENT,
   DEFAULT_GROUP_ID,
-  GREETING_GROUP_ID,
-  GROUP_STORAGE_KEY,
   SETTINGS_CHANGED_EVENT,
-  STATUS_CATEGORY_NAME,
   getBackupReminder,
-  hasManageCategory,
   initStorage,
   readCharacter,
   readJson,
   readSettings,
-  readStatuses,
   readStickers,
   removeStorage,
   updateSettings,
@@ -46,9 +41,9 @@ import {
   writeJson,
   writeStickers,
 } from './lib/storage.js';
+import { getCurrentStatus } from './lib/status.js';
 
 const DAILY_GREETING_KEY = 'xinghui_daily_greeting';
-const GREETING_GROUP_NAME = '问候语字卡';
 
 const VIEWS = ['home', 'chat', 'questionnaire', 'feed', 'period', 'manage', 'favorites', 'settings', 'backup', 'pat'];
 const NAV_VIEWS = ['home', 'manage', 'settings'];
@@ -111,6 +106,11 @@ function applyAppearance(settings = readSettings()) {
     root.style.setProperty('--chat-background-image', `url("${settings.chatBackgroundImage}")`);
   } else {
     root.style.removeProperty('--chat-background-image');
+  }
+  if (settings.globalBackgroundImage) {
+    root.style.setProperty('--global-background-image', `url("${settings.globalBackgroundImage}")`);
+  } else {
+    root.style.removeProperty('--global-background-image');
   }
 
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#E9E9E9');
@@ -193,15 +193,10 @@ function renderHomeStatus() {
   const label = document.getElementById('homeStatusText');
   if (!container || !label) return;
 
-  const exists = hasManageCategory(STATUS_CATEGORY_NAME);
-  container.classList.toggle('is-warning', !exists);
-  if (!exists) {
-    label.textContent = '请先重建该类别';
-    return;
-  }
-
-  const latest = readStatuses().at(-1);
-  label.textContent = latest?.content || '还没有设置状态';
+  const status = getCurrentStatus();
+  const content = String(status.text || '').trim();
+  container.classList.toggle('is-warning', Boolean(status.missing || status.empty || !content));
+  label.textContent = content || '还没有设置状态';
 }
 function renderBackupReminder() {
   const reminder = document.getElementById('homeBackupReminder');
@@ -308,36 +303,39 @@ function localDateKey(date = new Date()) {
 }
 
 function getGreetingCards() {
-  const groups = readStoredJson(GROUP_STORAGE_KEY, []);
   const cards = readStoredJson(CARD_STORAGE_KEY, []);
-  const greetingGroupIds = new Set([GREETING_GROUP_ID]);
-
-  if (Array.isArray(groups)) {
-    groups.forEach((group) => {
-      if (group?.name === GREETING_GROUP_NAME && group.id) greetingGroupIds.add(String(group.id));
-    });
-  }
 
   if (!Array.isArray(cards)) return [];
 
   return cards
     .filter((card) => card && typeof card === 'object' && !card.disabled)
-    .filter((card) => greetingGroupIds.has(String(card.groupId || '')))
+    .filter((card) => String(card.groupId || '') === DEFAULT_GROUP_ID)
     .map((card) => ({ ...card, content: typeof card.content === 'string' ? card.content.trim() : '' }))
     .filter((card) => card.content);
+}
+
+function greetingCycleDate(now = new Date()) {
+  const cycle = new Date(now);
+  if (cycle.getHours() < 8) cycle.setDate(cycle.getDate() - 1);
+  return localDateKey(cycle);
 }
 
 function renderDailyGreeting(now = new Date()) {
   const greeting = document.getElementById('greeting');
   if (!greeting) return;
 
-  const today = localDateKey(now);
+  const today = greetingCycleDate(now);
   const cards = getGreetingCards();
+  const renderGreeting = (content = '') => {
+    const text = String(content || '').trim();
+    greeting.textContent = text || '还没有想说的话';
+    greeting.classList.toggle('is-placeholder', !text);
+    greeting.hidden = false;
+  };
 
   if (!cards.length) {
     removeStorage(DAILY_GREETING_KEY);
-    greeting.textContent = '';
-    greeting.hidden = true;
+    renderGreeting();
     return;
   }
 
@@ -347,21 +345,13 @@ function renderDailyGreeting(now = new Date()) {
     : null;
 
   if (storedCard) {
-    greeting.textContent = typeof stored.content === 'string' ? stored.content : storedCard.content;
-    greeting.hidden = false;
-    return;
-  }
-
-  if (stored?.date === today) {
-    greeting.textContent = '';
-    greeting.hidden = true;
+    renderGreeting(typeof stored.content === 'string' ? stored.content : storedCard.content);
     return;
   }
 
   const card = pickRandom(cards);
   if (!card) {
-    greeting.textContent = '';
-    greeting.hidden = true;
+    renderGreeting();
     return;
   }
 
@@ -371,8 +361,7 @@ function renderDailyGreeting(now = new Date()) {
     content: card.content,
   });
 
-  greeting.textContent = card.content;
-  greeting.hidden = false;
+  renderGreeting(card.content);
 }
 function updateClock() {
   const timeEl = document.getElementById('clockTime');
@@ -381,7 +370,8 @@ function updateClock() {
   const mm = String(now.getMinutes()).padStart(2, '0');
 
   if (timeEl) {
-    timeEl.textContent = `${hh}:${mm}`;
+    const timeText = `${hh}:${mm}`;
+    if (timeEl.textContent !== timeText) timeEl.textContent = timeText;
     timeEl.dateTime = now.toISOString();
   }
   renderDailyGreeting(now);

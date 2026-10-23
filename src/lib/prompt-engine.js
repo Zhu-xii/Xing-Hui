@@ -59,7 +59,7 @@ export function checkPromptQuestionnaire(now = Date.now()) {
   updateSettings({ lastPromptQuestionnaireCheckAt: now });
 
   if (readChatMessages().some(isAwaitingAnswer)) return false;
-  if (!randomChance(settings.promptQuestionnaireChance * 100)) return false;
+  if (!randomChance(settings.promptQuestionnaireChance)) return false;
 
   const presets = readPromptQuestionnaires()
     .filter((item) => item.enabled !== false && item.question)

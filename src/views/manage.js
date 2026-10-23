@@ -9,6 +9,8 @@ import {
   MANAGE_CATEGORIES,
   PAT_CARD_STORAGE_KEY as STORAGE_PAT_CARD_KEY,
   QUESTIONNAIRE_ANSWER_STORAGE_KEY as STORAGE_QUESTIONNAIRE_KEY,
+  readPromptQuestionnaires,
+  writePromptQuestionnaires,
   SETTINGS_KEY as STORAGE_SETTINGS_KEY,
   STATUS_STORAGE_KEY as STORAGE_STATUS_KEY,
   MOOD_CARD_STORAGE_KEY as STORAGE_MOOD_KEY,
@@ -40,8 +42,8 @@ const MANAGE_GROUP_STORAGE_KEY = 'xinghui_manage_group_id';
 
 const TEXT_CATEGORY_META = Object.freeze({
   questionnaire: { label: '问卷回答', icon: '？', hint: '问卷回答会保存在本地，供问卷入口调用。' },
+  prompt: { label: '问答问卷', icon: '？', hint: '聊天时星回会从这里随机抽取一条问卷发送。' },
   status: { label: '状态', icon: '◷', hint: '最新一条状态会显示在首页顶部。' },
-  mood: { label: '心情', icon: '☾', hint: '聊天顶栏的「心情」会从心情字卡里随机抽取一条。' },
   roast: { label: '他的吐槽', icon: '✎', hint: '聊天时星回偶尔抽一条吐槽字卡主动吐槽你。' },
 });
 
@@ -75,6 +77,7 @@ const state = {
   stickers: [],
   images: [],
   questionnaireAnswers: [],
+  promptQuestionnaires: [],
   statuses: [],
   moods: [],
   roasts: [],
@@ -202,6 +205,11 @@ function readManageData() {
     .map(normalizeTextEntry)
     .filter(Boolean);
 
+  const promptQuestionnaires = readPromptQuestionnaires().map((item) => ({
+    ...item,
+    content: item.question,
+  }));
+
   const statuses = readStoredArray(STATUS_STORAGE_KEY)
     .map(normalizeTextEntry)
     .filter(Boolean);
@@ -221,7 +229,7 @@ function readManageData() {
   const requestedGroupId = String(readJson(MANAGE_GROUP_STORAGE_KEY, '') || '').trim();
   const currentGroupId = groupIds.has(requestedGroupId) ? requestedGroupId : DEFAULT_GROUP_ID;
 
-  return { groups, cards, stickers, images, questionnaireAnswers, statuses, moods, roasts, patCards, currentGroupId };
+  return { groups, cards, stickers, images, questionnaireAnswers, promptQuestionnaires, statuses, moods, roasts, patCards, currentGroupId };
 }
 
 function writeStoredArray(key, value) {
@@ -239,6 +247,7 @@ function saveData() {
     writeStoredArray(STICKER_STORAGE_KEY, state.stickers),
     writeStoredArray(IMAGE_STORAGE_KEY, state.images),
     writeStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY, state.questionnaireAnswers),
+    Boolean(writePromptQuestionnaires(state.promptQuestionnaires)),
     writeStoredArray(STATUS_STORAGE_KEY, state.statuses),
     writeStoredArray(STORAGE_MOOD_KEY, state.moods),
     writeStoredArray(STORAGE_ROAST_KEY, state.roasts),
@@ -254,6 +263,7 @@ function saveData() {
         stickers: state.stickers,
         images: state.images,
         questionnaireAnswers: state.questionnaireAnswers,
+        promptQuestionnaires: state.promptQuestionnaires,
         statuses: state.statuses,
         moods: state.moods,
         roasts: state.roasts,
@@ -272,6 +282,7 @@ function syncState() {
   state.stickers = data.stickers;
   state.images = data.images;
   state.questionnaireAnswers = data.questionnaireAnswers;
+  state.promptQuestionnaires = data.promptQuestionnaires;
   state.statuses = data.statuses;
   state.moods = data.moods;
   state.roasts = data.roasts;
@@ -311,6 +322,7 @@ function categoryItems(categoryType) {
   if (categoryType === 'images') return state.images;
   if (categoryType === 'stickers') return state.stickers;
   if (categoryType === 'questionnaire') return state.questionnaireAnswers;
+  if (categoryType === 'prompt') return state.promptQuestionnaires;
   if (categoryType === 'status') return state.statuses;
   if (categoryType === 'mood') return state.moods;
   if (categoryType === 'roast') return state.roasts;
@@ -542,6 +554,7 @@ function renderStickerRows(visibleStickers, categoryName = '表情包') {
 }
 
 function renderTextEntryRows(entries, category) {
+  const categoryType = typeof category === 'string' ? category : category?.type;
   if (!entries.length) {
     return `
       <div class="manage-empty">
@@ -554,6 +567,8 @@ function renderTextEntryRows(entries, category) {
 
   return entries.map((entry) => {
     const checked = state.selectedCardIds.has(entry.id);
+    const isPrompt = categoryType === 'prompt';
+    const promptType = { qa: '问答问卷', single: '单选题', multiple: '多选题' }[entry.type] || '问答问卷';
     return `
       <article class="manage-card-row${checked ? ' is-selected' : ''}">
         <label class="manage-checkbox" title="选择内容">
@@ -562,7 +577,10 @@ function renderTextEntryRows(entries, category) {
         </label>
         <div class="manage-card-row__copy">
           <p class="manage-card-row__content">${escapeHtml(entry.content)}</p>
-          <div class="manage-card-row__meta"><span>${textCategoryMeta(category).label}</span></div>
+          <div class="manage-card-row__meta">
+            <span>${isPrompt ? promptType : textCategoryMeta(category).label}</span>
+            ${isPrompt ? `<span class="manage-status ${entry.enabled === false ? 'is-disabled' : 'is-enabled'}">${entry.enabled === false ? '已停用' : '启用中'}</span>` : ''}
+          </div>
         </div>
         <div class="manage-card-row__actions">
           <button type="button" data-manage-action="edit-card" data-card-id="${escapeHtml(entry.id)}">编辑</button>
@@ -604,7 +622,7 @@ function renderCards() {
   const isTextCategory = isTextCategoryType(category?.type);
   const unit = isTextCategory ? '条' : '张';
 
-  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.images.length} 张图片 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.moods.length} 条心情 · ${state.roasts.length} 条吐槽 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
+  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.images.length} 张图片 · ${state.promptQuestionnaires.length} 条问答问卷 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.roasts.length} 条吐槽 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
   elements.currentGroupName.textContent = currentGroup?.name || '默认分组';
   elements.visibleCardCount.textContent = `${allItems.length} ${unit}`;
 
@@ -940,6 +958,82 @@ function textEntryEditor(entryId = '') {
   });
 }
 
+function promptQuestionnaireEditor(entryId = '') {
+  const entry = entryId ? state.promptQuestionnaires.find((item) => item.id === entryId) : null;
+  if (entryId && !entry) return;
+
+  openModal({
+    title: entry ? '编辑问答问卷' : '新增问答问卷',
+    description: '聊天时星回会从启用的问答问卷字卡中随机抽取一条发送。',
+    confirmLabel: entry ? '保存' : '新增',
+    body: `
+      <label class="manage-field">
+        <span>问卷问题</span>
+        <textarea id="managePromptQuestion" rows="4" maxlength="500" placeholder="输入问题…">${escapeHtml(entry?.question || '')}</textarea>
+      </label>
+      <label class="manage-field">
+        <span>问卷类型</span>
+        <select id="managePromptType">
+          <option value="qa"${entry?.type === 'single' || entry?.type === 'multiple' ? '' : ' selected'}>问答问卷</option>
+          <option value="single"${entry?.type === 'single' ? ' selected' : ''}>单选题</option>
+          <option value="multiple"${entry?.type === 'multiple' ? ' selected' : ''}>多选题</option>
+        </select>
+      </label>
+      <label class="manage-field">
+        <span>选项（每行一个，问答问卷可留空）</span>
+        <textarea id="managePromptOptions" rows="4" placeholder="选项 A&#10;选项 B">${escapeHtml(entry?.options?.join('\n') || '')}</textarea>
+      </label>
+      <label class="manage-switch-field">
+        <input id="managePromptEnabled" type="checkbox" ${entry?.enabled === false ? '' : 'checked'} />
+        <span class="manage-switch-field__control" aria-hidden="true"></span>
+        <span>
+          <strong>启用这张问卷</strong>
+          <small>停用后不会参与聊天随机发题。</small>
+        </span>
+      </label>
+    `,
+    onConfirm: () => {
+      const question = elements.modal.querySelector('#managePromptQuestion').value.trim();
+      const type = elements.modal.querySelector('#managePromptType').value;
+      const options = elements.modal.querySelector('#managePromptOptions').value
+        .split(/\r?\n/)
+        .map((option) => option.trim())
+        .filter(Boolean);
+      const enabled = elements.modal.querySelector('#managePromptEnabled').checked;
+
+      if (!question) {
+        setModalError('问卷问题不能为空。');
+        return false;
+      }
+      if (type !== 'qa' && options.length < 2) {
+        setModalError('单选或多选问卷至少需要两个选项。');
+        return false;
+      }
+
+      if (entry) {
+        Object.assign(entry, { question, content: question, type, options, enabled });
+      } else {
+        state.promptQuestionnaires.push({
+          id: createId('prompt'),
+          question,
+          content: question,
+          type,
+          options,
+          enabled,
+        });
+      }
+
+      if (!saveData()) {
+        setModalError(importStorageFailureMessage());
+        return false;
+      }
+      render();
+      setToast(entry ? '问答问卷已保存' : '问答问卷已新增');
+      return true;
+    },
+  });
+}
+
 function editCurrentItem(itemId) {
   const category = currentCategory();
   if (!category) {
@@ -949,6 +1043,11 @@ function editCurrentItem(itemId) {
 
   if (isMediaCategoryType(category.type)) {
     setToast(`${category.name}无需编辑内容`, 'warning');
+    return;
+  }
+
+  if (category.type === 'prompt') {
+    promptQuestionnaireEditor(itemId);
     return;
   }
 
@@ -962,7 +1061,8 @@ function createCurrentItem() {
     return;
   }
   if (isTextCategoryType(category?.type)) {
-    textEntryEditor();
+    if (category.type === 'prompt') promptQuestionnaireEditor();
+    else textEntryEditor();
     return;
   }
   cardEditor();
@@ -1124,6 +1224,7 @@ function deleteCards(cardIds) {
       const previousStickers = state.stickers;
       const previousImages = state.images;
       const previousQuestionnaireAnswers = state.questionnaireAnswers;
+      const previousPromptQuestionnaires = state.promptQuestionnaires;
       const previousStatuses = state.statuses;
       const previousMoods = state.moods;
       const previousRoasts = state.roasts;
@@ -1138,6 +1239,8 @@ function deleteCards(cardIds) {
         state.images = state.images.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'questionnaire') {
         state.questionnaireAnswers = state.questionnaireAnswers.filter((item) => !idSet.has(item.id));
+      } else if (category?.type === 'prompt') {
+        state.promptQuestionnaires = state.promptQuestionnaires.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'status') {
         state.statuses = state.statuses.filter((item) => !idSet.has(item.id));
       } else if (category?.type === 'mood') {
@@ -1153,6 +1256,7 @@ function deleteCards(cardIds) {
         state.stickers = previousStickers;
         state.images = previousImages;
         state.questionnaireAnswers = previousQuestionnaireAnswers;
+        state.promptQuestionnaires = previousPromptQuestionnaires;
         state.statuses = previousStatuses;
         state.moods = previousMoods;
         state.roasts = previousRoasts;
@@ -1256,7 +1360,7 @@ function importTextCategoryJson(category) {
         <span>JSON 文件</span>
         <input id="manageCategoryImportFile" type="file" accept=".json,application/json" />
       </label>
-      <p class="manage-field__hint">会读取 items、cards、questionnaireAnswers、statuses、moods 或 roasts 数组。</p>
+      <p class="manage-field__hint">会读取 items、cards、promptQuestionnaires、questionnaireAnswers、statuses 或 roasts 数组。</p>
     `,
     onConfirm: async () => {
       const file = elements.modal.querySelector('#manageCategoryImportFile').files?.[0];
@@ -1275,7 +1379,7 @@ function importTextCategoryJson(category) {
 
       const candidates = Array.isArray(parsed)
         ? parsed
-        : parsed?.items || parsed?.cards || parsed?.questionnaireAnswers || parsed?.statuses || parsed?.moods || parsed?.roasts || null;
+        : parsed?.items || parsed?.cards || parsed?.promptQuestionnaires || parsed?.questionnaireAnswers || parsed?.statuses || parsed?.roasts || null;
       if (!Array.isArray(candidates)) {
         setModalError('JSON 中没有找到可导入的内容数组。');
         return false;
@@ -1283,8 +1387,21 @@ function importTextCategoryJson(category) {
 
       const imported = candidates
         .map((item) => (typeof item === 'string' ? { content: item } : item))
-        .filter((item) => item && typeof item.content === 'string' && item.content.trim())
-        .map((item) => ({ id: createId(category.type), content: item.content.trim() }));
+        .filter((item) => item && typeof (item.content || item.question) === 'string' && String(item.content || item.question).trim())
+        .map((item) => {
+          const content = String(item.content || item.question).trim();
+          if (category.type !== 'prompt') return { id: createId(category.type), content };
+          return {
+            id: createId(category.type),
+            question: content,
+            content,
+            type: ['qa', 'single', 'multiple'].includes(item.type) ? item.type : 'qa',
+            options: Array.isArray(item.options)
+              ? item.options.map((option) => String(option).trim()).filter(Boolean)
+              : [],
+            enabled: item.enabled !== false,
+          };
+        });
 
       if (!imported.length) {
         setModalError('JSON 中没有可导入的文字内容。');
@@ -1566,7 +1683,9 @@ function importTextCards() {
         cleaned.unique,
         existing,
         (content) => (
-          isTextCategory
+          isTextCategory && category.type === 'prompt'
+            ? { id: createId(category.type), question: content, content, type: 'qa', options: [], enabled: true }
+            : isTextCategory
             ? { id: createId(category.type), content }
             : { id: createId('card'), groupId: group.id, content, disabled: false }
         ),
@@ -1621,6 +1740,8 @@ function exportSelectedCards() {
   } else if (isTextCategoryType(category?.type)) {
     const key = category.type === 'questionnaire'
       ? 'questionnaireAnswers'
+      : category.type === 'prompt'
+        ? 'promptQuestionnaires'
       : category.type === 'status'
         ? 'statuses'
         : category.type === 'mood'
@@ -1655,7 +1776,7 @@ function exportSelectedCards() {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
-  setToast(`已导出 ${items.length} ${category?.type === 'questionnaire' || category?.type === 'status' ? '条' : '张'}内容`);
+  setToast(`已导出 ${items.length} ${['questionnaire', 'prompt', 'status', 'roast'].includes(category?.type) ? '条' : '张'}内容`);
 }
 
 function handleAction(action, target) {
@@ -1947,6 +2068,7 @@ export function getManageSnapshot() {
     stickers: state.stickers.map((item) => ({ ...item })),
     images: state.images.map((item) => ({ ...item })),
     questionnaireAnswers: state.questionnaireAnswers.map((item) => ({ ...item })),
+    promptQuestionnaires: state.promptQuestionnaires.map((item) => ({ ...item })),
     statuses: state.statuses.map((item) => ({ ...item })),
     moods: state.moods.map((item) => ({ ...item })),
     roasts: state.roasts.map((item) => ({ ...item })),
