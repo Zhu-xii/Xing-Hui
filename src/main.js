@@ -14,9 +14,11 @@ import { initFavoritesView, onFavoritesViewEnter } from './views/favorites.js';
 import { initPatView } from './views/pat.js';
 import { initManageView, onManageViewEnter } from './views/manage.js';
 import { initQuestionnaireView, onQuestionnaireViewEnter } from './views/questionnaire.js';
+import { initLetterView, onLetterViewEnter } from './views/letter.js';
 import { initPeriodView, onPeriodViewEnter } from './views/period.js';
 import { initFeedView, onFeedViewEnter } from './views/feed.js';
 import { initPromptEngine } from './lib/prompt-engine.js';
+import { initLetterEngine } from './lib/letter-engine.js';
 import { getAvatarBlob, listStickerRecords, migrateLegacyMedia, setBlobImage } from './lib/media-db.js';
 import { initSettingsView, onSettingsViewEnter } from './views/settings.js';
 import { initBackupView, onBackupViewEnter } from './views/backup.js';
@@ -45,13 +47,14 @@ import { getCurrentStatus } from './lib/status.js';
 
 const DAILY_GREETING_KEY = 'xinghui_daily_greeting';
 
-const VIEWS = ['home', 'chat', 'questionnaire', 'feed', 'period', 'manage', 'favorites', 'settings', 'backup', 'pat'];
+const VIEWS = ['home', 'chat', 'questionnaire', 'letter', 'feed', 'period', 'manage', 'favorites', 'settings', 'backup', 'pat'];
 const NAV_VIEWS = ['home', 'manage', 'settings'];
 const HOME_PAGE_SIZE = 6;
 const TITLES = {
   home: '首页',
   chat: '聊天',
-  questionnaire: '问卷',
+  questionnaire: '小问题',
+  letter: '信封',
   feed: '朋友圈',
   period: '经期记录',
   manage: '字卡',
@@ -66,6 +69,7 @@ let homePageIndex = 0;
 const initializedViews = new Set();
 const lazyViewInitializers = {
   questionnaire: initQuestionnaireView,
+  letter: initLetterView,
   period: initPeriodView,
   manage: initManageView,
   favorites: initFavoritesView,
@@ -107,10 +111,23 @@ function applyAppearance(settings = readSettings()) {
   } else {
     root.style.removeProperty('--chat-background-image');
   }
-  if (settings.globalBackgroundImage) {
-    root.style.setProperty('--global-background-image', `url("${settings.globalBackgroundImage}")`);
-  } else {
-    root.style.removeProperty('--global-background-image');
+  const globalBackground = document.getElementById('globalBackground');
+  if (globalBackground) {
+    if (settings.globalBackgroundImage) {
+      let image = globalBackground.querySelector('img');
+      if (!image) {
+        image = document.createElement('img');
+        image.alt = '';
+        globalBackground.append(image);
+      }
+      if (image.getAttribute('src') !== settings.globalBackgroundImage) {
+        image.src = settings.globalBackgroundImage;
+      }
+      globalBackground.hidden = false;
+    } else {
+      globalBackground.replaceChildren();
+      globalBackground.hidden = true;
+    }
   }
 
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#E9E9E9');
@@ -281,6 +298,7 @@ function render() {
   if (!justInitialized) {
     if (view === 'chat') onChatViewEnter();
     if (view === 'questionnaire') onQuestionnaireViewEnter();
+    if (view === 'letter') onLetterViewEnter();
     if (view === 'feed') onFeedViewEnter();
     if (view === 'period') onPeriodViewEnter();
     if (view === 'favorites') onFavoritesViewEnter();
@@ -451,6 +469,7 @@ initReplyEngine();
 initFeedView();
 initializedViews.add('feed');
 initPromptEngine();
+initLetterEngine();
 initPatView();
 initializedViews.add('pat');
 renderHomeStarAvatar();

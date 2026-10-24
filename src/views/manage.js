@@ -9,7 +9,11 @@ import {
   MANAGE_CATEGORIES,
   PAT_CARD_STORAGE_KEY as STORAGE_PAT_CARD_KEY,
   QUESTIONNAIRE_ANSWER_STORAGE_KEY as STORAGE_QUESTIONNAIRE_KEY,
+  LETTER_CATEGORY_NAME as STORAGE_LETTER_CATEGORY_NAME,
+  LETTER_GROUP_ID as STORAGE_LETTER_GROUP_ID,
   readPromptQuestionnaires,
+  readTaChoices,
+  writeTaChoices,
   writePromptQuestionnaires,
   SETTINGS_KEY as STORAGE_SETTINGS_KEY,
   STATUS_STORAGE_KEY as STORAGE_STATUS_KEY,
@@ -36,13 +40,14 @@ export const MOOD_CARD_STORAGE_KEY = STORAGE_MOOD_KEY;
 export const ROAST_STORAGE_KEY = STORAGE_ROAST_KEY;
 export const DEFAULT_GROUP_ID = STORAGE_DEFAULT_GROUP_ID;
 export const GREETING_GROUP_ID = STORAGE_GREETING_GROUP_ID;
+export const LETTER_GROUP_ID = STORAGE_LETTER_GROUP_ID;
 
 const CARD_PAGE_SIZE = 120;
 const MANAGE_GROUP_STORAGE_KEY = 'xinghui_manage_group_id';
 
 const TEXT_CATEGORY_META = Object.freeze({
   questionnaire: { label: '问卷回答', icon: '？', hint: '问卷回答会保存在本地，供问卷入口调用。' },
-  prompt: { label: '问答问卷', icon: '？', hint: '聊天时星回会从这里随机抽取一条问卷发送。' },
+  choice: { label: 'TA 的小问题', icon: '？', hint: 'TA 会从这里随机抽取选择题；内置题只能启用或停用。' },
   status: { label: '状态', icon: '◷', hint: '最新一条状态会显示在首页顶部。' },
   roast: { label: '他的吐槽', icon: '✎', hint: '聊天时星回偶尔抽一条吐槽字卡主动吐槽你。' },
 });
@@ -62,6 +67,7 @@ function isMediaCategoryType(type) {
 
 const BUILT_IN_GROUPS = [
   { id: DEFAULT_GROUP_ID, name: '默认分组' },
+  { id: LETTER_GROUP_ID, name: STORAGE_LETTER_CATEGORY_NAME },
   { id: GREETING_GROUP_ID, name: '问候语字卡' },
 ];
 
@@ -78,6 +84,7 @@ const state = {
   images: [],
   questionnaireAnswers: [],
   promptQuestionnaires: [],
+  taChoices: [],
   statuses: [],
   moods: [],
   roasts: [],
@@ -209,6 +216,10 @@ function readManageData() {
     ...item,
     content: item.question,
   }));
+  const taChoices = readTaChoices().map((item) => ({
+    ...item,
+    content: item.question,
+  }));
 
   const statuses = readStoredArray(STATUS_STORAGE_KEY)
     .map(normalizeTextEntry)
@@ -229,7 +240,7 @@ function readManageData() {
   const requestedGroupId = String(readJson(MANAGE_GROUP_STORAGE_KEY, '') || '').trim();
   const currentGroupId = groupIds.has(requestedGroupId) ? requestedGroupId : DEFAULT_GROUP_ID;
 
-  return { groups, cards, stickers, images, questionnaireAnswers, promptQuestionnaires, statuses, moods, roasts, patCards, currentGroupId };
+  return { groups, cards, stickers, images, questionnaireAnswers, promptQuestionnaires, taChoices, statuses, moods, roasts, patCards, currentGroupId };
 }
 
 function writeStoredArray(key, value) {
@@ -248,6 +259,7 @@ function saveData() {
     writeStoredArray(IMAGE_STORAGE_KEY, state.images),
     writeStoredArray(QUESTIONNAIRE_ANSWER_STORAGE_KEY, state.questionnaireAnswers),
     Boolean(writePromptQuestionnaires(state.promptQuestionnaires)),
+    Boolean(writeTaChoices(state.taChoices)),
     writeStoredArray(STATUS_STORAGE_KEY, state.statuses),
     writeStoredArray(STORAGE_MOOD_KEY, state.moods),
     writeStoredArray(STORAGE_ROAST_KEY, state.roasts),
@@ -264,6 +276,7 @@ function saveData() {
         images: state.images,
         questionnaireAnswers: state.questionnaireAnswers,
         promptQuestionnaires: state.promptQuestionnaires,
+        taChoices: state.taChoices,
         statuses: state.statuses,
         moods: state.moods,
         roasts: state.roasts,
@@ -283,6 +296,7 @@ function syncState() {
   state.images = data.images;
   state.questionnaireAnswers = data.questionnaireAnswers;
   state.promptQuestionnaires = data.promptQuestionnaires;
+  state.taChoices = data.taChoices;
   state.statuses = data.statuses;
   state.moods = data.moods;
   state.roasts = data.roasts;
@@ -310,6 +324,11 @@ function groupById(groupId) {
 }
 
 function cardsInGroup(groupId) {
+  if (groupId === DEFAULT_GROUP_ID) {
+    return state.cards.filter((card) => (
+      card.groupId === DEFAULT_GROUP_ID || card.groupId === LETTER_GROUP_ID
+    ));
+  }
   return state.cards.filter((card) => card.groupId === groupId);
 }
 
@@ -323,6 +342,7 @@ function categoryItems(categoryType) {
   if (categoryType === 'stickers') return state.stickers;
   if (categoryType === 'questionnaire') return state.questionnaireAnswers;
   if (categoryType === 'prompt') return state.promptQuestionnaires;
+  if (categoryType === 'choice') return state.taChoices;
   if (categoryType === 'status') return state.statuses;
   if (categoryType === 'mood') return state.moods;
   if (categoryType === 'roast') return state.roasts;
@@ -504,7 +524,7 @@ function renderCardRows(visibleCards, currentGroup) {
         <div class="manage-card-row__copy">
           <p class="manage-card-row__content">${escapeHtml(card.content || '（空白内容）')}</p>
           <div class="manage-card-row__meta">
-            <span>${escapeHtml(currentGroup?.name || '默认分组')}</span>
+            <span>${escapeHtml(groupById(card.groupId)?.name || currentGroup?.name || '默认分组')}</span>
             <span class="manage-status ${card.disabled ? 'is-disabled' : 'is-enabled'}">${card.disabled ? '已禁用' : '启用中'}</span>
           </div>
         </div>
@@ -591,6 +611,33 @@ function renderTextEntryRows(entries, category) {
   }).join('');
 }
 
+function renderChoiceRows(entries) {
+  if (!entries.length) {
+    return `
+      <div class="manage-empty">
+        <span aria-hidden="true">？</span>
+        <strong>还没有 TA 的小问题</strong>
+        <p>启用至少一道预设题后，TA 才会在聊天里主动发问。</p>
+      </div>
+    `;
+  }
+
+  return entries.map((entry) => `
+    <article class="manage-card-row manage-card-row--choice${entry.enabled === false ? ' is-disabled' : ''}">
+      <div class="manage-card-row__copy">
+        <p class="manage-card-row__content">${escapeHtml(entry.question)}</p>
+        <div class="manage-card-row__meta">
+          <span>${escapeHtml(entry.options.map((option) => option.text).join(' / '))}</span>
+          <span class="manage-status ${entry.enabled === false ? 'is-disabled' : 'is-enabled'}">${entry.enabled === false ? '已停用' : '启用中'}</span>
+        </div>
+      </div>
+      <div class="manage-card-row__actions">
+        <button type="button" data-manage-action="toggle-choice" data-choice-id="${escapeHtml(entry.id)}">${entry.enabled === false ? '启用' : '停用'}</button>
+      </div>
+    </article>
+  `).join('');
+}
+
 async function hydrateStickerPreviewImages() {
   const images = Array.from(elements?.cardList?.querySelectorAll('[data-sticker-image-id]') || []);
   await Promise.all(images.map(async (image) => {
@@ -620,9 +667,10 @@ function renderCards() {
   const isMediaCategory = isMediaCategoryType(category?.type);
   const isStickerCategory = category?.type === 'stickers';
   const isTextCategory = isTextCategoryType(category?.type);
+  const isChoiceCategory = category?.type === 'choice';
   const unit = isTextCategory ? '条' : '张';
 
-  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.images.length} 张图片 · ${state.promptQuestionnaires.length} 条问答问卷 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.roasts.length} 条吐槽 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
+  elements.summary.textContent = `${state.groups.length} 个分组 · ${state.cards.length} 张字卡 · ${state.stickers.length} 张表情包 · ${state.images.length} 张图片 · ${state.taChoices.length} 道 TA 的小问题 · ${state.questionnaireAnswers.length} 条问卷回答 · ${state.statuses.length} 条状态 · ${state.roasts.length} 条吐槽 · ${state.patCards.length} 张拍一拍字卡 · ${disabledTotal} 张已禁用`;
   elements.currentGroupName.textContent = currentGroup?.name || '默认分组';
   elements.visibleCardCount.textContent = `${allItems.length} ${unit}`;
 
@@ -637,6 +685,7 @@ function renderCards() {
 
   const createButton = viewRoot.querySelector('[data-manage-action="create-card"]');
   if (createButton) {
+    createButton.hidden = isChoiceCategory;
     createButton.textContent = isMediaCategory
       ? `＋ 导入${category.name}`
       : isTextCategory
@@ -647,9 +696,14 @@ function renderCards() {
   const importJsonButton = viewRoot.querySelector('[data-manage-action="import-json"]');
   const importTextButton = viewRoot.querySelector('[data-manage-action="import-text"]');
   const deduplicateButton = viewRoot.querySelector('[data-manage-action="deduplicate"]');
+  const exportSelectedButton = viewRoot.querySelector('[data-manage-action="export-selected"]');
   if (importJsonButton) importJsonButton.textContent = isMediaCategory ? '导入图片' : '导入 JSON';
-  if (importTextButton) importTextButton.hidden = isMediaCategory;
+  if (importJsonButton) importJsonButton.hidden = isChoiceCategory;
+  if (importTextButton) importTextButton.hidden = isMediaCategory || isChoiceCategory;
   if (deduplicateButton) deduplicateButton.hidden = Boolean(category);
+  if (exportSelectedButton) exportSelectedButton.hidden = isChoiceCategory;
+  const selectAllLabel = elements.selectAll?.closest('.manage-select-all');
+  if (selectAllLabel) selectAllLabel.hidden = isChoiceCategory;
 
   const batchEnable = viewRoot.querySelector('[data-manage-action="batch-enable"]');
   const batchDisable = viewRoot.querySelector('[data-manage-action="batch-disable"]');
@@ -661,6 +715,8 @@ function renderCards() {
   if (isMediaCategory) {
     elements.cardList.innerHTML = renderStickerRows(pageItems, category?.name || '表情包');
     void hydrateStickerPreviewImages();
+  } else if (isChoiceCategory) {
+    elements.cardList.innerHTML = renderChoiceRows(pageItems);
   } else if (isTextCategory) {
     elements.cardList.innerHTML = renderTextEntryRows(pageItems, category.type);
   } else {
@@ -1085,7 +1141,7 @@ function cardEditor(cardId = '') {
         <span>所属分组</span>
         <select id="manageCardGroup">${groupOptionsHtml(initialGroupId)}</select>
       </label>
-      <p class="manage-field__hint">默认分组会显示所有分组的字卡；修改所属分组只会改变分类，不会从默认分组移除。</p>
+      <p class="manage-field__hint">「写信专用」中的字卡也会显示在默认分组；聊天随机回复不会抽取写信专用字卡。</p>
       <label class="manage-switch-field">
         <input id="manageCardDisabled" type="checkbox" ${card?.disabled ? 'checked' : ''} />
         <span class="manage-switch-field__control" aria-hidden="true"></span>
@@ -1197,6 +1253,19 @@ function toggleCards(cardIds, disabled) {
   setToast(isMediaCategoryType(category?.type)
     ? `${changed} 张${category?.name || '表情包'}已${disabled ? '停用' : '启用'}`
     : `${changed} 张字卡已${disabled ? '禁用' : '启用'}`);
+}
+
+function toggleChoice(choiceId) {
+  const choice = state.taChoices.find((item) => item.id === choiceId);
+  if (!choice) return;
+  choice.enabled = choice.enabled === false;
+  if (!saveData()) {
+    choice.enabled = !choice.enabled;
+    setToast('保存失败，请检查浏览器存储空间', 'warning');
+    return;
+  }
+  render();
+  setToast(`TA 的小问题已${choice.enabled ? '启用' : '停用'}`);
 }
 
 function deleteCards(cardIds) {
@@ -1824,6 +1893,9 @@ function handleAction(action, target) {
       if (card) toggleCards([card.id], !card.disabled);
       break;
     }
+    case 'toggle-choice':
+      toggleChoice(target.dataset.choiceId);
+      break;
     case 'delete-card':
       deleteCards([target.dataset.cardId]);
       break;
@@ -2069,6 +2141,10 @@ export function getManageSnapshot() {
     images: state.images.map((item) => ({ ...item })),
     questionnaireAnswers: state.questionnaireAnswers.map((item) => ({ ...item })),
     promptQuestionnaires: state.promptQuestionnaires.map((item) => ({ ...item })),
+    taChoices: state.taChoices.map((item) => ({
+      ...item,
+      options: item.options.map((option) => ({ ...option, reply: option.reply.slice() })),
+    })),
     statuses: state.statuses.map((item) => ({ ...item })),
     moods: state.moods.map((item) => ({ ...item })),
     roasts: state.roasts.map((item) => ({ ...item })),

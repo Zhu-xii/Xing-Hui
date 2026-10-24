@@ -1,3 +1,6 @@
+import { TA_CHOICE_DEFAULTS } from './ta-choice-data.js';
+import { ROAST_DEFAULTS } from './roast-data.js';
+
 export const STORAGE_KEYS = Object.freeze({
   settings: 'xinghui_settings',
   cards: 'xinghui_cards',
@@ -12,6 +15,8 @@ export const STORAGE_KEYS = Object.freeze({
   categoryMigration: 'xinghui_category_migration_v1',
   questionnaireDraft: 'xinghui_questionnaire_draft',
   promptQuestionnaires: 'xinghui_prompt_questionnaires',
+  taChoices: 'xinghui_ta_choices',
+  letters: 'xinghui_letters',
   periodRecords: 'xinghui_period_records',
   moodCache: 'xinghui_chat_mood',
   chatMessages: 'xinghui_chat_messages',
@@ -34,8 +39,11 @@ export const STATUS_STORAGE_KEY = STORAGE_KEYS.statuses;
 export const MOOD_CARD_STORAGE_KEY = STORAGE_KEYS.moods;
 export const ROAST_STORAGE_KEY = STORAGE_KEYS.roasts;
 export const CATEGORY_MIGRATION_KEY = STORAGE_KEYS.categoryMigration;
+const ROAST_PRESET_MIGRATION_KEY = 'xinghui_mochi_roast_presets_v1';
 export const QUESTIONNAIRE_DRAFT_KEY = STORAGE_KEYS.questionnaireDraft;
 export const PROMPT_QUESTIONNAIRE_STORAGE_KEY = STORAGE_KEYS.promptQuestionnaires;
+export const TA_CHOICE_STORAGE_KEY = STORAGE_KEYS.taChoices;
+export const LETTER_STORAGE_KEY = STORAGE_KEYS.letters;
 export const PERIOD_RECORD_STORAGE_KEY = STORAGE_KEYS.periodRecords;
 export const MOOD_CACHE_KEY = STORAGE_KEYS.moodCache;
 export const CHAT_STORAGE_KEY = STORAGE_KEYS.chatMessages;
@@ -50,6 +58,8 @@ export const STICKER_GROUP_ID = 'group_stickers';
 export const IMAGE_GROUP_ID = 'group_images';
 export const QUESTIONNAIRE_GROUP_ID = 'group_questionnaire';
 export const PRESET_QUESTIONNAIRE_GROUP_ID = 'group_preset_questionnaires';
+export const TA_CHOICE_GROUP_ID = 'group_ta_choices';
+export const LETTER_GROUP_ID = 'group_letters';
 export const STATUS_GROUP_ID = 'group_status';
 export const MOOD_GROUP_ID = 'group_mood';
 export const ROAST_GROUP_ID = 'group_roast';
@@ -57,6 +67,8 @@ export const STICKER_CATEGORY_NAME = '表情包';
 export const IMAGE_CATEGORY_NAME = '图片';
 export const QUESTIONNAIRE_CATEGORY_NAME = '问卷回答';
 export const PRESET_QUESTIONNAIRE_CATEGORY_NAME = '问答问卷';
+export const TA_CHOICE_CATEGORY_NAME = 'TA 的小问题';
+export const LETTER_CATEGORY_NAME = '写信专用';
 export const STATUS_CATEGORY_NAME = '状态';
 export const MOOD_CATEGORY_NAME = '心情';
 export const ROAST_CATEGORY_NAME = '他的吐槽';
@@ -64,7 +76,7 @@ export const MANAGE_CATEGORIES = Object.freeze([
   Object.freeze({ id: STICKER_GROUP_ID, name: STICKER_CATEGORY_NAME, type: 'stickers' }),
   Object.freeze({ id: IMAGE_GROUP_ID, name: IMAGE_CATEGORY_NAME, type: 'images' }),
   Object.freeze({ id: QUESTIONNAIRE_GROUP_ID, name: QUESTIONNAIRE_CATEGORY_NAME, type: 'questionnaire' }),
-  Object.freeze({ id: PRESET_QUESTIONNAIRE_GROUP_ID, name: PRESET_QUESTIONNAIRE_CATEGORY_NAME, type: 'prompt' }),
+  Object.freeze({ id: TA_CHOICE_GROUP_ID, name: TA_CHOICE_CATEGORY_NAME, type: 'choice' }),
   Object.freeze({ id: STATUS_GROUP_ID, name: STATUS_CATEGORY_NAME, type: 'status' }),
   Object.freeze({ id: ROAST_GROUP_ID, name: ROAST_CATEGORY_NAME, type: 'roast' }),
 ]);
@@ -109,6 +121,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   promptQuestionnaireChance: 30,
   promptQuestionnaireIntervalHours: 0.5,
   lastPromptQuestionnaireCheckAt: 0,
+  letterEnabled: true,
+  letterProbability: 30,
+  letterIntervalHours: 2,
+  letterSentenceMin: 2,
+  letterSentenceMax: 4,
+  letterDailyMax: 3,
+  lastLetterCheckAt: 0,
   bubbleColor: '#111111',
   bubbleColorStar: '#FFFFFF',
   chatBackgroundType: 'color',
@@ -321,6 +340,8 @@ export function normalizeSettings(settings = {}) {
   // 旧版本概率以 0–1 存储，这里迁移到 0–100 百分比。
   const rawPromptChance = finiteNumber(source.promptQuestionnaireChance, DEFAULT_SETTINGS.promptQuestionnaireChance);
   const promptChance = rawPromptChance > 0 && rawPromptChance <= 1 ? rawPromptChance * 100 : rawPromptChance;
+  const letterSentenceA = clamp(Math.round(finiteNumber(source.letterSentenceMin, DEFAULT_SETTINGS.letterSentenceMin)), 1, 20);
+  const letterSentenceB = clamp(Math.round(finiteNumber(source.letterSentenceMax, DEFAULT_SETTINGS.letterSentenceMax)), 1, 20);
 
   return {
     replyDelayMin: Math.min(firstDelay, secondDelay),
@@ -348,6 +369,13 @@ export function normalizeSettings(settings = {}) {
     promptQuestionnaireChance: clamp(promptChance, 0, 100),
     promptQuestionnaireIntervalHours: clamp(finiteNumber(source.promptQuestionnaireIntervalHours, DEFAULT_SETTINGS.promptQuestionnaireIntervalHours), 0, 12),
     lastPromptQuestionnaireCheckAt: Math.max(0, finiteNumber(source.lastPromptQuestionnaireCheckAt, DEFAULT_SETTINGS.lastPromptQuestionnaireCheckAt)),
+    letterEnabled: source.letterEnabled !== false,
+    letterProbability: normalizePercentage(source.letterProbability, DEFAULT_SETTINGS.letterProbability, 0),
+    letterIntervalHours: clamp(finiteNumber(source.letterIntervalHours, DEFAULT_SETTINGS.letterIntervalHours), 0.5, 72),
+    letterSentenceMin: Math.min(letterSentenceA, letterSentenceB),
+    letterSentenceMax: Math.max(letterSentenceA, letterSentenceB),
+    letterDailyMax: clamp(Math.round(finiteNumber(source.letterDailyMax, DEFAULT_SETTINGS.letterDailyMax)), 1, 24),
+    lastLetterCheckAt: Math.max(0, finiteNumber(source.lastLetterCheckAt, DEFAULT_SETTINGS.lastLetterCheckAt)),
     bubbleColor: bubbleIsLegacy ? DEFAULT_SETTINGS.bubbleColor : rawBubble,
     bubbleColorStar: bubbleIsLegacy ? rawBubble : (rawBubbleStar || DEFAULT_SETTINGS.bubbleColorStar),
     chatBackgroundType: source.chatBackgroundType === 'image' && typeof source.chatBackgroundImage === 'string' && /^data:image\//i.test(source.chatBackgroundImage)
@@ -518,7 +546,7 @@ export function hasManageCategory(category) {
 export function migrateManageCategories() {
   const storage = getStorage();
   // 迁移标记按版本推进：新增类别后提升版本号，保证老用户也会补齐新类别。
-  const MIGRATION_VERSION = '4';
+  const MIGRATION_VERSION = '5';
   if (!storage || storage.getItem(CATEGORY_MIGRATION_KEY) === MIGRATION_VERSION) return false;
 
   const statusEntries = readStatuses();
@@ -536,7 +564,11 @@ export function migrateManageCategories() {
   }
 
   const groups = readGroups().filter((group) => (
-    group.id !== MOOD_GROUP_ID && group.name !== MOOD_CATEGORY_NAME
+    group.id !== MOOD_GROUP_ID
+    && group.name !== MOOD_CATEGORY_NAME
+    && group.id !== PRESET_QUESTIONNAIRE_GROUP_ID
+    && group.category !== 'prompt'
+    && group.name !== PRESET_QUESTIONNAIRE_CATEGORY_NAME
   ));
   const existingIds = new Set(groups.map((group) => group.id));
   const existingNames = new Set(groups.map((group) => group.name));
@@ -552,6 +584,12 @@ export function migrateManageCategories() {
     existingIds.add(category.id);
     existingNames.add(category.name);
   });
+  if (!groups.some((group) => group.id === LETTER_GROUP_ID || group.name === LETTER_CATEGORY_NAME)) {
+    const defaultIndex = groups.findIndex((group) => group.id === DEFAULT_GROUP_ID);
+    const letterGroup = { id: LETTER_GROUP_ID, name: LETTER_CATEGORY_NAME };
+    if (defaultIndex >= 0) groups.splice(defaultIndex + 1, 0, letterGroup);
+    else groups.unshift(letterGroup);
+  }
 
   writeGroups(groups);
   writeStorage(CATEGORY_MIGRATION_KEY, MIGRATION_VERSION);
@@ -572,6 +610,64 @@ export function normalizePromptQuestionnaire(item) {
     options,
     type,
     enabled: item.enabled !== false,
+  };
+}
+
+function normalizeTaChoiceOption(option) {
+  if (typeof option === 'string') {
+    const text = option.trim();
+    return text ? { text, reply: [], liked: false } : null;
+  }
+  if (!option || typeof option !== 'object' || Array.isArray(option)) return null;
+  const text = String(option.text ?? option.t ?? '').trim().slice(0, 300);
+  if (!text) return null;
+  const rawReply = option.reply ?? option.replies;
+  const reply = (Array.isArray(rawReply) ? rawReply : [rawReply])
+    .map((item) => String(item ?? '').trim().slice(0, 1000))
+    .filter(Boolean);
+  return {
+    text,
+    reply,
+    liked: option.liked === true || option.liked === 'true',
+  };
+}
+
+export function normalizeTaChoice(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+  const question = String(item.question ?? item.text ?? '').trim().slice(0, 500);
+  if (!question) return null;
+  const options = (Array.isArray(item.options) ? item.options : [])
+    .map(normalizeTaChoiceOption)
+    .filter(Boolean)
+    .slice(0, 20);
+  if (options.length < 2) return null;
+  const preferredIndex = clamp(
+    Math.round(finiteNumber(item.preferredIndex ?? item.pref, 0)),
+    0,
+    options.length - 1,
+  );
+  return {
+    id: String(item.id || createId('choice')).trim().slice(0, 120),
+    category: String(item.category ?? item.cat ?? 'daily').trim().slice(0, 40) || 'daily',
+    question,
+    options,
+    preferredIndex,
+    enabled: item.enabled !== false,
+    isPreset: item.isPreset !== false,
+  };
+}
+
+export function normalizeLetter(letter) {
+  if (!letter || typeof letter !== 'object' || Array.isArray(letter)) return null;
+  const content = String(letter.content || '').trim().slice(0, 12000);
+  if (!content) return null;
+  return {
+    id: String(letter.id || createId('letter')).slice(0, 120),
+    direction: letter.direction === 'user' ? 'user' : 'star',
+    title: String(letter.title || '一封来信').trim().slice(0, 80) || '一封来信',
+    content,
+    createdAt: parseTimestamp(letter.createdAt),
+    read: letter.read === true,
   };
 }
 
@@ -613,11 +709,30 @@ export function normalizeQuestionnaire(questionnaire) {
   const options = Array.isArray(questionnaire.options)
     ? questionnaire.options.map((option) => String(option).trim()).filter(Boolean).slice(0, 100)
     : [];
+  const source = questionnaire.source === 'ta-choice' ? 'ta-choice' : '';
+  const optionMeta = source === 'ta-choice'
+    ? options.map((text, index) => {
+        const option = questionnaire.optionMeta?.[index];
+        return {
+          text,
+          reply: (Array.isArray(option?.reply) ? option.reply : [option?.reply])
+            .map((item) => String(item ?? '').trim().slice(0, 1000))
+            .filter(Boolean),
+          liked: option?.liked === true || option?.liked === 'true',
+        };
+      })
+    : [];
   const question = typeof questionnaire.question === 'string' ? questionnaire.question.trim().slice(0, 500) : '';
 
   return {
+    source,
+    choiceId: source ? String(questionnaire.choiceId || '').slice(0, 120) : '',
     question,
     options,
+    optionMeta,
+    preferredIndex: source
+      ? clamp(Math.round(finiteNumber(questionnaire.preferredIndex, 0)), 0, Math.max(0, options.length - 1))
+      : 0,
     type,
     thinkMin: clamp(finiteNumber(questionnaire.thinkMin, 5), 1, 60),
     thinkMax: clamp(finiteNumber(questionnaire.thinkMax, 15), 1, 60),
@@ -630,6 +745,8 @@ export function normalizeQuestionnaire(questionnaire) {
     createdAt: parseTimestamp(questionnaire.createdAt),
     sequence: finiteNumber(questionnaire.sequence, Date.now()),
     answer: questionnaire.answer ?? '',
+    reply: typeof questionnaire.reply === 'string' ? questionnaire.reply.trim().slice(0, 2000) : '',
+    matchText: typeof questionnaire.matchText === 'string' ? questionnaire.matchText.trim().slice(0, 500) : '',
     selected: Array.isArray(questionnaire.selected)
       ? questionnaire.selected.map((item) => String(item)).filter(Boolean).slice(0, 100)
       : [],
@@ -801,6 +918,15 @@ export function readPromptQuestionnaires() {
   return readCollection(STORAGE_KEYS.promptQuestionnaires, normalizePromptQuestionnaire);
 }
 
+export function readTaChoices() {
+  return readCollection(STORAGE_KEYS.taChoices, normalizeTaChoice);
+}
+
+export function readLetters() {
+  return readCollection(STORAGE_KEYS.letters, normalizeLetter)
+    .sort((first, second) => second.createdAt - first.createdAt);
+}
+
 export function readPeriodRecords() {
   return readCollection(STORAGE_KEYS.periodRecords, normalizePeriodRecord)
     .sort((first, second) => second.startDate.localeCompare(first.startDate));
@@ -871,6 +997,16 @@ export function writeRoasts(entries) {
 export function writePromptQuestionnaires(items) {
   const normalized = Array.isArray(items) ? items.map(normalizePromptQuestionnaire).filter(Boolean) : [];
   return writeJson(STORAGE_KEYS.promptQuestionnaires, normalized) ? normalized : null;
+}
+
+export function writeTaChoices(items) {
+  const normalized = Array.isArray(items) ? items.map(normalizeTaChoice).filter(Boolean) : [];
+  return writeJson(STORAGE_KEYS.taChoices, normalized) ? normalized : null;
+}
+
+export function writeLetters(letters) {
+  const normalized = Array.isArray(letters) ? letters.map(normalizeLetter).filter(Boolean) : [];
+  return writeJson(STORAGE_KEYS.letters, normalized) ? normalized : null;
 }
 
 export function writePeriodRecords(records) {
@@ -969,6 +1105,39 @@ export function getBackupReminder(now = Date.now()) {
   };
 }
 
+function ensureTaChoicePresets() {
+  const current = readTaChoices();
+  const currentIds = new Set(current.map((item) => item.id));
+  const merged = current.slice();
+  TA_CHOICE_DEFAULTS.forEach((item) => {
+    const preset = normalizeTaChoice({ ...item, isPreset: true });
+    if (preset && !currentIds.has(preset.id)) {
+      merged.push(preset);
+      currentIds.add(preset.id);
+    }
+  });
+  if (merged.length !== current.length) writeTaChoices(merged);
+}
+
+function ensureRoastPresets() {
+  const storage = getStorage();
+  if (!storage || storage.getItem(ROAST_PRESET_MIGRATION_KEY) === '1') return;
+  const current = readRoasts();
+  const contentSet = new Set(current.map((entry) => entry.content));
+  const idSet = new Set(current.map((entry) => entry.id));
+  const merged = current.slice();
+  ROAST_DEFAULTS.forEach((item) => {
+    const content = String(item.text || '').trim();
+    const id = `mochi_roast_${item.id}`;
+    if (!content || contentSet.has(content) || idSet.has(id)) return;
+    merged.push({ id, content });
+    contentSet.add(content);
+    idSet.add(id);
+  });
+  if (merged.length !== current.length) writeRoasts(merged);
+  writeStorage(ROAST_PRESET_MIGRATION_KEY, '1');
+}
+
 export function initStorage() {
   const storage = getStorage();
   if (!storage) return { settings: { ...DEFAULT_SETTINGS }, character: { ...DEFAULT_CHARACTER } };
@@ -983,6 +1152,8 @@ export function initStorage() {
 
   ensureFirstLaunchAt();
   migrateManageCategories();
+  ensureTaChoicePresets();
+  ensureRoastPresets();
   return {
     settings: readSettings(),
     character: readCharacter(),
@@ -1006,6 +1177,8 @@ export function getStorageSnapshot() {
     settings: readSettings(),
     groups: readGroups(),
     promptQuestionnaires: readPromptQuestionnaires(),
+    taChoices: readTaChoices(),
+    letters: readLetters(),
     periodRecords: readPeriodRecords(),
     questionnaireDraft: readJson(QUESTIONNAIRE_DRAFT_KEY, null),
     moodCache: readJson(MOOD_CACHE_KEY, null),
@@ -1052,7 +1225,7 @@ export function normalizeBackupPayload(input) {
     ? source.favorites
     : {};
 
-  const knownKeys = ['cards', 'stickers', 'chatMessages', 'feedPosts', 'feedNotices', 'feedAutoPost', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'periodRecords', 'questionnaireDraft', 'moodCache', 'mediaAssets', 'patCards', 'questionnaireAnswers', 'statuses', 'moods', 'roasts', 'images', 'character'];
+  const knownKeys = ['cards', 'stickers', 'chatMessages', 'feedPosts', 'feedNotices', 'feedAutoPost', 'favorites', 'settings', 'groups', 'promptQuestionnaires', 'taChoices', 'letters', 'periodRecords', 'questionnaireDraft', 'moodCache', 'mediaAssets', 'patCards', 'questionnaireAnswers', 'statuses', 'moods', 'roasts', 'images', 'character'];
   if (!knownKeys.some((key) => Object.prototype.hasOwnProperty.call(source, key))) {
     throw new Error('没有找到可导入的星回数据。');
   }
@@ -1089,6 +1262,12 @@ export function normalizeBackupPayload(input) {
     groups: Array.isArray(source.groups) ? source.groups.map(normalizeGroup).filter(Boolean) : [],
     promptQuestionnaires: Array.isArray(source.promptQuestionnaires)
       ? source.promptQuestionnaires.map(normalizePromptQuestionnaire).filter(Boolean)
+      : [],
+    taChoices: Array.isArray(source.taChoices)
+      ? source.taChoices.map(normalizeTaChoice).filter(Boolean)
+      : [],
+    letters: Array.isArray(source.letters)
+      ? source.letters.map(normalizeLetter).filter(Boolean)
       : [],
     periodRecords: Array.isArray(source.periodRecords)
       ? source.periodRecords.map(normalizePeriodRecord).filter(Boolean)

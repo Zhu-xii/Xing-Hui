@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   GREETING_GROUP_ID,
   GROUP_STORAGE_KEY,
+  LETTER_GROUP_ID,
   MANAGE_CATEGORIES,
   normalizeSettings,
   REPLY_ALL_GROUPS_ID,
@@ -32,7 +33,7 @@ function readReplyGroupChoices() {
     groups.forEach((group) => {
       const id = String(group?.id || '').trim();
       const name = String(group?.name || '').trim();
-      if (!id || !name || seen.has(id) || group?.category || MANAGE_CATEGORY_IDS.has(id)) return;
+      if (!id || !name || id === LETTER_GROUP_ID || seen.has(id) || group?.category || MANAGE_CATEGORY_IDS.has(id)) return;
       seen.add(id);
       choices.push({ id, name });
     });
@@ -190,6 +191,7 @@ function syncSettings() {
   syncProbability('feedReplyProbability', settings.feedReplyProbability);
   syncProbability('feedReplyToCommentProbability', settings.feedReplyToCommentProbability);
   syncProbability('roastProbability', settings.roastProbability);
+  syncProbability('letterProbability', settings.letterProbability);
   syncProbability('callIncomingProbability', settings.callIncomingProbability);
   syncProbability('callPickupProbability', settings.callPickupProbability);
   syncProbability('callBusyProbability', settings.callBusyProbability);
@@ -204,6 +206,11 @@ function syncSettings() {
   if (elements.feedDailyMax) elements.feedDailyMax.value = String(settings.feedDailyMax);
   if (elements.roastEnabled) elements.roastEnabled.checked = settings.roastEnabled;
   if (elements.roastInterval) elements.roastInterval.value = String(settings.roastIntervalMinutes);
+  if (elements.letterEnabled) elements.letterEnabled.checked = settings.letterEnabled;
+  if (elements.letterInterval) elements.letterInterval.value = String(settings.letterIntervalHours);
+  if (elements.letterSentenceMin) elements.letterSentenceMin.value = String(settings.letterSentenceMin);
+  if (elements.letterSentenceMax) elements.letterSentenceMax.value = String(settings.letterSentenceMax);
+  if (elements.letterDailyMax) elements.letterDailyMax.value = String(settings.letterDailyMax);
 
   elements.promptQuestionnaireChance.value = String(settings.promptQuestionnaireChance);
   elements.promptQuestionnaireIntervalHours.value = String(settings.promptQuestionnaireIntervalHours);
@@ -239,7 +246,7 @@ function saveDelayRange(preferMin = false) {
 function saveProbability(key, value, minimum = null) {
   const settings = readSettings();
   const floor = minimum === null
-    ? (key === "starFavorite" || key === "starFavoriteCard" || key === "starFavoriteFeed" || key === "roastProbability" || key.startsWith("feed") || key.startsWith("call") ? 0 : 1)
+    ? (key === "starFavorite" || key === "starFavoriteCard" || key === "starFavoriteFeed" || key === "roastProbability" || key === "letterProbability" || key.startsWith("feed") || key.startsWith("call") ? 0 : 1)
     : minimum;
   const next = enabledValue(value, settings[key] ?? DEFAULT_SETTINGS[key], floor);
   updateSettings({ [key]: next });
@@ -292,6 +299,12 @@ function saveAllSettings() {
     roastEnabled: elements.roastEnabled.checked,
     roastProbability: elements.roastProbabilityNumber.value,
     roastIntervalMinutes: elements.roastInterval.value,
+    letterEnabled: elements.letterEnabled.checked,
+    letterProbability: elements.letterProbabilityNumber.value,
+    letterIntervalHours: elements.letterInterval.value,
+    letterSentenceMin: elements.letterSentenceMin.value,
+    letterSentenceMax: elements.letterSentenceMax.value,
+    letterDailyMax: elements.letterDailyMax.value,
     callIncomingProbability: elements.callIncomingProbabilityNumber.value,
     callPickupProbability: elements.callPickupProbabilityNumber.value,
     callBusyProbability: elements.callBusyProbabilityNumber.value,
@@ -556,6 +569,17 @@ function handleSettingsChange(event) {
   }
   if (setting === "roast-enabled") { updateSettings({ roastEnabled: target.checked }); return; }
   if (setting === "roast-interval") { updateSettings({ roastIntervalMinutes: target.value }); syncSettings(); return; }
+  if (setting === "letter-enabled") { updateSettings({ letterEnabled: target.checked }); return; }
+  if (setting === "letter-interval") { updateSettings({ letterIntervalHours: target.value }); syncSettings(); return; }
+  if (setting === "letter-daily-max") { updateSettings({ letterDailyMax: target.value }); syncSettings(); return; }
+  if (setting === "letter-sentence-min" || setting === "letter-sentence-max") {
+    updateSettings({
+      letterSentenceMin: setting === "letter-sentence-min" ? target.value : elements.letterSentenceMin.value,
+      letterSentenceMax: setting === "letter-sentence-max" ? target.value : elements.letterSentenceMax.value,
+    });
+    syncSettings();
+    return;
+  }
   if (setting === "call-no-hangup") { updateSettings({ callNoHangup: target.checked }); return; }
 }
 
@@ -892,7 +916,7 @@ export function initSettingsView(root = document.getElementById('view-settings')
         </div>
         <div class="settings-field settings-field--inline">
           <label for="settingPromptQuestionnaireChance">
-            <strong>星回随机发题概率</strong>
+            <strong>TA 的小问题触发概率</strong>
             <small>0%–100%，默认 30%</small>
           </label>
           <input class="settings-number-input" id="settingPromptQuestionnaireChance" data-setting="prompt-questionnaire-chance" type="number" min="0" max="100" step="1" inputmode="numeric" />
@@ -900,7 +924,7 @@ export function initSettingsView(root = document.getElementById('view-settings')
 
         <div class="settings-field settings-field--inline">
           <label for="settingPromptQuestionnaireIntervalHours">
-            <strong>发题间隔</strong>
+            <strong>小问题间隔</strong>
             <small>0–12 小时，默认 0.5</small>
           </label>
           <input class="settings-number-input" id="settingPromptQuestionnaireIntervalHours" data-setting="prompt-questionnaire-interval" type="number" min="0" max="12" step="0.5" inputmode="decimal" />
@@ -1361,6 +1385,76 @@ export function initSettingsView(root = document.getElementById('view-settings')
         </div>
       </section>
 
+      <section class="settings-card" aria-labelledby="settingsLetterTitle">
+        <div class="settings-card__heading">
+          <div>
+            <p class="settings-kicker">信封</p>
+            <h3 id="settingsLetterTitle">写信</h3>
+          </div>
+        </div>
+
+        <label class="settings-switch-row">
+          <span>
+            <strong>让星回主动写信</strong>
+            <small>从字卡页的「写信专用」中随机抽取句子组成信件</small>
+          </span>
+          <span class="settings-switch">
+            <input id="settingLetterEnabled" data-setting="letter-enabled" type="checkbox" />
+            <span aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <div class="settings-field settings-field--probability">
+          <div class="settings-field__label">
+            <span>来信触发概率</span>
+            <small>每次检查时的概率，0%–100%</small>
+          </div>
+          <div class="settings-probability" data-probability-control="letterProbability">
+            <input id="settingLetterProbabilityRange" data-probability-range="letterProbability" type="range" min="0" max="100" step="1" />
+            <label>
+              <input id="settingLetterProbabilityNumber" data-setting="probability-number" data-probability="letterProbability" type="number" min="0" max="100" step="1" inputmode="numeric" />
+              <span>%</span>
+            </label>
+            <output id="settingLetterProbabilityOutput">0%</output>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingLetterInterval">
+            <strong>写信间隔</strong>
+            <small>0.5–72 小时；到达间隔后才检查来信概率</small>
+          </label>
+          <input class="settings-number-input" id="settingLetterInterval" data-setting="letter-interval" type="number" min="0.5" max="72" step="0.5" inputmode="decimal" />
+        </div>
+
+        <div class="settings-field">
+          <div class="settings-field__label">
+            <span>每封信的句子数量</span>
+            <small>1–20 句，实际数量不会超过「写信专用」中的可用字卡数</small>
+          </div>
+          <div class="settings-delay-row">
+            <label>
+              <span>最少</span>
+              <input id="settingLetterSentenceMin" data-setting="letter-sentence-min" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-delay-separator">至</span>
+            <label>
+              <span>最多</span>
+              <input id="settingLetterSentenceMax" data-setting="letter-sentence-max" type="number" min="1" max="20" step="1" inputmode="numeric" />
+            </label>
+            <span class="settings-unit">句</span>
+          </div>
+        </div>
+
+        <div class="settings-field settings-field--inline">
+          <label for="settingLetterDailyMax">
+            <strong>每日来信上限</strong>
+            <small>1–24 封，默认 3 封</small>
+          </label>
+          <input class="settings-number-input" id="settingLetterDailyMax" data-setting="letter-daily-max" type="number" min="1" max="24" step="1" inputmode="numeric" />
+        </div>
+      </section>
+
       <section class="settings-card" aria-labelledby="settingsAvatarTitle">
         <div class="settings-card__heading">
           <div>
@@ -1636,11 +1730,16 @@ export function initSettingsView(root = document.getElementById('view-settings')
     feedDailyMax: viewRoot.querySelector('#settingFeedDailyMax'),
     roastEnabled: viewRoot.querySelector('#settingRoastEnabled'),
     roastInterval: viewRoot.querySelector('#settingRoastInterval'),
+    letterEnabled: viewRoot.querySelector('#settingLetterEnabled'),
+    letterInterval: viewRoot.querySelector('#settingLetterInterval'),
+    letterSentenceMin: viewRoot.querySelector('#settingLetterSentenceMin'),
+    letterSentenceMax: viewRoot.querySelector('#settingLetterSentenceMax'),
+    letterDailyMax: viewRoot.querySelector('#settingLetterDailyMax'),
     callNoHangup: viewRoot.querySelector('#settingCallNoHangup'),
   };
 
   // 概率类控件（滑块 + 数字 + 输出）统一登记，便于同步与保存。
-  ["starFavorite", "starFavoriteCard", "starFavoriteFeed", "feedPostChance", "feedLikeProbability", "feedCommentProbability", "feedReplyProbability", "feedReplyToCommentProbability", "roastProbability", "callIncomingProbability", "callPickupProbability", "callBusyProbability", "callRejectProbability", "callHangupProbability"].forEach((key) => {
+  ["starFavorite", "starFavoriteCard", "starFavoriteFeed", "feedPostChance", "feedLikeProbability", "feedCommentProbability", "feedReplyProbability", "feedReplyToCommentProbability", "roastProbability", "letterProbability", "callIncomingProbability", "callPickupProbability", "callBusyProbability", "callRejectProbability", "callHangupProbability"].forEach((key) => {
     const cap = key[0].toUpperCase() + key.slice(1);
     elements[key + "Range"] = viewRoot.querySelector("#setting" + cap + "Range");
     elements[key + "Number"] = viewRoot.querySelector("#setting" + cap + "Number");

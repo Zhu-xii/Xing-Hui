@@ -75,7 +75,7 @@ function renderHistory() {
         <div class="history-card__copy">
           <div class="history-card__meta">
             <span>${DIRECTION_LABELS[q.direction] || '我问他的'}</span>
-            <span>${TYPE_LABELS[q.type] || '问答问卷'}</span>
+            <span>${q.source === 'ta-choice' ? 'TA 的小问题' : (TYPE_LABELS[q.type] || '问答问卷')}</span>
             <span>${statusLabel(q)}</span>
           </div>
           <p class="history-card__question">${escapeHtml(q.question)}</p>
@@ -85,6 +85,8 @@ function renderHistory() {
             </ul>
           ` : ''}
           ${q.answer ? `<p class="history-card__answer">${escapeHtml(q.answer)}</p>` : ''}
+          ${q.matchText ? `<p class="history-card__answer">${escapeHtml(q.matchText)}</p>` : ''}
+          ${q.reply ? `<p class="history-card__answer">TA：${escapeHtml(q.reply)}</p>` : ''}
         </div>
         <button class="history-card__delete is-danger" type="button" data-questionnaire-action="delete-history" data-id="${escapeHtml(message.id)}">删除</button>
       </article>
@@ -155,9 +157,9 @@ export function initQuestionnaireView(root = document.getElementById('view-quest
   viewRoot.innerHTML = `
     <div class="questionnaire-page">
       <header class="questionnaire-header">
-        <p class="questionnaire-eyebrow">QUESTION ARCHIVE</p>
-        <h2 class="questionnaire-title">问卷</h2>
-        <p class="questionnaire-intro">查看已发送的问卷与问答记录。</p>
+        <p class="questionnaire-eyebrow">QUESTIONS</p>
+        <h2 class="questionnaire-title">TA 的小问题</h2>
+        <p class="questionnaire-intro">查看问卷记录，以及 TA 主动发来的选择题。</p>
       </header>
 
       <section class="questionnaire-card" aria-labelledby="historyTitle">

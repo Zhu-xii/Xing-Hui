@@ -23,6 +23,8 @@ import {
   readPatCards,
   readPeriodRecords,
   readPromptQuestionnaires,
+  readTaChoices,
+  readLetters,
   readQuestionnaireAnswers,
   readImages,
   readMoods,
@@ -40,6 +42,8 @@ import {
   writePatCards,
   writePeriodRecords,
   writePromptQuestionnaires,
+  writeTaChoices,
+  writeLetters,
   writeQuestionnaireAnswers,
   writeImages,
   writeMoods,
@@ -189,6 +193,8 @@ export function mergeBackupData(payload) {
   const currentGroups = readGroups();
   const currentPatCards = readPatCards();
   const currentPromptQuestionnaires = readPromptQuestionnaires();
+  const currentTaChoices = readTaChoices();
+  const currentLetters = readLetters();
   const currentPeriodRecords = readPeriodRecords();
   const currentQuestionnaireAnswers = readQuestionnaireAnswers();
   const currentStatuses = readStatuses();
@@ -220,6 +226,8 @@ export function mergeBackupData(payload) {
     normalized.promptQuestionnaires,
     (item) => `${item.type}\u0000${item.question}`,
   );
+  const mergedTaChoices = mergeByKey(currentTaChoices, normalized.taChoices || [], (item) => item.id);
+  const mergedLetters = mergeByKey(currentLetters, normalized.letters || [], (item) => item.id);
   const mergedPeriodRecords = mergeByKey(currentPeriodRecords, normalized.periodRecords, (item) => item.id);
   const mergedQuestionnaireAnswers = mergeByKey(
     currentQuestionnaireAnswers,
@@ -242,6 +250,8 @@ export function mergeBackupData(payload) {
   writeGroups(mergedGroups);
   writePatCards(mergedPatCards);
   writePromptQuestionnaires(mergedPromptQuestionnaires);
+  writeTaChoices(mergedTaChoices);
+  writeLetters(mergedLetters);
   writePeriodRecords(mergedPeriodRecords);
   writeQuestionnaireAnswers(mergedQuestionnaireAnswers);
   writeStatuses(mergedStatuses);
@@ -282,6 +292,8 @@ export function mergeBackupData(payload) {
     groupsAdded: mergedGroups.length - currentGroups.length,
     patCardsAdded: mergedPatCards.length - currentPatCards.length,
     promptQuestionnairesAdded: mergedPromptQuestionnaires.length - currentPromptQuestionnaires.length,
+    taChoicesAdded: mergedTaChoices.length - currentTaChoices.length,
+    lettersAdded: mergedLetters.length - currentLetters.length,
     periodRecordsAdded: mergedPeriodRecords.length - currentPeriodRecords.length,
     questionnaireAnswersAdded: mergedQuestionnaireAnswers.length - currentQuestionnaireAnswers.length,
     statusesAdded: mergedStatuses.length - currentStatuses.length,
@@ -292,6 +304,7 @@ export function mergeBackupData(payload) {
 
   window.dispatchEvent(new CustomEvent(DATA_RESTORED_EVENT, { detail: result }));
   window.dispatchEvent(new CustomEvent('xinghui:manage-data-changed', { detail: result }));
+  window.dispatchEvent(new CustomEvent('xinghui:letters-changed', { detail: result }));
   return result;
 }
 
@@ -335,7 +348,8 @@ function renderStats() {
   elements.favoriteCount.textContent = String(
     snapshot.favorites.mine.length + snapshot.favorites.star.length + feedFavoriteCount,
   );
-  elements.promptCount.textContent = String(snapshot.promptQuestionnaires.length);
+  elements.choiceCount.textContent = String(snapshot.taChoices.length);
+  elements.letterCount.textContent = String(snapshot.letters.length);
   elements.periodCount.textContent = String(snapshot.periodRecords.length);
   if (elements.feedCount) elements.feedCount.textContent = String(snapshot.feedPosts.length);
 }
@@ -420,7 +434,7 @@ function handleImportFile(file) {
       if (migrated.avatar) writeCharacter({ ...readCharacter(), avatar: migrated.avatar });
       if (migrated.userAvatar) writeSettings({ ...readSettings(), userAvatar: migrated.userAvatar });
       renderBackupPage();
-      const added = result.cardsAdded + result.stickersAdded + (result.imagesAdded || 0) + result.messagesAdded + result.feedPostsAdded + result.feedNoticesAdded + result.groupsAdded + result.patCardsAdded + result.promptQuestionnairesAdded + result.periodRecordsAdded + result.questionnaireAnswersAdded + result.statusesAdded + result.moodsAdded + result.roastsAdded;
+      const added = result.cardsAdded + result.stickersAdded + (result.imagesAdded || 0) + result.messagesAdded + result.feedPostsAdded + result.feedNoticesAdded + result.groupsAdded + result.patCardsAdded + result.promptQuestionnairesAdded + result.taChoicesAdded + result.lettersAdded + result.periodRecordsAdded + result.questionnaireAnswersAdded + result.statusesAdded + result.moodsAdded + result.roastsAdded;
       setImportStatus(
         `导入完成：新增 ${added} 项；字卡已按内容完全一致合并，现有数据未被覆盖。`,
         'success',
@@ -481,7 +495,8 @@ export function initBackupView(root = document.getElementById('view-backup')) {
           <span><strong id="backupStickerCount">0</strong><small>表情包</small></span>
           <span><strong id="backupMessageCount">0</strong><small>聊天</small></span>
           <span><strong id="backupFavoriteCount">0</strong><small>收藏</small></span>
-          <span><strong id="backupPromptCount">0</strong><small>预设问卷</small></span>
+          <span><strong id="backupChoiceCount">0</strong><small>小问题</small></span>
+          <span><strong id="backupLetterCount">0</strong><small>信件</small></span>
           <span><strong id="backupPeriodCount">0</strong><small>经期记录</small></span>
           <span><strong id="backupFeedCount">0</strong><small>朋友圈</small></span>
         </div>
@@ -525,7 +540,8 @@ export function initBackupView(root = document.getElementById('view-backup')) {
     stickerCount: viewRoot.querySelector('#backupStickerCount'),
     messageCount: viewRoot.querySelector('#backupMessageCount'),
     favoriteCount: viewRoot.querySelector('#backupFavoriteCount'),
-    promptCount: viewRoot.querySelector('#backupPromptCount'),
+    choiceCount: viewRoot.querySelector('#backupChoiceCount'),
+    letterCount: viewRoot.querySelector('#backupLetterCount'),
     periodCount: viewRoot.querySelector('#backupPeriodCount'),
     feedCount: viewRoot.querySelector('#backupFeedCount'),
     fileInput: viewRoot.querySelector('#backupFileInput'),

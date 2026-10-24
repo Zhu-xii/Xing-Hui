@@ -24,7 +24,7 @@ import {
 } from '../lib/questionnaire.js';
 import { getCurrentStatus, maybeChangeStatus } from '../lib/status.js';
 import { compressImageFile, getAvatarBlob, getStickerBlob, putImageBlob, setBlobImage, detectOrphanStickers, putStickerBlob } from '../lib/media-db.js';
-import { randomChance } from '../lib/random.js';
+import { pickRandom, randomChance } from '../lib/random.js';
 import { navigateTo } from '../lib/router.js';
 
 const MESSAGE_ACTION_EVENT = 'xinghui:message-action';
@@ -674,12 +674,15 @@ function createQuestionnaireBubble(message, context = createChatRenderContext())
       button.textContent = option;
       options.append(button);
     });
-    const submit = document.createElement('button');
-    submit.type = 'button';
-    submit.className = 'questionnaire-answer-submit';
-    submit.dataset.questionnaireSubmit = '';
-    submit.textContent = '确认';
-    bubble.append(options, submit);
+    bubble.append(options);
+    if (questionnaire.source !== 'ta-choice') {
+      const submit = document.createElement('button');
+      submit.type = 'button';
+      submit.className = 'questionnaire-answer-submit';
+      submit.dataset.questionnaireSubmit = '';
+      submit.textContent = '确认';
+      bubble.append(submit);
+    }
   } else if (questionnaire.options?.length) {
     const list = document.createElement('ul');
     list.className = 'questionnaire-bubble__options';
@@ -698,6 +701,20 @@ function createQuestionnaireBubble(message, context = createChatRenderContext())
     answer.className = 'questionnaire-bubble__answer';
     answer.textContent = questionnaire.answer;
     bubble.append(answer);
+  }
+  if (questionnaire.source === 'ta-choice' && !isAwaitingAnswer) {
+    if (questionnaire.matchText) {
+      const match = document.createElement('p');
+      match.className = 'questionnaire-bubble__match';
+      match.textContent = questionnaire.matchText;
+      bubble.append(match);
+    }
+    if (questionnaire.reply) {
+      const reply = document.createElement('p');
+      reply.className = 'questionnaire-bubble__reply';
+      reply.textContent = questionnaire.reply;
+      bubble.append(reply);
+    }
   }
 
   const state = document.createElement('span');
@@ -990,7 +1007,7 @@ function questionnaireDraftFromForm() {
     type: elements.questionnaireType.value,
     thinkMin: Number(elements.questionnaireThinkMin.value) || 5,
     thinkMax: Number(elements.questionnaireThinkMax.value) || 15,
-    multiMin: Number(elements.questionnaireMultiMin.value) || 1,
+    multiMin: Number(elements.questionnaireMultiMin.value) || 2,
     multiMax: Number(elements.questionnaireMultiMax.value) || 3,
   };
 }
@@ -1000,10 +1017,10 @@ function hydrateQuestionnairePanel(draft) {
   const data = draft && typeof draft === 'object' ? draft : {};
   elements.questionnaireQuestion.value = data.question || '';
   elements.questionnaireOptions.value = Array.isArray(data.options) ? data.options.join('\n') : '';
-  elements.questionnaireType.value = ['qa', 'single', 'multiple'].includes(data.type) ? data.type : 'qa';
+  elements.questionnaireType.value = ['qa', 'single', 'multiple'].includes(data.type) ? data.type : 'multiple';
   elements.questionnaireThinkMin.value = String(data.thinkMin ?? 5);
   elements.questionnaireThinkMax.value = String(data.thinkMax ?? 15);
-  elements.questionnaireMultiMin.value = String(data.multiMin ?? 1);
+  elements.questionnaireMultiMin.value = String(data.multiMin ?? 2);
   elements.questionnaireMultiMax.value = String(data.multiMax ?? 3);
   updateQuestionnairePanelControls();
 }
@@ -1684,6 +1701,20 @@ function submitStarQuestionnaireAnswer(messageElement, answerValue = '') {
     if (questionnaire.type === 'multiple' && selected.length < 1) return;
     questionnaire.selected = selected;
     questionnaire.answer = selected.join('、');
+    if (questionnaire.source === 'ta-choice') {
+      const selectedIndex = questionnaire.options.indexOf(selected[0]);
+      const option = questionnaire.optionMeta?.[selectedIndex];
+      const preferredIndex = Number.isInteger(questionnaire.preferredIndex)
+        ? questionnaire.preferredIndex
+        : 0;
+      const preferredText = questionnaire.options[preferredIndex] || '';
+      questionnaire.reply = pickRandom(option?.reply || []) || '我记住了。';
+      questionnaire.matchText = selectedIndex === preferredIndex
+        ? '✦ 刚好想到了一起'
+        : option?.liked
+          ? '你们想得不一样，不过 TA 似乎很喜欢你的答案'
+          : `这次没有选到一起。TA 心里想的是：「${preferredText}」`;
+    }
   }
 
   questionnaire.status = 'answered';
@@ -1747,6 +1778,7 @@ function handleMessageListClick(event) {
         if (button !== optionButton) button.classList.remove('is-selected');
       });
       optionButton.classList.add('is-selected');
+      if (questionnaire.source === 'ta-choice') submitStarQuestionnaireAnswer(messageElement);
     } else {
       optionButton.classList.toggle('is-selected');
     }
@@ -2130,9 +2162,9 @@ export function initChatView(root = document.getElementById('view-chat')) {
               <label class="questionnaire-field">
                 <span>类型</span>
                 <select id="chatQuestionnaireType">
-                  <option value="qa">问答问卷</option>
-                  <option value="single">单选题</option>
                   <option value="multiple">多选题</option>
+                  <option value="single">单选题</option>
+                  <option value="qa">问答问卷</option>
                 </select>
               </label>
 
@@ -2150,7 +2182,7 @@ export function initChatView(root = document.getElementById('view-chat')) {
               <div class="questionnaire-form__row" id="chatQuestionnaireMultiField" hidden>
                 <label class="questionnaire-field">
                   <span>最少选择</span>
-                  <input id="chatQuestionnaireMultiMin" type="number" min="1" max="10" step="1" inputmode="numeric" />
+                  <input id="chatQuestionnaireMultiMin" type="number" min="2" max="10" step="1" value="2" inputmode="numeric" />
                 </label>
                 <label class="questionnaire-field">
                   <span>最多选择</span>

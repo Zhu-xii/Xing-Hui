@@ -146,18 +146,20 @@
 }
 
 .manage-group-list {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  align-items: stretch;
   gap: 8px;
   margin-top: 12px;
   padding: 1px 1px 4px;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .manage-group {
   display: inline-flex;
-  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
   align-items: center;
+  justify-content: space-between;
   min-height: 34px;
   padding: 3px 4px 3px 3px;
   border: 1px solid #dfeaf3;
@@ -174,15 +176,16 @@
 
 .manage-group__select {
   display: inline-flex;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   min-width: 0;
   min-height: 26px;
   padding: 0 6px;
   color: var(--color-text-muted);
   font-size: 0.72rem;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .manage-group.is-active .manage-group__select {
@@ -190,9 +193,12 @@
 }
 
 .manage-group__name {
-  max-width: 126px;
+  min-width: 0;
+  max-width: none;
   overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
 }
 
 .manage-group__count {
@@ -491,6 +497,10 @@
 .manage-card-row__actions button.is-danger:hover {
   background: #fff0f0;
   color: #a9474c;
+}
+
+.manage-card-row--choice {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .manage-empty {
@@ -879,7 +889,7 @@
 }
 
 .manage-group__category {
-  padding: 0 7px 0 5px;
+  padding: 0 4px 0 3px;
   color: #7394AE;
   font-size: 0.58rem;
   font-weight: 700;

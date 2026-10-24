@@ -1279,6 +1279,26 @@ body[data-view='chat'] .views {
   overflow-wrap: anywhere;
 }
 
+.questionnaire-bubble__match {
+  margin-top: 7px;
+  color: #666666;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.questionnaire-bubble__reply {
+  margin-top: 7px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: #F5F5F5;
+  color: #222222;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .questionnaire-bubble__state {
   display: block;
   margin-top: 8px;

@@ -42,7 +42,7 @@ export function buildQuestionnaireMessage(form) {
   const type = ['qa', 'single', 'multiple'].includes(form.type) ? form.type : 'qa';
   const question = String(form.question || '').trim().slice(0, 500);
   const multiMax = Math.min(10, Math.max(1, Number(form.multiMax) || options.length || 3));
-  const multiMin = Math.min(multiMax, Math.max(1, Number(form.multiMin) || 1));
+  const multiMin = Math.min(multiMax, Math.max(1, Number(form.multiMin) || 2));
 
   return {
     question,

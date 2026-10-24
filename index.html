@@ -17,6 +17,7 @@
 </head>
   <body data-view="home">
     <div class="app" id="app" data-view="home">
+      <div class="global-background" id="globalBackground" aria-hidden="true" hidden></div>
       <div class="status-bar" aria-hidden="true">
         <span class="status-bar__brand status-bar__brand--desktop">星回</span>
         <span class="status-bar__icons">
@@ -69,7 +70,7 @@
             </a>
             <a class="entry-card" href="#/questionnaire" data-route="questionnaire">
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span>
-              <span class="entry-label">问卷</span>
+              <span class="entry-label">小问题</span>
             </a>
             <a class="entry-card" href="#/period" data-route="period">
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5v3M17 3.5v3"/><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10h16"/><path d="M12 13v5M9.5 15.5h5"/></svg></span>
@@ -83,8 +84,10 @@
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l2.35 4.76 5.25.77-3.8 3.7.9 5.23L12 16.5l-4.7 2.46.9-5.23-3.8-3.7 5.25-.77z"/></svg></span>
               <span class="entry-label">收藏</span>
             </a>
-            <span class="entry-card-placeholder" aria-hidden="true"></span>
-            <span class="entry-card-placeholder" aria-hidden="true"></span>
+            <a class="entry-card" href="#/letter" data-route="letter">
+              <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13.5" rx="2.5"/><path d="M3.5 7.5 12 13l8.5-5.5"/><path d="M5 17.5 9.5 13M19 17.5 14.5 13"/></svg></span>
+              <span class="entry-label">信封</span>
+            </a>
             <a class="entry-card" href="#/backup" data-route="backup" hidden>
               <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v10"/><path d="M8 9l4-4 4 4"/><path d="M4 13v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4"/></svg></span>
               <span class="entry-label">数据备份</span>
@@ -107,6 +110,9 @@
         <section class="view view--back chat-view" id="view-chat" data-view="chat" aria-label="与星回聊天"></section>
         <!-- 问卷 -->
         <section class="view view--back" id="view-questionnaire" data-view="questionnaire"></section>
+
+        <!-- 信封 -->
+        <section class="view view--back" id="view-letter" data-view="letter"></section>
 
         <!-- 经期记录 -->
         <section class="view view--back" id="view-period" data-view="period"></section>

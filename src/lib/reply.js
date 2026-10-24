@@ -2,6 +2,7 @@ import { pickRandom, randomBetween, randomChance, randomInt } from './random.js'
 import {
   CARD_STORAGE_KEY,
   DEFAULT_GROUP_ID,
+  LETTER_GROUP_ID,
   REPLY_ALL_GROUPS_ID,
   SETTINGS_KEY,
   STICKER_STORAGE_KEY,
@@ -128,6 +129,7 @@ export function getAvailableCards(groupId, cards = readCards()) {
   return sourceCards
     .filter((card) => card && typeof card === 'object')
     .filter((card) => !card.disabled)
+    .filter((card) => targetGroupId !== REPLY_ALL_GROUPS_ID || card.groupId !== LETTER_GROUP_ID)
     .filter((card) => (
       targetGroupId === REPLY_ALL_GROUPS_ID
       || String(card.groupId || '') === targetGroupId
