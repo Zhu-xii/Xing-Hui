@@ -5,6 +5,15 @@
   padding-bottom: 22px;
 }
 
+body[data-view='letter'] .footer {
+  z-index: 0;
+}
+
+body[data-view='letter']:has(.letter-modal:not([hidden])) .footer,
+body[data-view='letter']:has(.letter-toast:not([hidden])) .footer {
+  visibility: hidden;
+}
+
 .letter-header {
   display: flex;
   align-items: flex-start;
