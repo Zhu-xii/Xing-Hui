@@ -711,6 +711,7 @@ function renderCards() {
   if (batchEnable) batchEnable.hidden = isTextCategory;
   if (batchDisable) batchDisable.hidden = isTextCategory;
   if (batchMove) batchMove.hidden = Boolean(category);
+  elements.cardList.classList.toggle('manage-card-list--stickers', isStickerCategory);
 
   if (isMediaCategory) {
     elements.cardList.innerHTML = renderStickerRows(pageItems, category?.name || '表情包');

@@ -878,6 +878,15 @@
     margin-top: -2px;
   }
 
+  .manage-card-row--choice {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .manage-card-row--choice .manage-card-row__actions {
+    grid-column: auto;
+    margin-top: 0;
+  }
+
   .manage-batch-bar {
     align-items: flex-start;
     flex-direction: column;
@@ -898,6 +907,54 @@
 
 .manage-card-row--sticker {
   align-items: center;
+}
+
+.manage-card-list--stickers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.manage-card-list--stickers .manage-card-row--sticker {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.manage-card-list--stickers .manage-checkbox {
+  position: absolute;
+  top: 11px;
+  left: 10px;
+  z-index: 1;
+}
+
+.manage-card-list--stickers .manage-card-row__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.manage-card-list--stickers .manage-sticker-preview {
+  flex: 0 0 auto;
+}
+
+.manage-card-list--stickers .manage-card-row__meta {
+  justify-content: center;
+  text-align: center;
+}
+
+.manage-card-list--stickers .manage-card-row__actions {
+  grid-column: auto;
+  justify-content: center;
+  max-width: none;
+  margin-top: 0;
+}
+
+.manage-card-list--stickers .manage-empty {
+  grid-column: 1 / -1;
 }
 
 .manage-sticker-preview {

@@ -75,8 +75,24 @@ export function composeLetter(direction = 'star', now = Date.now()) {
   return letter;
 }
 
-export function writeUserLetter() {
-  return composeLetter('user');
+export function writeUserLetter({ title, content } = {}, now = Date.now()) {
+  const cleanContent = String(content || '').trim();
+  if (!cleanContent) return null;
+
+  const letter = {
+    id: `letter_${now}_${Math.random().toString(36).slice(2, 8)}`,
+    direction: 'user',
+    title: String(title || '').trim().slice(0, 80) || '一封手写信',
+    content: cleanContent.slice(0, 12000),
+    createdAt: now,
+    read: true,
+  };
+
+  const letters = readLetters();
+  letters.unshift(letter);
+  if (!writeLetters(letters)) return null;
+  notifyLettersChanged();
+  return letter;
 }
 
 export function checkStarLetter(now = Date.now()) {

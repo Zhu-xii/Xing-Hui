@@ -75,7 +75,7 @@ function renderList() {
         <strong>${activeTab === 'star' ? '还没有收到信' : '还没有写过信'}</strong>
         <p>${activeTab === 'star'
           ? '星回会在适合的时候，从「写信专用」里挑几句话写给你。'
-          : '点「写一封信」，从「写信专用」字卡中随机抽几句寄出去。'}</p>
+          : '点「写一封信」，自由写下一个标题和想说的话。'}</p>
       </div>
     `;
     return;
@@ -142,6 +142,42 @@ function openLetter(letterId) {
   renderList();
 }
 
+function openComposer() {
+  if (!elements?.modal) return;
+  activeLetterId = '';
+  elements.modal.hidden = false;
+  elements.modal.innerHTML = `
+    <div class="letter-modal__backdrop" data-letter-action="close"></div>
+    <article class="letter-paper letter-paper--compose" role="dialog" aria-modal="true" aria-labelledby="letterComposeTitle">
+      <header class="letter-paper__head">
+        <div>
+          <p>我的信</p>
+          <h3 id="letterComposeTitle">写一封信</h3>
+        </div>
+        <button class="letter-paper__close" type="button" data-letter-action="close" aria-label="关闭写信窗口">×</button>
+      </header>
+      <form class="letter-composer" data-letter-compose>
+        <label class="letter-composer__field">
+          <span>标题</span>
+          <input name="title" type="text" maxlength="80" autocomplete="off" placeholder="一封手写信" />
+        </label>
+        <label class="letter-composer__field">
+          <span>正文</span>
+          <textarea name="content" maxlength="12000" required placeholder="写下此刻想说的话……"></textarea>
+        </label>
+        <footer class="letter-paper__foot">
+          <span class="letter-composer__hint">信会保存在这台设备上</span>
+          <button type="button" data-letter-action="close">取消</button>
+          <button type="submit" class="letter-paper__done">保存这封信</button>
+        </footer>
+      </form>
+    </article>
+  `;
+  window.requestAnimationFrame(() => {
+    elements?.modal?.querySelector('[name="title"]')?.focus();
+  });
+}
+
 function deleteLetter(letterId) {
   const letters = readLetters();
   const next = letters.filter((letter) => letter.id !== letterId);
@@ -165,14 +201,7 @@ function handleClick(event) {
 
   const action = event.target.closest('[data-letter-action]')?.dataset.letterAction;
   if (action === 'write') {
-    const letter = writeUserLetter();
-    if (!letter) {
-      showToast('请先在「写信专用」里添加可用字卡。', 'warning');
-      return;
-    }
-    activeTab = 'user';
-    renderList();
-    openLetter(letter.id);
+    openComposer();
     return;
   }
   if (action === 'close') {
@@ -188,9 +217,39 @@ function handleClick(event) {
   if (card) openLetter(card.dataset.letterId);
 }
 
+function handleSubmit(event) {
+  const form = event.target.closest('[data-letter-compose]');
+  if (!form) return;
+  event.preventDefault();
+
+  const formData = new FormData(form);
+  const content = String(formData.get('content') || '').trim();
+  if (!content) {
+    form.querySelector('[name="content"]')?.focus();
+    showToast('先写一点内容再保存吧。', 'warning');
+    return;
+  }
+
+  const letter = writeUserLetter({
+    title: formData.get('title'),
+    content,
+  });
+  if (!letter) {
+    showToast('保存失败，请检查浏览器存储空间。', 'warning');
+    return;
+  }
+
+  activeTab = 'user';
+  closeLetter();
+  renderList();
+  openLetter(letter.id);
+  showToast('信已保存');
+}
+
 function bindEvents() {
   if (!viewRoot || eventsBound) return;
   viewRoot.addEventListener('click', handleClick);
+  viewRoot.addEventListener('submit', handleSubmit);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && elements?.modal && !elements.modal.hidden) closeLetter();
   });

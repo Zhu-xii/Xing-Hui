@@ -116,6 +116,7 @@ body[data-view='chat'] .global-background {
 }
 
 #view-feed,
+#view-letter,
 #view-favorites {
   padding-top: calc(104px + env(safe-area-inset-top, 0px));
 }
