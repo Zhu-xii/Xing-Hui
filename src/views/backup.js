@@ -5,6 +5,7 @@ import {
   MOOD_CACHE_KEY,
   QUESTIONNAIRE_DRAFT_KEY,
   createBackupPayload,
+  dismissBackupReminder,
   getBackupReminder,
   getStorageSnapshot,
   markBackupExported,
@@ -367,6 +368,9 @@ function renderReminder() {
     : `${baselineText} 距离下次提醒阈值还有 ${Math.max(0, 7 - reminder.elapsedDays)} 天左右。`;
   elements.reminderLastExport.textContent = lastBackupText;
   elements.reminder.classList.toggle('is-due', reminder.isDue);
+  if (elements.reminderDismissButton) {
+    elements.reminderDismissButton.hidden = !reminder.isDue || reminder.isDismissed;
+  }
 }
 
 function renderBackupPage() {
@@ -460,6 +464,10 @@ function bindEvents() {
     const action = event.target.closest('[data-backup-action]')?.dataset.backupAction;
     if (action === 'export') void downloadBackup();
     if (action === 'choose-import') elements.fileInput?.click();
+    if (action === 'dismiss-reminder' && dismissBackupReminder()) {
+      renderReminder();
+      showToast('本次备份提醒已隐藏，下次提醒时仍会显示。');
+    }
   });
 
   elements.fileInput.addEventListener('change', (event) => {
@@ -528,6 +536,7 @@ export function initBackupView(root = document.getElementById('view-backup')) {
           <h3 id="backupReminderTitle">备份状态正常</h3>
           <p id="backupReminderText">正在计算备份周期…</p>
           <small>上次导出：<span id="backupLastExport">尚无记录</span></small>
+          <button class="backup-button backup-button--quiet" type="button" data-backup-action="dismiss-reminder" id="backupDismissReminder" hidden>退出后本次不显示</button>
         </div>
       </section>
     </div>
@@ -550,6 +559,7 @@ export function initBackupView(root = document.getElementById('view-backup')) {
     reminderTitle: viewRoot.querySelector('#backupReminderTitle'),
     reminderText: viewRoot.querySelector('#backupReminderText'),
     reminderLastExport: viewRoot.querySelector('#backupLastExport'),
+    reminderDismissButton: viewRoot.querySelector('#backupDismissReminder'),
     toast: viewRoot.querySelector('#backupToast'),
   };
 

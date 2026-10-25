@@ -220,8 +220,9 @@ function renderBackupReminder() {
   if (!reminder) return;
 
   const status = getBackupReminder();
-  reminder.hidden = !status.isDue;
-  if (!status.isDue) return;
+  const shouldShow = status.isDue && !status.isDismissed;
+  reminder.hidden = !shouldShow;
+  if (!shouldShow) return;
 
   const label = reminder.querySelector('[data-backup-reminder-text]');
   if (label) {

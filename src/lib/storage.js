@@ -26,6 +26,7 @@ export const STORAGE_KEYS = Object.freeze({
   character: 'xinghui_character',
   firstLaunchAt: 'xinghui_first_launch_at',
   lastBackupAt: 'xinghui_last_backup_at',
+  backupReminderDismissedCycle: 'xinghui_backup_reminder_dismissed_cycle',
 });
 
 export const SETTINGS_KEY = STORAGE_KEYS.settings;
@@ -1084,6 +1085,7 @@ export function markBackupExported(timestamp = Date.now()) {
   const exportedAt = normalizeDateValue(timestamp, Date.now());
   const saved = writeStorage(STORAGE_KEYS.lastBackupAt, String(exportedAt));
   if (saved && typeof window !== 'undefined') {
+    removeStorage(STORAGE_KEYS.backupReminderDismissedCycle);
     window.dispatchEvent(new CustomEvent(BACKUP_STATUS_CHANGED_EVENT, { detail: { lastBackupAt: exportedAt } }));
   }
   return saved;
@@ -1095,14 +1097,39 @@ export function getBackupReminder(now = Date.now()) {
   const baselineAt = lastBackupAt || firstLaunchAt;
   const elapsedMs = Math.max(0, now - baselineAt);
   const elapsedDays = Math.floor(elapsedMs / DAY_MS);
+  const periodMs = BACKUP_REMINDER_DAYS * DAY_MS;
+  const reminderCycleAt = baselineAt + Math.max(1, Math.floor(elapsedMs / periodMs)) * periodMs;
+  const isDue = elapsedMs > periodMs;
+  const dismissedCycle = readJson(STORAGE_KEYS.backupReminderDismissedCycle, null);
+  const isDismissed = isDue
+    && dismissedCycle?.baselineAt === baselineAt
+    && dismissedCycle?.reminderCycleAt === reminderCycleAt;
 
   return {
-    isDue: elapsedMs > BACKUP_REMINDER_DAYS * DAY_MS,
+    isDue,
+    isDismissed,
     elapsedDays,
     firstLaunchAt,
     lastBackupAt,
     baselineAt,
+    reminderCycleAt,
   };
+}
+
+export function dismissBackupReminder(now = Date.now()) {
+  const reminder = getBackupReminder(now);
+  if (!reminder.isDue) return false;
+
+  const saved = writeJson(STORAGE_KEYS.backupReminderDismissedCycle, {
+    baselineAt: reminder.baselineAt,
+    reminderCycleAt: reminder.reminderCycleAt,
+  });
+  if (saved && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(BACKUP_STATUS_CHANGED_EVENT, {
+      detail: { dismissedReminderCycleAt: reminder.reminderCycleAt },
+    }));
+  }
+  return saved;
 }
 
 function ensureTaChoicePresets() {

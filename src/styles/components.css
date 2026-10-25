@@ -279,6 +279,7 @@
   #view-feed,
   #view-letter,
   #view-favorites,
+  #view-backup,
   #view-questionnaire {
     padding-top: max(0px, calc(2cm - 54px - env(safe-area-inset-top, 0px)));
   }
